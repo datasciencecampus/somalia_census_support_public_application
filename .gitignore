@@ -1,0 +1,50 @@
+# Remove all reports
+# *.html
+*.pdf
+*.docx
+*.pptx
+
+# Ignore secure data folders
+data/*
+!data/README.md
+*/data/*
+!*/data/README.md
+
+# Ignore the outputs folders
+outputs/*
+*/outputs/*
+
+# Keep specific data files
+
+
+
+# Ignore R specific files
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+.Rproj.user/
+*.Rproj
+
+# Ignore python specific files
+.env
+.venv
+.ipynb_checkpoints
+*/python/.ipynb_checkpoints/*
+.vscode/
+*/__pycache__/*
+
+#Spyder project files
+*.ini
+*.bak
+
+# Ignore csv files throughout to avoid data being pushed to GitHub
+src/python/*.csv
+src/R/*.csv
+*/src/python/*.csv
+*/src/R/*.csv
+*.pyc
+
+# Ignore mac specific files
+.DS_Store
+
