@@ -48,3 +48,4 @@ src/R/*.csv
 # Ignore mac specific files
 .DS_Store
 
+*.ipynb
