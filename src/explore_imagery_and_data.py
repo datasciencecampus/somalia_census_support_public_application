@@ -98,6 +98,9 @@ for area in priority_areas:
 
     folium.GeoJson(area_of_interest, name=f"{area} UNFPA extent").add_to(m)
 
+training_data = json.load(open(data_dir.joinpath("training_data.geojson")))
+folium.GeoJson(training_data, name=f"Doolow labelled training data").add_to(m)
+
 # +
 folium.LayerControl().add_to(m)
 
