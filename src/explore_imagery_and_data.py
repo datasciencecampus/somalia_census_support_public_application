@@ -23,6 +23,16 @@ data_dir = Path.cwd().parent.joinpath("data")
 
 doolow = [4.160722262, 42.0770588]
 
+m = folium.Map(location=doolow)
+
+tile = folium.TileLayer(
+        tiles = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attr = 'Esri',
+        name = 'Esri Satellite',
+        overlay = False,
+        control = True
+       ).add_to(m)
+
 # +
 # code largely coutesy of https://gis.stackexchange.com/questions/393938/plotting-landsat-image-on-folium-maps
 
@@ -56,15 +66,19 @@ for item in bounds_orig:
 # Finding the centre latitude & longitude    
 centre_lon = bounds_fin[0][1] + (bounds_fin[1][1] - bounds_fin[0][1])/2
 centre_lat = bounds_fin[0][0] + (bounds_fin[1][0] - bounds_fin[0][0])/2
-
-# +
-m = folium.Map(location=doolow, zoom_start=13)
+# -
 
 # Overlay raster (RGB) called img using add_child() function (opacity and bounding box set)
-m.add_child(folium.raster_layers.ImageOverlay(img.transpose(1, 2, 0), 
-                                              opacity=0.9,
-                                              bounds = bounds_fin
-                                             ))
+folium.raster_layers.ImageOverlay(img.transpose(1, 2, 0), 
+                                  bounds = bounds_fin,
+                                  name="Doolow Planet raster"
+                                 ).add_to(m)
+
+# +
+folium.LayerControl().add_to(m)
 
 # Display map 
 m
+# -
+
+
