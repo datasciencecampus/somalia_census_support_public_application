@@ -122,4 +122,33 @@ folium.LayerControl().add_to(m)
 # %%
 m
 
+# %% [markdown]
+# ## Experimental: colour raster generation
+#
+# The normalisation needs work still...
 
+# %%
+from osgeo import gdal
+import matplotlib.pyplot as plt
+  
+dataset = gdal.Open(str(image_path.resolve()))
+
+band1 = dataset.GetRasterBand(3) # Red channel
+band2 = dataset.GetRasterBand(2) # Green channel
+band3 = dataset.GetRasterBand(1) # Blue channel
+
+b1 = band1.ReadAsArray()
+b2 = band2.ReadAsArray()
+b3 = band3.ReadAsArray()
+
+from sklearn.preprocessing import normalize
+b1_normalised = normalize(b1, norm='max', axis=0)
+b2_normalised = normalize(b2, norm='max', axis=0)
+b3_normalised = normalize(b3, norm='max', axis=0)
+
+col_img = np.dstack((b1_normalised, b2_normalised, b3_normalised))
+f = plt.figure()
+plt.imshow(col_img)
+plt.show()
+
+# %%
