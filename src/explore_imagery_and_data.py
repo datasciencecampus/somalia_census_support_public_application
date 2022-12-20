@@ -18,7 +18,7 @@ import folium
 import geopandas
 import json
 from pathlib import Path
-from pyproj import Transformer 
+from pyproj import Transformer
 import rasterio as rio
 
 
@@ -57,34 +57,34 @@ image_path = images_dir.joinpath("20220830_070622_ssc2_u0001_pansharpened_clip.t
 dst_crs = "EPSG:4326" # Global projection: WGS84
 
 with rio.open(image_path) as src:
-    img = src.read()  
+    img = src.read()
     img = img
     src_crs = src.crs["init"].upper()
     min_lon, min_lat, max_lon, max_lat = src.bounds
-    
+
 ## Conversion from UTM to WGS84 CRS
 bounds_orig = [[min_lat, min_lon], [max_lat, max_lon]]
 
 bounds_fin = []
- 
-for item in bounds_orig:   
+
+for item in bounds_orig:
     #converting to lat/lon
     lat = item[0]
     lon = item[1]
-    
+
     proj = Transformer.from_crs(int(src_crs.split(":")[1]), int(dst_crs.split(":")[1]), always_xy=True)
 
     lon_n, lat_n = proj.transform(lon, lat)
-    
+
     bounds_fin.append([lat_n, lon_n])
 
-# Finding the centre latitude & longitude    
+# Finding the centre latitude & longitude
 centre_lon = bounds_fin[0][1] + (bounds_fin[1][1] - bounds_fin[0][1])/2
 centre_lat = bounds_fin[0][0] + (bounds_fin[1][0] - bounds_fin[0][0])/2
 
 # %%
 # Overlay raster (RGB) called img using add_child() function (opacity and bounding box set)
-folium.raster_layers.ImageOverlay(img.transpose(1, 2, 0), 
+folium.raster_layers.ImageOverlay(img.transpose(1, 2, 0),
                                   bounds = bounds_fin,
                                   name="Doolow Planet raster"
                                  ).add_to(m)
@@ -97,7 +97,7 @@ priority_areas = ["Doolow",
                   "Bossaso",
                   "Burao",
                   "Dhuusamarreeb",
-                  "Gaalkacyo", 
+                  "Gaalkacyo",
                   "Hargeisa",
                   "Kismayo"]
 
@@ -121,34 +121,3 @@ folium.LayerControl().add_to(m)
 
 # %%
 m
-
-# %% [markdown]
-# ## Experimental: colour raster generation
-#
-# The normalisation needs work still...
-
-# %%
-from osgeo import gdal
-import matplotlib.pyplot as plt
-  
-dataset = gdal.Open(str(image_path.resolve()))
-
-band1 = dataset.GetRasterBand(3) # Red channel
-band2 = dataset.GetRasterBand(2) # Green channel
-band3 = dataset.GetRasterBand(1) # Blue channel
-
-b1 = band1.ReadAsArray()
-b2 = band2.ReadAsArray()
-b3 = band3.ReadAsArray()
-
-from sklearn.preprocessing import normalize
-b1_normalised = normalize(b1, norm='max', axis=0)
-b2_normalised = normalize(b2, norm='max', axis=0)
-b3_normalised = normalize(b3, norm='max', axis=0)
-
-col_img = np.dstack((b1_normalised, b2_normalised, b3_normalised))
-f = plt.figure()
-plt.imshow(col_img)
-plt.show()
-
-# %%
