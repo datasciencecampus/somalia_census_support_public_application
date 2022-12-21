@@ -70,6 +70,9 @@ for observation in zipped_observation_list:
 #%%
 from sklearn.preprocessing import normalize
 
+gdal.Translate("out.tif", planet_img, bandList=[3, 2, 1])
+
+
 band_number_list = [3, 2, 1] # red, green, blue in order Planet uses
 
 band_list = [planet_img.GetRasterBand(band_number) for band_number in band_number_list]
