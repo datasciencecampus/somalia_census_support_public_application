@@ -4,6 +4,19 @@
 
 Automating building detection in satellite imagery over Somalia, with a focus on Internally displaced people (IDPs).
 
+## Getting set-up:
+
+### Sentinel-2 images
+Within the `src` folder there is a Python script for extracting Sentinel-2 imagery using Google Earth Engine. To execute this script, run 
+```
+python sentinel_export_gee.py <insert tags here for optional arguments>
+```
+For help on these optional arguments run 
+```
+python sentinel_export_gee.py -h
+``` 
+and see the detailed guidance on the [Uganda Forestry README](https://github.com/datasciencecampus/uganda_forestry/blob/master/acquire_sentinel2_imgs_readme.md#acquire-a-sentinel-2-image-using-google-earth-engine). 
+
 ## Workflow
 Example, to be amended as required.
 
