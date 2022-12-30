@@ -44,7 +44,7 @@ data_dir = Path.cwd().parent.joinpath("data")
 
 planet_imgs_path = setup_sub_dir(data_dir, "planet_images")
 
-path_to_imgs = planet_imgs_path.joinpath("Doolow")
+path_to_imgs = planet_imgs_path.joinpath("Baidoa")
 
 zipped_observation_list = generate_file_list(
         path_to_imgs, "zip", []
@@ -118,23 +118,57 @@ img_arr_reordered = change_band_order(img_array)
 
 #%%
 def return_percentile_range(img_arr, range):
+    """Select pixels with value above zero and return upper and lower percentiles
+    for given range. E.g. range = 98 returns the 2% and 98% percentiles.
+
+    Parameters
+    ----------
+    img_arr : numpy.ndarray
+        The array representation of the satellite raster.
+    range : float or int
+        The range at which to return upper and lower percentiles. A value of 90
+        would return the 10th and 90th percentile values.
+    """
     non_zero_img_arr = img_arr[img_arr>0]
     lower_percentile = np.percentile(non_zero_img_arr, 100-range)
     upper_percentile = np.percentile(non_zero_img_arr, range)
     return(lower_percentile, upper_percentile)
 
 def clip_to_soft_min_max(img_arr, range):
+    """Calculate percentile values for given range and clip all values above and below.
+
+    Parameters
+    ----------
+    img_arr : numpy.ndarray
+        The array representation of the satellite raster.
+    range : float or int
+        The range at which to return upper and lower percentiles. A value of 90
+        would return the 10th and 90th percentile values.
+    """
     soft_min, soft_max = return_percentile_range(img_arr, range)
     img_arr_clipped = np.clip(img_arr, soft_min, soft_max)
     return(img_arr_clipped)
 
 #%%
 
-min_max_scaler = MinMaxScaler()
+def clip_and_normalize_raster(img_arr, clipping_percentile_range):
+    """Clip raster by percentile range and then normalise to [0,1] range.
 
-clipping_percentile_range = 99
-normalised_img = np.array([
-    min_max_scaler.fit_transform(clip_to_soft_min_max(band_array, clipping_percentile_range)) for band_array in img_arr_reordered
-    ])
+    Parameters
+    ----------
+    img_arr : numpy.ndarray
+        The array representation of the satellite raster.
+    clipping_percentile_range : _type_
+        The range at which to return upper and lower percentiles. A value of 90
+        would return the 10th and 90th percentile values.
+    """
+    min_max_scaler = MinMaxScaler()
+    normalised_img = np.array([
+        min_max_scaler.fit_transform(clip_to_soft_min_max(band_array, clipping_percentile_range)) for band_array in img_arr
+        ])
+    return(normalised_img)
 # %%
+normalised_img = clip_and_normalize_raster(img_arr_reordered, 99)
 show(normalised_img)
+
+# %%
