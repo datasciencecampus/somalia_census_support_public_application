@@ -1,8 +1,8 @@
+#%%
 from pathlib import Path
 from osgeo import gdal
 from datetime import datetime
 from zipfile import ZipFile
-import matplotlib.pyplot as plt
 import numpy as np
 import rasterio as rio
 from rasterio.plot import show
@@ -27,49 +27,60 @@ def extract_dates_from_image_filenames(file_name):
     datetime.datetime
         Date data type from string.
     """
-    numerical_string = file_name.split("_")[-1]
+    numerical_string = file_name.split("_")[0]
     date = datetime.strptime(numerical_string, "%Y%m%d")
     return date
 
 
 def unzip_image_files(file_to_unzip):
-    # opening the zip file in READ mode
+    """Extract content from zipped folder into dir of same name at same location.
+
+    Parameters
+    ----------
+    file_to_unzip : path
+        Path to zipped folder to extract.
+    """
     with ZipFile(file_to_unzip, 'r') as zip:
         # extracting all the files
         zip.extractall(setup_sub_dir(file_to_unzip.parent, file_to_unzip.stem))
         print(f"Files extracted {file_to_unzip.parent.joinpath(file_to_unzip.stem)}")
 
 
-data_dir = Path.cwd().parent.joinpath("data")
+def check_zipped_dirs_and_unzip(path_to_imgs):
+    """Check image directory and if only zipped files present, extract them.
 
-planet_imgs_path = setup_sub_dir(data_dir, "planet_images")
+    Parameters
+    ----------
+    path_to_imgs : path
+        Path to subdirectory in data where satellite rasters stored for given location.
+    """
+    zipped_observation_list = generate_file_list(
+            path_to_imgs, "zip", []
+        )
 
-path_to_imgs = planet_imgs_path.joinpath("Baidoa")
+    for observation in zipped_observation_list:
+        dir_path = observation.parent.joinpath(observation.stem)
 
-zipped_observation_list = generate_file_list(
-        path_to_imgs, "zip", []
-    )
+        # if directory does not exist, unzip it first
+        if not dir_path.is_dir():
+            print("Unzipping zipped raster folder.\n")
+            unzip_image_files(observation)
 
-zipped_files = [file_name.stem for file_name in zipped_observation_list]
 
-observation_dates = [
-    extract_dates_from_image_filenames(file_name) for file_name in zipped_files
-    ]
+def list_directories_at_path(dir_path):
+    """Return list of subdirectories at given path directory."""
+    return([item for item in dir_path.iterdir() if item.is_dir()])
 
-for observation in zipped_observation_list:
-    dir_path = observation.parent.joinpath(observation.stem)
 
-    # if directory does not exist, unzip it first
-    if not dir_path.is_dir():
-        unzip_image_files(observation)
-
-    tiff_img_list = generate_file_list(
-            dir_path.joinpath("files"), "tif", ["pansharpened_clip"]
+def get_raster_list_for_given_area(observation_path_list):
+    tiff_img_list = []
+    for directory in observation_path_list:
+        tiff_img = generate_file_list(
+            directory.joinpath("files"), "tif", ["pansharpened_clip"]
             )
+        tiff_img_list.append(tiff_img[0])
+    return(tiff_img_list)
 
-    planet_img = gdal.Open(str(tiff_img_list[0].resolve()))
-
-# %%
 
 # Refactor into funcs for: (not in order)
 # 1) reading planet image
@@ -111,12 +122,8 @@ def change_band_order(
     """
     img_array = [img_array[band-1] for band in correct_band_order]
     return(np.array(img_array))
-# %%
-img_array = return_array_from_tiff(tiff_img_list[0])
 
-img_arr_reordered = change_band_order(img_array)
 
-#%%
 def return_percentile_range(img_arr, range):
     """Select pixels with value above zero and return upper and lower percentiles
     for given range. E.g. range = 98 returns the 2% and 98% percentiles.
@@ -134,6 +141,7 @@ def return_percentile_range(img_arr, range):
     upper_percentile = np.percentile(non_zero_img_arr, range)
     return(lower_percentile, upper_percentile)
 
+
 def clip_to_soft_min_max(img_arr, range):
     """Calculate percentile values for given range and clip all values above and below.
 
@@ -149,7 +157,6 @@ def clip_to_soft_min_max(img_arr, range):
     img_arr_clipped = np.clip(img_arr, soft_min, soft_max)
     return(img_arr_clipped)
 
-#%%
 
 def clip_and_normalize_raster(img_arr, clipping_percentile_range):
     """Clip raster by percentile range and then normalise to [0,1] range.
@@ -168,7 +175,40 @@ def clip_and_normalize_raster(img_arr, clipping_percentile_range):
         ])
     return(normalised_img)
 # %%
-normalised_img = clip_and_normalize_raster(img_arr_reordered, 99)
+
+priority_areas = ["Doolow",
+                  "Mogadishu",
+                  "Baidoa",
+                  "BeletWeyne",
+                  "Bossaso",
+                  "Burao",
+                  "Dhuusamarreeb",
+                  "Gaalkacyo",
+                  "Hargeisa",
+                  "Kismayo"
+                  ]
+
+data_dir = Path.cwd().parent.joinpath("data")
+planet_imgs_path = setup_sub_dir(data_dir, "planet_images")
+
+priority_area_of_interest = "BeletWeyne"
+path_to_imgs = planet_imgs_path.joinpath(priority_area_of_interest)
+check_zipped_dirs_and_unzip(path_to_imgs)
+
+observation_path_list = list_directories_at_path(path_to_imgs)
+
+tiff_img_list = get_raster_list_for_given_area(observation_path_list)
+
+observation_dates = [
+    extract_dates_from_image_filenames(file_name.stem) for file_name in tiff_img_list
+    ]
+
+img_array = return_array_from_tiff(tiff_img_list[0])
+
+img_arr_reordered = change_band_order(img_array)
+
+normalised_img = clip_and_normalize_raster(img_arr_reordered, 99.5)
+
 show(normalised_img)
 
 # %%
