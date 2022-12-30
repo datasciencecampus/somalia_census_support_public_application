@@ -69,67 +69,6 @@ for observation in zipped_observation_list:
 
     planet_img = gdal.Open(str(tiff_img_list[0].resolve()))
 
-#%%
-
-import cv2
-
-def read_this(image_file, gray_scale=False):
-    image_src = cv2.imread(image_file)
-    return image_src
-
-
-def equalize_this(image_file, with_plot=False, gray_scale=False):
-    image_src = read_this(image_file=image_file, gray_scale=gray_scale)
-    if not gray_scale:
-        b_image, g_image, r_image = cv2.split(image_src)
-
-        band_list = [b_image, g_image, r_image]
-
-        b_image, g_image, r_image = [np.ma.masked_where(band == 0, band) for band in band_list]
-
-        r_image_eq = cv2.equalizeHist(r_image)
-        g_image_eq = cv2.equalizeHist(g_image)
-        b_image_eq = cv2.equalizeHist(b_image)
-
-        image_eq = cv2.merge((r_image_eq, g_image_eq, b_image_eq))
-        cmap_val = None
-    else:
-        image_eq = cv2.equalizeHist(image_src)
-        cmap_val = 'gray'
-
-    if with_plot:
-        fig = plt.figure(figsize=(10, 20))
-
-        ax1 = fig.add_subplot(2, 2, 1)
-        ax1.axis("off")
-        ax1.title.set_text('Original')
-        ax2 = fig.add_subplot(2, 2, 2)
-        ax2.axis("off")
-        ax2.title.set_text("Equalized")
-
-        ax1.imshow(image_src, cmap=cmap_val)
-        ax2.imshow(image_eq, cmap=cmap_val)
-        return True
-    return image_eq
-
-im_eq = equalize_this(image_file=str(tiff_img_list[0].resolve()), with_plot=False)
-
-masked_img = np.ma.masked_where(im_eq==0, im_eq)
-
-ax = plt.subplot(1,1,1)
-
-ax.imshow(masked_img.data)
-
-
-image_src = cv2.imread(str(tiff_img_list[0].resolve()))
-
-plt.imshow(image_src)
- # code here largely thanks to: https://msameeruddin.hashnode.dev/image-equalization-contrast-enhancing-in-python
- # using the equalize histogram approach. Still no real luck improving contrast.
-
-#TODO: Explore https://github.com/planetlabs/color_balance for rendering colours
-
-
 # %%
 
 # Refactor into funcs for: (not in order)
