@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import rasterio as rio
 from rasterio.plot import show
+from sklearn.preprocessing import MinMaxScaler
 
 from functions_library import setup_sub_dir, generate_file_list
 
@@ -176,15 +177,25 @@ img_array = return_array_from_tiff(tiff_img_list[0])
 
 img_arr_reordered = change_band_order(img_array)
 
-# %%
+#%%
+def return_percentile_range(img_arr, range):
+    non_zero_img_arr = img_arr[img_arr>0]
+    lower_percentile = np.percentile(non_zero_img_arr, 100-range)
+    upper_percentile = np.percentile(non_zero_img_arr, range)
+    return(lower_percentile, upper_percentile)
 
-from sklearn.preprocessing import normalize
+def clip_to_soft_min_max(img_arr, range):
+    soft_min, soft_max = return_percentile_range(img_arr, range)
+    img_arr_clipped = np.clip(img_arr, soft_min, soft_max)
+    return(img_arr_clipped)
 
+#%%
+
+min_max_scaler = MinMaxScaler()
+
+clipping_percentile_range = 99
 normalised_img = np.array([
-    normalize(band_array, norm='max', axis=0) for band_array in img_arr_reordered
+    min_max_scaler.fit_transform(clip_to_soft_min_max(band_array, clipping_percentile_range)) for band_array in img_arr_reordered
     ])
-
 # %%
 show(normalised_img)
-
-
