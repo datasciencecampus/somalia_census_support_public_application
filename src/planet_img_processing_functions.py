@@ -4,6 +4,8 @@ from datetime import datetime
 from zipfile import ZipFile
 import matplotlib.pyplot as plt
 import numpy as np
+import rasterio as rio
+from rasterio.plot import show
 
 from functions_library import setup_sub_dir, generate_file_list
 
@@ -66,30 +68,10 @@ for observation in zipped_observation_list:
 
     planet_img = gdal.Open(str(tiff_img_list[0].resolve()))
 
-
 #%%
-from sklearn.preprocessing import normalize
+
 import cv2
 
-gdal.Translate("out.tif", planet_img, bandList=[3, 2, 1])
-
-
-band_number_list = [3, 2, 1] # red, green, blue in order Planet uses
-
-band_list = [planet_img.GetRasterBand(band_number) for band_number in band_number_list]
-
-band_array_list = [band.ReadAsArray() for band in band_list]
-
-normalised_bands = [
-    normalize(band_array, norm='max', axis=0) for band_array in band_array_list
-    ]
-
-col_img = np.dstack((normalised_bands))
-f = plt.figure()
-plt.imshow(col_img)
-plt.show()
-
-#%%
 def read_this(image_file, gray_scale=False):
     image_src = cv2.imread(image_file)
     return image_src
@@ -139,6 +121,8 @@ ax.imshow(masked_img.data)
 
 
 image_src = cv2.imread(str(tiff_img_list[0].resolve()))
+
+plt.imshow(image_src)
  # code here largely thanks to: https://msameeruddin.hashnode.dev/image-equalization-contrast-enhancing-in-python
  # using the equalize histogram approach. Still no real luck improving contrast.
 
@@ -147,7 +131,60 @@ image_src = cv2.imread(str(tiff_img_list[0].resolve()))
 
 # %%
 
+# Refactor into funcs for: (not in order)
+# 1) reading planet image
+# 2) getting dates from title
+# 3) change band order of images
+# 4) unzip images
+# 5) image standardisation
+
+#%%
+
+def return_array_from_tiff(img_path):
+    """Get array from tiff raster.
+
+    Parameters
+    ----------
+    img_path : Path
+        Full path to img file to open.
+    """
+    with rio.open(img_path) as img:
+        img_array = img.read()
+    return(img_array)
 
 
+def change_band_order(
+    img_array,
+    correct_band_order = [3, 2, 1, 4]
+):
+    """Changes the order of the raster bands. Default is to assume
+    raster order BGR and correct to RGB.
+
+    Parameters
+    ----------
+    img_array : numpy.ndarray
+        The raster in numpy array format.
+    correct_band_order : list, optional
+        The correct order of bands to get RGB. Planet imagery by default is
+        blue, green, red, IR. So we need to parse [3, 2, 1, 4]. This is the
+        value.
+    """
+    img_array = [img_array[band-1] for band in correct_band_order]
+    return(np.array(img_array))
+# %%
+img_array = return_array_from_tiff(tiff_img_list[0])
+
+img_arr_reordered = change_band_order(img_array)
+
+# %%
+
+from sklearn.preprocessing import normalize
+
+normalised_img = np.array([
+    normalize(band_array, norm='max', axis=0) for band_array in img_arr_reordered
+    ])
+
+# %%
+show(normalised_img)
 
 
