@@ -6,6 +6,8 @@ import numpy as np
 import geopandas as gpd
 import rasterio as rio
 from sklearn.preprocessing import MinMaxScaler
+from pyproj import CRS
+from pyproj import Transformer
 
 from functions_library import setup_sub_dir, generate_file_list
 
@@ -96,6 +98,21 @@ def return_array_from_tiff(img_path):
     with rio.open(img_path) as img:
         img_array = img.read()
     return(img_array)
+
+
+def return_geo_meta_from_tiff(img_path):
+    """Get bounding box from tiff raster. Assumes consistent use of WGS84
+    #TODO: Check and convert where neccessary
+
+    Parameters
+    ----------
+    img_path : Path
+        Full path to img file to open.
+    """
+    with rio.open(img_path) as raster:
+        bounding_box = raster.bounds
+        crs = raster.crs
+    return(bounding_box, crs)
 
 
 def change_band_order(
@@ -194,3 +211,13 @@ def create_geojsons_of_extents(
         )
 #TODO: Add check for existing files and ignore if present.
 
+
+def get_reprojected_bounds(raster_file, desired_crs = 4326):
+    """Returns bounds from raster and reprojects to desired CRS"""
+    bounding_box, raster_crs = return_geo_meta_from_tiff(tiff_img_list[0])
+    xmin, ymin, xmax, ymax = bounding_box
+    transformer = Transformer.from_crs(raster_crs, desired_crs)
+    xmin, ymin = transformer.transform(xmin, ymin)
+    xmax, ymax = transformer.transform(xmax, ymax)
+    bounding_box = [[xmin, ymin], [xmax, ymax]]
+    return(bounding_box)

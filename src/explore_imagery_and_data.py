@@ -37,15 +37,16 @@ from planet_img_processing_functions import (
     change_band_order,
     clip_and_normalize_raster,
     create_geojsons_of_extents,
+    return_bounds_from_tiff,
+    get_reprojected_bounds,
 )
 
 # %%
-
 data_dir = Path.cwd().parent.joinpath("data")
 planet_imgs_path = setup_sub_dir(data_dir, "planet_images")
 priority_area_geojsons_dir = setup_sub_dir(data_dir, "priority_areas_geojson")
 
-#%%
+# %%
 priority_area_of_interest = "Baidoa"
 path_to_imgs = planet_imgs_path.joinpath(priority_area_of_interest)
 check_zipped_dirs_and_unzip(path_to_imgs)
@@ -58,13 +59,15 @@ observation_dates = [
     extract_dates_from_image_filenames(file_name.stem) for file_name in tiff_img_list
     ]
 
-img_array = return_array_from_tiff(tiff_img_list[0])
+raster = tiff_img_list[0]
+
+img_array = return_array_from_tiff(raster)
 
 img_arr_reordered = change_band_order(img_array)
 
 normalised_img = clip_and_normalize_raster(img_arr_reordered, 99)
 
-show(normalised_img)
+#show(normalised_img)
 
 # %%
 doolow = [4.160722262, 42.0770588]
@@ -114,15 +117,18 @@ for item in bounds_orig:
 
     bounds_fin.append([lat_n, lon_n])
 
-# Finding the centre latitude & longitude
-centre_lon = bounds_fin[0][1] + (bounds_fin[1][1] - bounds_fin[0][1])/2
-centre_lat = bounds_fin[0][0] + (bounds_fin[1][0] - bounds_fin[0][0])/2
-
 # %%
 # Overlay raster (RGB) called img using add_child() function (opacity and bounding box set)
 folium.raster_layers.ImageOverlay(img.transpose(1, 2, 0),
                                   bounds = bounds_fin,
                                   name="Doolow Planet raster"
+                                 ).add_to(m)
+
+# %%
+folium.raster_layers.ImageOverlay(normalised_img.transpose(1, 2, 0),
+                                  bounds = get_reprojected_bounds(raster),
+                                  name="Baidoa Planet raster",
+                                  interactive=True,
                                  ).add_to(m)
 
 # %%
@@ -165,3 +171,5 @@ folium.LayerControl().add_to(m)
 # %%
 m
 
+
+# %%
