@@ -41,10 +41,16 @@ from planet_img_processing_functions import (
     get_reprojected_bounds,
 )
 
+# %% [markdown]
+# ### Set-up filepaths
+
 # %%
 data_dir = Path.cwd().parent.joinpath("data")
 planet_imgs_path = setup_sub_dir(data_dir, "planet_images")
 priority_area_geojsons_dir = setup_sub_dir(data_dir, "priority_areas_geojson")
+
+# %% [markdown]
+# ### Preprocess Planet raster
 
 # %%
 priority_area_of_interest = "Baidoa"
@@ -59,15 +65,13 @@ observation_dates = [
     extract_dates_from_image_filenames(file_name.stem) for file_name in tiff_img_list
     ]
 
-raster = tiff_img_list[0]
+raster_filepath = tiff_img_list[0]
 
-img_array = return_array_from_tiff(raster)
+img_array = return_array_from_tiff(raster_filepath)
 
 img_arr_reordered = change_band_order(img_array)
 
 normalised_img = clip_and_normalize_raster(img_arr_reordered, 99)
-
-#show(normalised_img)
 
 # %%
 doolow = [4.160722262, 42.0770588]
@@ -75,8 +79,10 @@ doolow = [4.160722262, 42.0770588]
 # %%
 m = folium.Map(location=doolow)
 
+# %% [markdown]
+# ### Add ESRI satellite imagery as layer
+
 # %%
-# Add ESRI satellite tile as a layer into map
 tile = folium.TileLayer(
         tiles = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
         attr = 'Esri',
@@ -85,48 +91,12 @@ tile = folium.TileLayer(
         control = True
        ).add_to(m)
 
-# %%
-# code largely courtesy of https://gis.stackexchange.com/questions/393938/plotting-landsat-image-on-folium-maps
-
-# load Planet imagery data for Doolow
-# TODO: Generalise for other data files when present.
-images_dir = data_dir.joinpath("20220830_070622_Dolow_skysatcollect_pansharpened_udm2", "files")
-image_path = images_dir.joinpath("20220830_070622_ssc2_u0001_pansharpened_clip.tif")
-
-dst_crs = "EPSG:4326" # Global projection: WGS84
-
-with rio.open(image_path) as src:
-    img = src.read()
-    img = img
-    src_crs = src.crs["init"].upper()
-    min_lon, min_lat, max_lon, max_lat = src.bounds
-
-## Conversion from UTM to WGS84 CRS
-bounds_orig = [[min_lat, min_lon], [max_lat, max_lon]]
-
-bounds_fin = []
-
-for item in bounds_orig:
-    #converting to lat/lon
-    lat = item[0]
-    lon = item[1]
-
-    proj = Transformer.from_crs(int(src_crs.split(":")[1]), int(dst_crs.split(":")[1]), always_xy=True)
-
-    lon_n, lat_n = proj.transform(lon, lat)
-
-    bounds_fin.append([lat_n, lon_n])
-
-# %%
-# Overlay raster (RGB) called img using add_child() function (opacity and bounding box set)
-folium.raster_layers.ImageOverlay(img.transpose(1, 2, 0),
-                                  bounds = bounds_fin,
-                                  name="Doolow Planet raster"
-                                 ).add_to(m)
+# %% [markdown]
+# ### Add raster layer
 
 # %%
 folium.raster_layers.ImageOverlay(normalised_img.transpose(1, 2, 0),
-                                  bounds = get_reprojected_bounds(raster),
+                                  bounds = get_reprojected_bounds(raster_filepath),
                                   name="Baidoa Planet raster",
                                   interactive=True,
                                  ).add_to(m)
@@ -144,9 +114,11 @@ priority_areas = ["Doolow",
                   "Kismayo"
                   ]
 
+# %% [markdown]
+# ### Add UNFPA priority extents as layer
+
 # %%
 priority_extents = folium.FeatureGroup(name="priority_extents")
-
 
 for area in priority_areas:
     create_geojsons_of_extents(area, data_dir, priority_area_geojsons_dir)
@@ -156,17 +128,20 @@ for area in priority_areas:
     folium.GeoJson(area_of_interest, name=f"{area} UNFPA extent").add_to(priority_extents)
 
 # %%
+priority_extents.add_to(m)
+
+# %% [markdown]
+# ### Add DSC training data as layer
+
+# %%
 training_data = json.load(open(data_dir.joinpath("training_data.geojson")))
 folium.GeoJson(training_data, name=f"Doolow labelled training data").add_to(m)
 
-# %%
-priority_extents.add_to(m)
+# %% [markdown]
+# ## Display map
 
 # %%
 folium.LayerControl().add_to(m)
-
-# %% [markdown]
-# ## Display map
 
 # %%
 m
