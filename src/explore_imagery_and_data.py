@@ -15,20 +15,56 @@
 
 # %%
 import folium
-import geopandas
 import json
 from pathlib import Path
 from pyproj import Transformer
 import rasterio as rio
-
+from pathlib import Path
+from rasterio.plot import show
 
 # %%
 # import custom functions
-from functions_library import setup_sub_dir, create_geojsons_of_extents
+from functions_library import (
+    setup_sub_dir,
+    create_geojsons_of_extents,
+    list_directories_at_path
+)
+
+from planet_img_processing_functions import (
+    check_zipped_dirs_and_unzip,
+    extract_dates_from_image_filenames,
+    get_raster_list_for_given_area,
+    return_array_from_tiff,
+    change_band_order,
+    clip_and_normalize_raster
+)
 
 # %%
+
 data_dir = Path.cwd().parent.joinpath("data")
+planet_imgs_path = setup_sub_dir(data_dir, "planet_images")
 priority_area_geojsons_dir = setup_sub_dir(data_dir, "priority_areas_geojson")
+
+#%%
+priority_area_of_interest = "Baidoa"
+path_to_imgs = planet_imgs_path.joinpath(priority_area_of_interest)
+check_zipped_dirs_and_unzip(path_to_imgs)
+
+observation_path_list = list_directories_at_path(path_to_imgs)
+
+tiff_img_list = get_raster_list_for_given_area(observation_path_list)
+
+observation_dates = [
+    extract_dates_from_image_filenames(file_name.stem) for file_name in tiff_img_list
+    ]
+
+img_array = return_array_from_tiff(tiff_img_list[0])
+
+img_arr_reordered = change_band_order(img_array)
+
+normalised_img = clip_and_normalize_raster(img_arr_reordered, 99)
+
+show(normalised_img)
 
 # %%
 doolow = [4.160722262, 42.0770588]
@@ -47,7 +83,7 @@ tile = folium.TileLayer(
        ).add_to(m)
 
 # %%
-# code largely coutesy of https://gis.stackexchange.com/questions/393938/plotting-landsat-image-on-folium-maps
+# code largely courtesy of https://gis.stackexchange.com/questions/393938/plotting-landsat-image-on-folium-maps
 
 # load Planet imagery data for Doolow
 # TODO: Generalise for other data files when present.
@@ -99,7 +135,8 @@ priority_areas = ["Doolow",
                   "Dhuusamarreeb",
                   "Gaalkacyo",
                   "Hargeisa",
-                  "Kismayo"]
+                  "Kismayo"
+                  ]
 
 # %%
 for area in priority_areas:
@@ -121,3 +158,4 @@ folium.LayerControl().add_to(m)
 
 # %%
 m
+

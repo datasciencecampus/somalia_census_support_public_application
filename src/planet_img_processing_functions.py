@@ -1,11 +1,9 @@
 #%%
-from pathlib import Path
-from osgeo import gdal
+
 from datetime import datetime
 from zipfile import ZipFile
 import numpy as np
 import rasterio as rio
-from rasterio.plot import show
 from sklearn.preprocessing import MinMaxScaler
 
 from functions_library import setup_sub_dir, generate_file_list
@@ -65,11 +63,6 @@ def check_zipped_dirs_and_unzip(path_to_imgs):
         if not dir_path.is_dir():
             print("Unzipping zipped raster folder.\n")
             unzip_image_files(observation)
-
-
-def list_directories_at_path(dir_path):
-    """Return list of subdirectories at given path directory."""
-    return([item for item in dir_path.iterdir() if item.is_dir()])
 
 
 def get_raster_list_for_given_area(observation_path_list):
@@ -174,41 +167,4 @@ def clip_and_normalize_raster(img_arr, clipping_percentile_range):
         min_max_scaler.fit_transform(clip_to_soft_min_max(band_array, clipping_percentile_range)) for band_array in img_arr
         ])
     return(normalised_img)
-# %%
 
-priority_areas = ["Doolow",
-                  "Mogadishu",
-                  "Baidoa",
-                  "BeletWeyne",
-                  "Bossaso",
-                  "Burao",
-                  "Dhuusamarreeb",
-                  "Gaalkacyo",
-                  "Hargeisa",
-                  "Kismayo"
-                  ]
-
-data_dir = Path.cwd().parent.joinpath("data")
-planet_imgs_path = setup_sub_dir(data_dir, "planet_images")
-
-priority_area_of_interest = "BeletWeyne"
-path_to_imgs = planet_imgs_path.joinpath(priority_area_of_interest)
-check_zipped_dirs_and_unzip(path_to_imgs)
-
-observation_path_list = list_directories_at_path(path_to_imgs)
-
-tiff_img_list = get_raster_list_for_given_area(observation_path_list)
-
-observation_dates = [
-    extract_dates_from_image_filenames(file_name.stem) for file_name in tiff_img_list
-    ]
-
-img_array = return_array_from_tiff(tiff_img_list[0])
-
-img_arr_reordered = change_band_order(img_array)
-
-normalised_img = clip_and_normalize_raster(img_arr_reordered, 99.5)
-
-show(normalised_img)
-
-# %%
