@@ -78,15 +78,6 @@ def get_raster_list_for_given_area(observation_path_list):
     return(tiff_img_list)
 
 
-# Refactor into funcs for: (not in order)
-# 1) reading planet image
-# 2) getting dates from title
-# 3) change band order of images
-# 4) unzip images
-# 5) image standardisation
-
-#%%
-
 def return_array_from_tiff(img_path):
     """Get array from tiff raster.
 
@@ -101,8 +92,7 @@ def return_array_from_tiff(img_path):
 
 
 def return_geo_meta_from_tiff(img_path):
-    """Get bounding box from tiff raster. Assumes consistent use of WGS84
-    #TODO: Check and convert where neccessary
+    """Get bounding box and CRS from tiff raster.
 
     Parameters
     ----------

@@ -17,10 +17,6 @@
 import folium
 import json
 from pathlib import Path
-from pyproj import Transformer
-import rasterio as rio
-from pathlib import Path
-from rasterio.plot import show
 
 # %%
 # import custom functions
@@ -97,6 +93,13 @@ tile = folium.TileLayer(
 # %%
 folium.raster_layers.ImageOverlay(normalised_img.transpose(1, 2, 0),
                                   bounds = get_reprojected_bounds(raster_filepath),
+                                  name="Baidoa Planet raster",
+                                  interactive=True,
+                                 ).add_to(m)
+
+# %%
+folium.raster_layers.ImageOverlay(normalised_img.transpose(1, 2, 0),
+                                  bounds = get_reprojected_bounds(raster),
                                   name="Baidoa Planet raster",
                                   interactive=True,
                                  ).add_to(m)
