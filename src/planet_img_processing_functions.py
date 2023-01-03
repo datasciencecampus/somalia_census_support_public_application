@@ -3,6 +3,7 @@
 from datetime import datetime
 from zipfile import ZipFile
 import numpy as np
+import geopandas as gpd
 import rasterio as rio
 from sklearn.preprocessing import MinMaxScaler
 
@@ -167,4 +168,29 @@ def clip_and_normalize_raster(img_arr, clipping_percentile_range):
         min_max_scaler.fit_transform(clip_to_soft_min_max(band_array, clipping_percentile_range)) for band_array in img_arr
         ])
     return(normalised_img)
+
+
+
+def create_geojsons_of_extents(
+    area_to_process,
+    data_directory_path,
+    output_dir,
+    full_shapefiles_path = None
+):
+    # Convert shapefile geometries into geojson files and save outputs.
+    if full_shapefiles_path:
+        shapefile = full_shapefiles_path
+    elif not full_shapefiles_path:
+        shapefile = data_directory_path.joinpath(
+        "IDP Priority Area Extent Shapefiles",
+        "IDP Priority Area Extent Shapefiles",
+        "IDP Survey Shapefiles",
+        f"{area_to_process}_Extent.shp"
+        )
+    shapefile_gdf = gpd.read_file(shapefile)
+    shapefile_gdf.to_file(
+        output_dir.joinpath(f"{area_to_process}_extent.geojson"),
+        driver='GeoJSON'
+        )
+#TODO: Add check for existing files and ignore if present.
 

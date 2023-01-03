@@ -23,25 +23,6 @@ def setup_sub_dir(data_dir: Path, sub_dir_name: str) -> Path:
     return sub_dir
 
 
-def create_geojsons_of_extents(
-    area_to_process,
-    data_directory_path,
-    full_shapefiles_path = None
-):
-    # Convert shapefile geometries into geojson files.
-    if full_shapefiles_path:
-        shapefile = full_shapefiles_path
-    elif not full_shapefiles_path:
-        shapefile = data_directory_path.joinpath(
-        "IDP Priority Area Extent Shapefiles",
-        "IDP Priority Area Extent Shapefiles",
-        "IDP Survey Shapefiles",
-        f"{area_to_process}_Extent.shp"
-        )
-    shapefile_gdf = geopandas.read_file(shapefile)
-    shapefile_gdf.to_file(priority_area_geojsons_dir.joinpath(f"{area_to_process}_extent.geojson"), driver='GeoJSON')
-
-
 def generate_file_list(
     data_dir: Path, file_extension: str, keyword_list: list
 ) -> List[Path]:

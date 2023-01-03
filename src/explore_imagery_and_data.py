@@ -26,7 +26,6 @@ from rasterio.plot import show
 # import custom functions
 from functions_library import (
     setup_sub_dir,
-    create_geojsons_of_extents,
     list_directories_at_path
 )
 
@@ -36,7 +35,8 @@ from planet_img_processing_functions import (
     get_raster_list_for_given_area,
     return_array_from_tiff,
     change_band_order,
-    clip_and_normalize_raster
+    clip_and_normalize_raster,
+    create_geojsons_of_extents,
 )
 
 # %%
@@ -139,16 +139,22 @@ priority_areas = ["Doolow",
                   ]
 
 # %%
+priority_extents = folium.FeatureGroup(name="priority_extents")
+
+
 for area in priority_areas:
-    create_geojsons_of_extents(area, data_dir)
+    create_geojsons_of_extents(area, data_dir, priority_area_geojsons_dir)
     extents_path = priority_area_geojsons_dir.joinpath(f"{area}_extent.geojson")
     area_of_interest = json.load(open(extents_path))
 
-    folium.GeoJson(area_of_interest, name=f"{area} UNFPA extent").add_to(m)
+    folium.GeoJson(area_of_interest, name=f"{area} UNFPA extent").add_to(priority_extents)
 
 # %%
 training_data = json.load(open(data_dir.joinpath("training_data.geojson")))
 folium.GeoJson(training_data, name=f"Doolow labelled training data").add_to(m)
+
+# %%
+priority_extents.add_to(m)
 
 # %%
 folium.LayerControl().add_to(m)
