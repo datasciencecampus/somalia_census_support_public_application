@@ -3,11 +3,9 @@
 from datetime import datetime
 from zipfile import ZipFile
 import numpy as np
-import geopandas as gpd
 import rasterio as rio
 from sklearn.preprocessing import MinMaxScaler
-from pyproj import CRS
-from pyproj import Transformer
+
 
 from functions_library import setup_sub_dir, generate_file_list
 
@@ -91,20 +89,6 @@ def return_array_from_tiff(img_path):
     return(img_array)
 
 
-def return_geo_meta_from_tiff(img_path):
-    """Get bounding box and CRS from tiff raster.
-
-    Parameters
-    ----------
-    img_path : Path
-        Full path to img file to open.
-    """
-    with rio.open(img_path) as raster:
-        bounding_box = raster.bounds
-        crs = raster.crs
-    return(bounding_box, crs)
-
-
 def change_band_order(
     img_array,
     correct_band_order = [3, 2, 1, 4]
@@ -176,38 +160,3 @@ def clip_and_normalize_raster(img_arr, clipping_percentile_range):
         ])
     return(normalised_img)
 
-
-
-def create_geojsons_of_extents(
-    area_to_process,
-    data_directory_path,
-    output_dir,
-    full_shapefiles_path = None
-):
-    # Convert shapefile geometries into geojson files and save outputs.
-    if full_shapefiles_path:
-        shapefile = full_shapefiles_path
-    elif not full_shapefiles_path:
-        shapefile = data_directory_path.joinpath(
-        "IDP Priority Area Extent Shapefiles",
-        "IDP Priority Area Extent Shapefiles",
-        "IDP Survey Shapefiles",
-        f"{area_to_process}_Extent.shp"
-        )
-    shapefile_gdf = gpd.read_file(shapefile)
-    shapefile_gdf.to_file(
-        output_dir.joinpath(f"{area_to_process}_extent.geojson"),
-        driver='GeoJSON'
-        )
-#TODO: Add check for existing files and ignore if present.
-
-
-def get_reprojected_bounds(raster_file, desired_crs = 4326):
-    """Returns bounds from raster and reprojects to desired CRS"""
-    bounding_box, raster_crs = return_geo_meta_from_tiff(raster_file)
-    xmin, ymin, xmax, ymax = bounding_box
-    transformer = Transformer.from_crs(raster_crs, desired_crs)
-    xmin, ymin = transformer.transform(xmin, ymin)
-    xmax, ymax = transformer.transform(xmax, ymax)
-    bounding_box = [[xmin, ymin], [xmax, ymax]]
-    return(bounding_box)

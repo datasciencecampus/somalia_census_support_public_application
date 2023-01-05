@@ -32,8 +32,10 @@ from planet_img_processing_functions import (
     return_array_from_tiff,
     change_band_order,
     clip_and_normalize_raster,
-    create_geojsons_of_extents,
-    return_geo_meta_from_tiff,
+)
+
+from geospatial_util_functions import (
+    convert_shapefile_to_geojson,
     get_reprojected_bounds,
 )
 
@@ -97,12 +99,6 @@ folium.raster_layers.ImageOverlay(normalised_img.transpose(1, 2, 0),
                                   interactive=True,
                                  ).add_to(m)
 
-# %%
-folium.raster_layers.ImageOverlay(normalised_img.transpose(1, 2, 0),
-                                  bounds = get_reprojected_bounds(raster),
-                                  name="Baidoa Planet raster",
-                                  interactive=True,
-                                 ).add_to(m)
 
 # %%
 priority_areas = ["Doolow",
@@ -123,8 +119,18 @@ priority_areas = ["Doolow",
 # %%
 priority_extents = folium.FeatureGroup(name="priority_extents")
 
+shapefiles_dir = data_dir.joinpath(
+        "IDP Priority Area Extent Shapefiles",
+        "IDP Priority Area Extent Shapefiles",
+        "IDP Survey Shapefiles",
+)
+
 for area in priority_areas:
-    create_geojsons_of_extents(area, data_dir, priority_area_geojsons_dir)
+    shapefile_full_path = shapefiles_dir.joinpath(f"{area}_Extent.shp")
+    convert_shapefile_to_geojson(
+        shapefile_full_path,
+        priority_area_geojsons_dir,
+        )
     extents_path = priority_area_geojsons_dir.joinpath(f"{area}_extent.geojson")
     area_of_interest = json.load(open(extents_path))
 
