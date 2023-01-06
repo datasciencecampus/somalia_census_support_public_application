@@ -14,9 +14,11 @@
 # ---
 
 # %%
+# import standard and third party libraries 
 import folium
 import json
 from pathlib import Path
+import geopandas as gpd
 
 # %%
 # import custom functions
@@ -39,6 +41,8 @@ from geospatial_util_functions import (
     get_reprojected_bounds,
     check_crs_and_reset
 )
+
+from modelling_preprocessing import rasterize_training_data
 
 # %% [markdown]
 # ### Set-up filepaths
@@ -145,7 +149,9 @@ priority_extents.add_to(m)
 # ### Add DSC training data as layer
 
 # %%
-training_data = json.load(open(data_dir.joinpath("training_data.geojson")))
+training_data = gpd.read_file(data_dir.joinpath("training_data.geojson"))
+
+# %%
 folium.GeoJson(training_data, name=f"Doolow labelled training data").add_to(m)
 
 # %% [markdown]
@@ -157,5 +163,20 @@ folium.LayerControl().add_to(m)
 # %%
 m
 
+
+# %% [markdown]
+# ## Process training data into raster
+
+# %%
+images_dir = data_dir.joinpath("20220830_070622_Dolow_skysatcollect_pansharpened_udm2", "files")
+raster_file_path = images_dir.joinpath("20220830_070622_ssc2_u0001_pansharpened_clip.tif")
+
+building_class_list = ["House", "Tent", "Service"]
+
+segmented_training_arr = rasterize_training_data(training_data, raster_file_path, building_class_list, "test3.tif")
+
+# %%
+import matplotlib.pyplot as plt
+plt.imshow(segmented_training_arr)
 
 # %%
