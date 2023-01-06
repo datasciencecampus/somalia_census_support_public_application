@@ -44,3 +44,22 @@ def get_reprojected_bounds(raster_file, desired_crs = 4326):
     xmax, ymax = transformer.transform(xmax, ymax)
     bounding_box = [[xmin, ymin], [xmax, ymax]]
     return(bounding_box)
+
+
+def check_crs_and_reset(shapefile, desired_crs = "EPSG:4326"):
+    """Check the CRS of a geospatial file and if not desired CRS, set to CRS and overwrite.
+
+    Parameters
+    ----------
+    shapefile : path
+        File path to geospatial to work with (such as shapefile).
+    desired_crs : str, optional
+        The desired CRS in format "EPSG:<epsg_number>. The default is "EPSG:4326"
+        corresponding to the WSG84 lon & lat system.
+    """
+    gdf_for_aoi = gpd.read_file(shapefile)
+    if gdf_for_aoi.crs.to_string() != desired_crs:
+        print(f"Converting CRS for shapefile {shapefile.stem}")
+        gdf_for_aoi = gdf_for_aoi.to_crs(crs=desired_crs)
+        gdf_for_aoi.to_file(shapefile)
+

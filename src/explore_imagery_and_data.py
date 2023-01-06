@@ -37,6 +37,7 @@ from planet_img_processing_functions import (
 from geospatial_util_functions import (
     convert_shapefile_to_geojson,
     get_reprojected_bounds,
+    check_crs_and_reset
 )
 
 # %% [markdown]
@@ -127,6 +128,7 @@ shapefiles_dir = data_dir.joinpath(
 
 for area in priority_areas:
     shapefile_full_path = shapefiles_dir.joinpath(f"{area}_Extent.shp")
+    check_crs_and_reset(shapefile_full_path)
     convert_shapefile_to_geojson(
         shapefile_full_path,
         priority_area_geojsons_dir,
