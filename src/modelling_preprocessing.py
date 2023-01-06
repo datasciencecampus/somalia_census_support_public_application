@@ -9,7 +9,8 @@ def rasterize_training_data(
     training_data: gpd.GeoDataFrame,
     reference_satellite_raster: Path,
     building_class_list: list,
-    output_tif_file_path
+    output_tif_file_path,
+    binary_classify = False
 ):
     """Generate segmented raster of training data from polygons.
 
@@ -31,13 +32,24 @@ def rasterize_training_data(
         A list of the classes of building present in the training data.
     output_tif_file_path : Path
         File path to desired output segmented training tif file.
+    binary_classify : bool
+        Determines whether to rasterize on multiple classes or just a binary
+        building / non-building set-up. Default is False and distinctive building
+        classes are assigned different pixel values.
 
     """
-    # create integer pairings to building classes, based on order of classes in list
-    building_class_numerical_lookups = dict(
-        (building_class, index+1) for
-        index, building_class in enumerate(building_class_list)
-    )
+    if binary_classify:
+        # assign all polygons with value 1 regardless of building class
+        building_class_numerical_lookups = dict(
+            (building_class, 1) for
+            index, building_class in enumerate(building_class_list)
+        )
+    else:
+        # create integer pairings to building classes, based on order of classes in list
+        building_class_numerical_lookups = dict(
+            (building_class, index+1) for
+            index, building_class in enumerate(building_class_list)
+        )
     # open corresponding satellite raster
     raster_tif = rio.open(reference_satellite_raster)
     # retrieve geospatial meta data from corresponding raster
