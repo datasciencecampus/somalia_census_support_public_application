@@ -4,7 +4,9 @@
 
 Automating building detection in satellite imagery over Somalia, with a focus on Internally displaced people (IDPs).
 
-## Notebooks and Jupytext
+## Getting set-up:
+
+### Notebooks and Jupytext
 For the benefit of proper version control, any notebooks in this project are stored as `.py` files with a hookup via Jupytext. The notebooks are distinguishable from modular python scripts via the following comments at their beginning:
 ```
 # ---
@@ -13,7 +15,7 @@ For the benefit of proper version control, any notebooks in this project are sto
 #     formats: ipynb,py:percent
 ....
 ```
-In order to successfully use these as notebooks, you are required to have Jupytext https://jupytext.readthedocs.io/en/latest/install.html (which can be achieved via a pip or conda install). Then, after cloning the repository, run 
+In order to successfully use these as notebooks, you are required to have Jupytext [installed](https://jupytext.readthedocs.io/en/latest/install.html) (which can be achieved via a pip or conda install). Then, after cloning the repository, run 
 ```
 jupytext --to notebook <file_name>.py
 ```
@@ -84,9 +86,8 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  
 ```
 
-## Getting set-up:
 
-### Sentinel-2 images
+### Obtaining Sentinel-2 images
 Within the `src` folder there is a Python script for extracting Sentinel-2 imagery using Google Earth Engine. To execute this script, run 
 ```
 python sentinel_export_gee.py <insert tags here for optional arguments>
