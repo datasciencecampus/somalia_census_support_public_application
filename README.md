@@ -4,6 +4,22 @@
 
 Automating building detection in satellite imagery over Somalia, with a focus on Internally displaced people (IDPs).
 
+## Notebooks and Jupytext
+For the benefit of proper version control, any notebooks in this project are stored as `.py` files with a hookup via Jupytext. The notebooks are distinguishable from modular python scripts via the following comments at their beginning:
+```
+# ---
+# jupyter:
+#   jupytext:
+#     formats: ipynb,py:percent
+....
+```
+In order to successfully use these as notebooks, you are required to have Jupytext https://jupytext.readthedocs.io/en/latest/install.html (which can be achieved via a pip or conda install). Then, after cloning the repository, run 
+```
+jupytext --to notebook <file_name>.py
+```
+from your terminal. This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs. 
+
+
 ## Workflow
 Example, to be amended as required.
 
@@ -67,6 +83,20 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  ┗ 📜README.md
  
 ```
+
+## Getting set-up:
+
+### Sentinel-2 images
+Within the `src` folder there is a Python script for extracting Sentinel-2 imagery using Google Earth Engine. To execute this script, run 
+```
+python sentinel_export_gee.py <insert tags here for optional arguments>
+```
+For help on these optional arguments run 
+```
+python sentinel_export_gee.py -h
+``` 
+and see the detailed guidance on the [Uganda Forestry README](https://github.com/datasciencecampus/uganda_forestry/blob/master/acquire_sentinel2_imgs_readme.md#acquire-a-sentinel-2-image-using-google-earth-engine). 
+
 
 ## Things of note
 The [wiki page attached to this repo](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Somalia-UNFPA-Census-support) contains useful resources and other relevant notes.
