@@ -6,20 +6,12 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.13.8
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
 #     name: python3
 # ---
-
-# %%
-# installed
-# !pip install rasterio
-
-# %%
-#added
-import rasterio as rio
 
 # %%
 # import standard and third party libraries 
@@ -111,7 +103,7 @@ folium.raster_layers.ImageOverlay(normalised_img.transpose(1, 2, 0),
                                   bounds = get_reprojected_bounds(raster_filepath),
                                   name="Baidoa Planet raster",
                                   interactive=True,
-                                 ).add_to(m);
+                                 ).add_to(m)
 
 
 # %%
@@ -152,7 +144,7 @@ for area in priority_areas:
     folium.GeoJson(area_of_interest, name=f"{area} UNFPA extent").add_to(priority_extents)
 
 # %%
-priority_extents.add_to(m);
+priority_extents.add_to(m)
 
 # %% [markdown]
 # ### Add DSC training data as layer
