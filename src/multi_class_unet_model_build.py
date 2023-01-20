@@ -6,14 +6,25 @@ and associated YouTube video:
 https://youtu.be/jvZm8REF2KY
 
 ----
-Standard Unet
+Standard UNET
 Model not compiled here, instead will be done externally to make it
 easy to test various loss functions and optimizers.
 
 """
 from keras.models import Model
-from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, concatenate, Conv2DTranspose, BatchNormalization, Dropout, Lambda
+from keras.layers import (
+    Input,
+    Conv2D,
+    MaxPooling2D,
+    UpSampling2D,
+    concatenate,
+    Conv2DTranspose,
+    BatchNormalization,
+    Dropout,
+    Lambda
+)
 from keras import backend as K
+
 
 def jacard_coef(y_true, y_pred):
     y_true_f = K.flatten(y_true)
