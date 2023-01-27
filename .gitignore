@@ -49,3 +49,4 @@ src/R/*.csv
 .DS_Store
 
 *.ipynb
+models/*
