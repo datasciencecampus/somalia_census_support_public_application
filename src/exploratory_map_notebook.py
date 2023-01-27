@@ -19,6 +19,7 @@ import folium
 import json
 from pathlib import Path
 import geopandas as gpd
+import pandas as pd
 
 # %%
 # import custom functions
@@ -152,31 +153,72 @@ priority_extents.add_to(m)
 training_data = gpd.read_file(data_dir.joinpath("training_data.geojson"))
 
 # %%
-folium.GeoJson(training_data, name=f"Doolow labelled training data").add_to(m)
+folium.GeoJson(training_data, name=f"Doolow labelled training data").add_to(m);
 
 # %% [markdown]
-# ## Display map
+# ## Add survey IDP location dataframe
 
 # %%
-folium.LayerControl().add_to(m)
+#load in dataframe with locations
+survey_idp_locations = pd.read_csv(data_dir.joinpath("Q3_Coordinates_Only_Master_List.csv"))
+
+# %%
+#check dataframe has loaded
+survey_idp_locations.head()
+
+# %%
+#set index
+survey_idp_locations.set_index("CCCM IDP Site Code", inplace=True)
+
+# %%
+survey_idp_locations.tail()
+
+# %% [markdown]
+# ## Check for null values
+
+# %%
+survey_idp_locations.isna().sum()
+
+# %%
+#drop columns to leave IDP site, long and lat
+idp_coordinates=survey_idp_locations.drop(["Region","District", "Neighbourhood", "Neighbourhood Type", "Date IDP site Established", "Source(Q3-2022)", "Comments(Q3-2022)"], axis=1)
+
+# %%
+idp_coordinates.head()
+
+# %%
+#drop 34 missing values for lat and long
+idp_coordinates=idp_coordinates.dropna()
+
+# %%
+#check no null values
+idp_coordinates.isna().sum()
+
+# %% [markdown]
+# ## Separate IDP site, latitude and longitude
+
+# %%
+#create nested list to be used in for loop
+site_coord_list=idp_coordinates[['IDP Site','Latitude','Longitude']].values.tolist()
+
+# %%
+site_coord_list
+
+# %% [markdown]
+# ## Add layer using feature group and add child
+
+# %%
+
+feature_group=folium.FeatureGroup(name=("site of interest"))
+
+for i in site_coord_list:
+    feature_group.add_child(folium.Marker(location=[i[1],i[2]], popup=i[0], icon=folium.Icon(color="red")))
+m.add_child(feature_group)
+
+
+
+# %%
+folium.LayerControl().add_to(m);
 
 # %%
 m
-
-
-# %% [markdown]
-# ## Process training data into raster
-
-# %%
-images_dir = data_dir.joinpath("20220830_070622_Dolow_skysatcollect_pansharpened_udm2", "files")
-raster_file_path = images_dir.joinpath("20220830_070622_ssc2_u0001_pansharpened_clip.tif")
-
-building_class_list = ["House", "Tent", "Service"]
-
-segmented_training_arr = rasterize_training_data(training_data, raster_file_path, building_class_list, "test3.tif")
-
-# %%
-import matplotlib.pyplot as plt
-plt.imshow(segmented_training_arr)
-
-# %%
