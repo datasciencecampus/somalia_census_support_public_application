@@ -100,23 +100,3 @@ with open(data_dir.joinpath('training_mask_raster.npy'), 'wb') as f:
     np.save(f, segmented_training_arr)
 
 # %%
-with open(data_dir.joinpath('pred.npy'), 'rb') as f:
-    pred = np.load(f)
-
-# %%
-with open(data_dir.joinpath('normalised_sat_raster.npy'), 'rb') as f:
-    normalised_sat_raster = np.load(f)
-img_size = 256
-normalised_sat_raster = normalised_sat_raster[0:img_size, 0:img_size, :]
-normalised_sat_raster.shape
-
-# %%
-import matplotlib.pyplot as plt
-plt.figure(figsize=(12, 6))
-plt.subplot(121)
-plt.imshow(pred[0,:,:,1])
-plt.subplot(122)
-plt.imshow(normalised_sat_raster[:,:,:3])
-plt.show()
-
-# %%
