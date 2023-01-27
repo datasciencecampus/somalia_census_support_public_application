@@ -65,15 +65,41 @@ normalised_sat_raster = normalised_sat_raster[0:img_size, 0:img_size, :]
 normalised_sat_raster.shape
 
 # %% [markdown]
+# ### Load original training mask
+
+# %%
+with open(data_dir.joinpath('training_mask_raster.npy'), 'rb') as f:
+    mask = np.load(f)
+    
+img_size = pred.shape[1]
+# Crop to size of modelling tile
+mask = mask[0:img_size, 0:img_size]
+mask.shape
+
+# %% [markdown]
 # ## Compare model prediction with image
 
 # %%
 import matplotlib.pyplot as plt
-plt.figure(figsize=(12, 6))
-plt.subplot(121)
-plt.imshow(pred[0,:,:,1])
-plt.subplot(122)
+plt.figure(figsize=(13, 8))
+plt.subplot(231)
+plt.title("Image")
 plt.imshow(normalised_sat_raster[:,:,:3])
+plt.subplot(232)
+plt.title("Mask")
+plt.imshow(mask[:,:])
+plt.subplot(233)
+plt.title("Prediction of classes")
+plt.imshow(pred[0,:,:,0])
+plt.subplot(234)
+plt.title("Prediction of classes")
+plt.imshow(pred[0,:,:,1])
+plt.subplot(235)
+plt.title("Prediction of classes")
+plt.imshow(pred[0,:,:,2])
+plt.subplot(236)
+plt.title("Prediction of classes")
+plt.imshow(pred[0,:,:,3])
 plt.show()
 
 # %%
