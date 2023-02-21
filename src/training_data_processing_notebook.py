@@ -75,7 +75,9 @@ data_dir = Path.cwd().parent.joinpath("data")
 planet_imgs_path = setup_sub_dir(data_dir, "planet_images")
 training_masks_dir = setup_sub_dir(data_dir, "training_masks")
 priority_area_geojsons_dir = setup_sub_dir(data_dir, "priority_areas_geojson")
+training_data_numpy_dir = setup_sub_dir(data_dir, "training_data_numpy")
 
+# %%
 # Doolow specific training data
 # TODO: Adjust as more training data added from other areas
 doolow_training_data_dir= data_dir.joinpath("Training_Data_Doolow")
@@ -149,9 +151,9 @@ plt.show()
 
 # %%
 # TODO : Better system for saving file names for different training tiles/areas currently using dx (doolow 1/2)
-with open(data_dir.joinpath('normalised_sat_raster_d1.npy'), 'wb') as f:
+with open(training_data_numpy_dir.joinpath('normalised_sat_raster_d1.npy'), 'wb') as f:
     np.save(f, normalised_img)
 
 # %%
-with open(data_dir.joinpath('training_mask_raster_d1.npy'), 'wb') as f:
+with open(training_data_numpy_dir.joinpath('training_mask_raster_d1.npy'), 'wb') as f:
     np.save(f, segmented_training_arr)
