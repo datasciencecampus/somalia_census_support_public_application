@@ -64,7 +64,10 @@ from planet_img_processing_functions import (
     clip_and_normalize_raster,
 )
 
-from modelling_preprocessing import rasterize_training_data
+from modelling_preprocessing import (
+    rasterize_training_data,
+    reorder_array
+)
 
 # %% [markdown]
 # ### Set-up filepaths
@@ -80,7 +83,7 @@ training_data_numpy_dir = setup_sub_dir(data_dir, "training_data_numpy")
 # %%
 # Doolow specific training data
 # TODO: Adjust as more training data added from other areas
-doolow_training_data_dir= data_dir.joinpath("Training_Data_Doolow")
+doolow_training_data_dir= data_dir.joinpath("training_data_doolow")
 
 # %% [markdown]
 # ## Load DSC training data <a name="loadtraining"></a>
@@ -95,7 +98,7 @@ raster_file_path = doolow_training_data_dir.joinpath("training_data_doolow_1.tif
 # remove unused column
 training_data = training_data.drop(columns=['fid'])
 
-# check number of building type and no missing data 
+# check number of building type and no missing data
 # TODO: Can reference against QGIS outputs to ensure same value - overkill?
 training_data.Type.value_counts()
 
@@ -119,14 +122,6 @@ segmented_training_arr = rasterize_training_data(
 img_array = return_array_from_tiff(raster_file_path)
 img_arr_reordered = change_band_order(img_array)
 normalised_img = clip_and_normalize_raster(img_arr_reordered, 99)
-
-
-# %%
-def reorder_array(img_arr, height_index, width_index, bands_index):
-    # Re-order the array into height, width, bands order. 
-    arr = np.transpose(img_arr, axes=[height_index, width_index, bands_index])
-    return arr
-
 
 # %%
 # transpose array to (x, y, band) from (band, x, y)
