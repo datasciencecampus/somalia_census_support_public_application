@@ -76,3 +76,9 @@ def rasterize_training_data(
         out.write_band(1, arr_to_burn)
         # return the array representation
         return(arr_to_burn)
+
+
+def reorder_array(img_arr, height_index, width_index, bands_index):
+    # Re-order the array into height, width, bands order.
+    arr = np.transpose(img_arr, axes=[height_index, width_index, bands_index])
+    return arr
