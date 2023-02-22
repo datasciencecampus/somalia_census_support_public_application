@@ -1,0 +1,9 @@
+name: somalia-map
+dependencies:
+  - python=3.9
+  - geopandas
+  - rasterio
+  - Path
+  - matplotlib
+  - numpy
+  - scikit-learn

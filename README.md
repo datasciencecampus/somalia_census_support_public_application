@@ -15,22 +15,27 @@ For the benefit of proper version control, any notebooks in this project are sto
 #     formats: ipynb,py:percent
 ....
 ```
-In order to successfully use these as notebooks, you are required to have Jupytext [installed](https://jupytext.readthedocs.io/en/latest/install.html) (which can be achieved via a pip or conda install). Then, after cloning the repository, run 
+In order to successfully use these as notebooks, you are required to have [Jupytext](https://jupytext.readthedocs.io/en/latest/install.html) installed (which can be achieved via a pip or conda install). After cloning the repository, run 
 ```
 jupytext --to notebook <file_name>.py
 ```
 from your terminal. This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs. 
 
+Note you will want to sync your `.ipynb` files to your conda environment either via ipykernel:
 
-## Workflow
-Example, to be amended as required.
-
-```mermaid
-flowchart TD;
-    A[step 1] --> B[step 2];
-    C[additional file] --> B;
-    B --> D[other stuff]
 ```
+conda install -c anaconda ipykernel
+````
+then
+```
+python -m ipykernel install --user --name=myenv
+```
+and then selecting the relevant ipykernel on the notebook start-up.
+Or you can open jupyter notebook from your environment:
+```
+jupyter notebook
+```
+
 
 ## Project structure tree
 Successful running of the scripts assumes a certain structure in how where data and other auxiliary inputs need to be located.
@@ -67,36 +72,54 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  ┃ ┃ ┃ ┣ 📜Doolow_W_50MB_20221101.zip
  ┃ ┣ 📂priority_areas_geojson
  ┃ ┃ ┣ 📜<area>_Extent.geojson
- ┃ ┣ 📂sentinel2_images
- ┃ ┃ ┣ 📂Doolow_S2
- ┃ ┃ ┃ ┗ 📂Doolow
- ┃ ┃ ┃ ┃ ┣ 📜Doolow_Extent_sentinel2_2022-08-15_2022-09-15.tif
- ┃ ┃ ┃ ┃ ┗ 📜Doolow_Extent_sentinel2_2022-10-15_2022-11-15.tif
- ┃ ┃ ┗ 📜Doolow_S2.zip
- ┃ ┗ 📜training_data.geojson
+ ┃ ┣ 📂Training_Data_Doolow
+ ┃ ┃ ┣ 📜Doolow east and west training data.qgz
+ ┃ ┃ ┣ 📜training_data_<area_number>.shp
+ ┃ ┃ ┣ 📜training_data_<area_number>_extent.shp
+ ┃ ┃ ┣ 📜training_data_<area_number>.tif
  ┣ 📂src
  ┃ ┣ 📜explore_imagery_and_data.py
  ┃ ┣ 📜functions_library.py
  ┃ ┣ 📜geospatial_util_functions.py
  ┃ ┣ 📜modelling_preprocessing.py
  ┃ ┣ 📜planet_img_processing_functions.py
- ┃ ┗ 📜sentinel_export_gee.py
+ ┃ ┗ 📜training_data_preprocessing_notebook.py
  ┣ 📜.gitignore
  ┗ 📜README.md
  
 ```
 
+## Workflow
 
-### Obtaining Sentinel-2 images
-Within the `src` folder there is a Python script for extracting Sentinel-2 imagery using Google Earth Engine. To execute this script, run 
+_in progress_
+
+```mermaid
+flowchart TD;
+    A[Create training polygons in QGIS] --> B[Process training data];
+    C[Planet raster from training tile area] --> B;
+    B --> D[_modelling preprocess_]
 ```
-python sentinel_export_gee.py <insert tags here for optional arguments>
+
+
+## Training data
+
+The training data only needs to be processed and outputted when first derived, or if changes are made to the polygons/raster. Follow the wiki guide to create training data and export as `.shp` files.
+
+Create your geospatial conda environment:
+
 ```
-For help on these optional arguments run 
+conda create -n environment-geo.yml
 ```
-python sentinel_export_gee.py -h
+
+then activate the environment:
+
 ``` 
-and see the detailed guidance on the [Uganda Forestry README](https://github.com/datasciencecampus/uganda_forestry/blob/master/acquire_sentinel2_imgs_readme.md#acquire-a-sentinel-2-image-using-google-earth-engine). 
+conda activate somalia-geo
+```
+
+Convert the `training_data_processing_notebook.py` file into a `.ipynb` as shown above, and open the notebook in your conda environment. 
+
+Follow the steps in the notebook - making sure to change the input file names and the outputted file names (_better solution needed eventually_). This notebook will convert the training data into numpy binary outputs that can be handled in an environment without geospatial packages present. 
 
 
 ## Things of note
