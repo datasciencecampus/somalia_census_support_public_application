@@ -8,7 +8,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.14.4
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -61,6 +61,7 @@ from sklearn.utils.class_weight import compute_class_weight
 import segmentation_models as sm
 from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
+import tensorflow as tf
 
 # %% [markdown]
 # ### Custom functions
@@ -235,7 +236,7 @@ history1 = model.fit(X_train,
                      verbose=1,
                      epochs=num_epochs,
                      validation_data=(X_test, y_test),
-                     shuffle=False
+                     shuffle=False,
                      callbacks = callbacks
                     )
 
