@@ -1,0 +1,8 @@
+name: somalia-model
+dependencies:
+  - python=3.9
+  - tensorflow
+  - Path
+  - numpy
+  - segmentation_models
+  - keras
