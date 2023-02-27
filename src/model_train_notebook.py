@@ -81,6 +81,11 @@ data_dir = Path.cwd().parent.joinpath("data")
 # %%
 training_data_numpy_data_dir = data_dir.joinpath("training_data_numpy")
 
+# %%
+training_data_output_dir = data_dir.joinpath("training_data_output")
+img_dir = training_data_output_dir.joinpath("img")
+mask_dir = training_data_output_dir.joinpath("mask")
+
 # %% [markdown]
 # ## Load raster arrays <a name="loadraster"></a>
 
@@ -89,14 +94,14 @@ training_data_numpy_data_dir = data_dir.joinpath("training_data_numpy")
 # requires good naming scheme and adding in folder at earlier stage (training_data_processing)
 
 # %%
-with open(data_dir.joinpath('normalised_sat_raster.npy'), 'rb') as f:
+with open(img_dir.joinpath('normalised_sat_raster_d1.npy'), 'rb') as f:
     normalised_sat_raster = np.load(f)
 
 # %%
 normalised_sat_raster_uncropped = normalised_sat_raster
 
 # %%
-with open(data_dir.joinpath('training_mask_raster.npy'), 'rb') as f:
+with open(mask_dir.joinpath('training_mask_raster_d1.npy'), 'rb') as f:
     training_mask_raster = np.load(f)
 
 # %% [markdown]
