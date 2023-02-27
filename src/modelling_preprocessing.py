@@ -4,6 +4,7 @@ import geopandas as gpd
 import rasterio as rio
 from pathlib import Path
 from rasterio import features
+import numpy as np
 
 def rasterize_training_data(
     training_data: gpd.GeoDataFrame,
