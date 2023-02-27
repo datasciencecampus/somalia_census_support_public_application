@@ -50,6 +50,7 @@ import geopandas as gpd
 import rasterio as rio
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import ndimage
 
 # %% [markdown]
 # ### Custom functions
@@ -207,3 +208,5 @@ plt.imshow(rot90h_mask)
 plt.subplot(122)
 plt.imshow(rot90h_img)
 plt.show()
+
+# %%
