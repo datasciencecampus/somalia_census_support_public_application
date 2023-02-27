@@ -7,5 +7,5 @@ dependencies:
   - matplotlib
   - numpy
   - scikit-learn
-  - jupytext
+  - jupytext=1.14
   - notebook
