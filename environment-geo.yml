@@ -8,4 +8,4 @@ dependencies:
   - numpy
   - scikit-learn
   - jupytext=1.14
-  - notebook
+  - jupyter
