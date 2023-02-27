@@ -35,6 +35,7 @@
 # 1. ##### [Training data to raster](#trainingraster)
 # 1. ##### [Check training tile and raster](#checktrainingtile)
 # 1. ##### [Output to numpy object](#outputnumpy)
+# 1. ##### [Manipulate training tiles](#trainingmanipulation)
 #
 
 # %% [markdown]
@@ -78,7 +79,11 @@ data_dir = Path.cwd().parent.joinpath("data")
 planet_imgs_path = setup_sub_dir(data_dir, "planet_images")
 training_masks_dir = setup_sub_dir(data_dir, "training_masks")
 priority_area_geojsons_dir = setup_sub_dir(data_dir, "priority_areas_geojson")
-training_data_numpy_dir = setup_sub_dir(data_dir, "training_data_numpy")
+
+# for outputting data into two folders (images and mask) 
+training_data_output_dir = setup_sub_dir(data_dir, "training_data_output")
+img_dir = setup_sub_dir(training_data_output_dir, "img")
+mask_dir = setup_sub_dir(training_data_output_dir, "mask")
 
 # %%
 # Doolow specific training data
@@ -131,12 +136,21 @@ normalised_img = reorder_array(normalised_img, 1, 2, 0)
 # ## Check training tile and training mask <a name="checktrainingtile"></a>
 
 # %%
-#TODO: Clipping by extent in QGIS is overextending raster box - check impact
+# Current process for exporting of raster and shapefile from QGIS is not aligned N-S
+# TODO: if change QGIS raster exporting process then remove the below
+
+segment_rotate = ndimage.rotate(segmented_training_arr, 35,
+                              mode = 'constant')
+
+normalised_rotate = ndimage.rotate(normalised_img[:,:,:3], 35,
+                              mode = 'constant')
+
+# %%
 plt.figure(figsize=(12, 6))
 plt.subplot(121)
-plt.imshow(segmented_training_arr)
+plt.imshow(segment_rotate)
 plt.subplot(122)
-plt.imshow(normalised_img[:,:,:3])
+plt.imshow(normalised_rotate)
 plt.show()
 
 # %% [markdown]
@@ -145,10 +159,51 @@ plt.show()
 # >Need to load in data to modelling environment that has no geospatial packages present so converting to numpy binary objects.
 
 # %%
-# TODO : Better system for saving file names for different training tiles/areas currently using dx (doolow 1/2)
-with open(training_data_numpy_dir.joinpath('normalised_sat_raster_d1.npy'), 'wb') as f:
-    np.save(f, normalised_img)
+with open(img_dir.joinpath('d1_normalised_sat_raster.npy'), 'wb') as f:
+    np.save(f, normalised_rotate)
 
 # %%
-with open(training_data_numpy_dir.joinpath('training_mask_raster_d1.npy'), 'wb') as f:
-    np.save(f, segmented_training_arr)
+with open(mask_dir.joinpath('d1_training_mask_raster.npy'), 'wb') as f:
+    np.save(f, segment_rotate)
+
+# %% [markdown]
+# ## Manipulate training tiles <a name="trainingmanipulation"></a>
+#
+# > This is only here to visualise the different rotations/mirrors for training tile. As I don't think I have them all covered I am keeping this here for now but can be deleted later
+
+# %%
+with open(img_dir.joinpath('d1_normalised_sat_raster.npy'), 'rb') as f:
+    normalised_sat_raster = np.load(f)
+
+# %%
+with open(mask_dir.joinpath('d1_training_mask_raster.npy'), 'rb') as f:
+    training_mask_raster = np.load(f)
+
+# %%
+#flip vertically
+vflip_img = np.flipud(normalised_sat_raster)
+vflip_mask = np.flipud(training_mask_raster)
+
+#flip horizontal
+hflip_img = np.fliplr(normalised_sat_raster)
+hflip_mask = np.fliplr(training_mask_raster)
+
+#flip horizontal & vertical
+hvflip_img = np.flipud(hflip_img)
+hvflip_mask = np.flipud(hflip_mask)
+
+#rotate 90 degrees
+rot90_img = np.rot90(normalised_sat_raster)
+rot90_mask = np.rot90(training_mask_raster)
+
+#rotate 90 degrees & horizontal
+rot90h_img = np.flipud(rot90_img)
+rot90h_mask = np.flipud(rot90_mask)
+
+# %%
+plt.figure(figsize=(12, 6))
+plt.subplot(121)
+plt.imshow(rot90h_mask)
+plt.subplot(122)
+plt.imshow(rot90h_img)
+plt.show()
