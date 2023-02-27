@@ -123,7 +123,7 @@ The training data only needs to be processed and outputted when first derived, o
 Create your geospatial conda environment:
 
 ```
-conda create -n environment-geo.yml
+conda env create -f environment-geo.yml
 ```
 
 then activate the environment:
