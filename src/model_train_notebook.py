@@ -79,9 +79,6 @@ from functions_library import (
 data_dir = Path.cwd().parent.joinpath("data")
 
 # %%
-training_data_numpy_data_dir = data_dir.joinpath("training_data_numpy")
-
-# %%
 training_data_output_dir = data_dir.joinpath("training_data_output")
 img_dir = training_data_output_dir.joinpath("img")
 mask_dir = training_data_output_dir.joinpath("mask")
@@ -121,6 +118,36 @@ normalised_sat_raster.shape
 # %%
 training_mask_raster = training_mask_raster[0:img_size, 0:img_size]
 training_mask_raster.shape
+
+# %% [markdown]
+# ## Manipulating training data
+#
+# Mirroring and rotating training images to 'beef' up the amount of training data inputted to model
+
+# %%
+# TODO: This currently only takes one training tile 
+# need to think about how to do this for all training tiles
+# probably a loop once naming structure established?
+
+#flip vertically
+vflip_img = np.flipud(normalised_sat_raster)
+vflip_mask = np.flipud(training_mask_raster)
+
+#flip horizontal
+hflip_img = np.fliplr(normalised_sat_raster)
+hflip_mask = np.fliplr(training_mask_raster)
+
+#flip horizontal & vertical
+hvflip_img = np.flipud(hflip_img)
+hvflip_mask = np.flipud(hflip_mask)
+
+#rotate 90 degrees
+rot90_img = np.rot90(normalised_sat_raster)
+rot90_mask = np.rot90(training_mask_raster)
+
+#rotate 90 degrees & horizontal
+rot90h_img = np.flipud(rot90_img)
+rot90h_mask = np.flipud(rot90_mask)
 
 # %% [markdown]
 # ## Training parameters <a name="trainingparameters"></a>
@@ -178,10 +205,6 @@ n_classes = len(np.unique(training_mask_raster))
 n_classes
 
 # %%
-# TODO: add procedure to transform each training tile and its mask.
-# that is, created rotated and mirrored versions and stack them
-
-# %%
 # one-hot encode building classes in training mask
 labels_categorical = to_categorical(training_mask_raster, num_classes=n_classes)
 
@@ -198,6 +221,7 @@ labels_categorical.shape
 # %%
 # duplicates the single training image to simulate the stack of training data
 # that will exist at some stage
+# TODO: Add manipulated training data
 #TODO: Remove this later!
 stacked_training_rasters = np.repeat(normalised_sat_raster[...,None], 5, axis = 3)
 
