@@ -6,20 +6,54 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
+#     display_name: Python 3
 #     language: python
 #     name: python3
 # ---
 
 # %% [markdown]
-# ### Load packages
+# # Model training
 #
+# This notebook trains the model using the created and inputted training data
+#
+# <div class="warning" style='background-color:#e9d8fd; color: #69337a; border-left: solid #805ad5 4px; border-radius: 2px; padding:0.7em;'>
+# <span>
+#     <p style='margin-left:0.5em;'>
 # *NOTE:* this notebook require Keras a installation, which itself requires tensorflow installed first. Installing tensorflow requires additional steps beyond a simple pip install. See https://www.tensorflow.org/install
+#     </p></span>
+#   </div>
+#
+#
+# ## Contents
+#
+#
+# 1. ##### [Set-up](#setup)
+# 1. ##### [Load raster arrays](#loadraster)
+# 1. ##### [Crop raster and masks](#cropraster)
+# 1. ##### [Training parameters](#trainingparameters)
+# 1. ##### [Format data for model input](#formatdata)
+# 1. ##### [Outputs for visual checking](#output)
+#
+#
+
+# %% [markdown]
+# ## Set-up <a name="setup"></a>
+
+# %% [markdown]
+# ### Segmentation models work-around
 
 # %%
-# import standard and third party libraries
+# since this model was built segmentation models has been updated to tf.keras -
+# recommended work around is to set env var as below (note this is needed by Nicci but not Tim)
+
+# %env SM_FRAMEWORK = tf.keras
+
+# %% [markdown]
+# ### Import libraries
+
+# %%
 from pathlib import Path
 import numpy as np
 from multi_class_unet_model_build import multi_unet_model, jacard_coef
@@ -27,6 +61,9 @@ from sklearn.utils.class_weight import compute_class_weight
 import segmentation_models as sm
 from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
+
+# %% [markdown]
+# ### Custom functions
 
 # %%
 # import custom functions
@@ -40,8 +77,15 @@ from functions_library import (
 # %%
 data_dir = Path.cwd().parent.joinpath("data")
 
+# %%
+training_data_numpy_data_dir = data_dir.joinpath("training_data_numpy")
+
 # %% [markdown]
-# ### Load raster arrays
+# ## Load raster arrays <a name="loadraster"></a>
+
+# %%
+# TODO: Set-up folder and file paths to open all the training data and then rasters - 
+# requires good naming scheme and adding in folder at earlier stage (training_data_processing)
 
 # %%
 with open(data_dir.joinpath('normalised_sat_raster.npy'), 'rb') as f:
@@ -55,7 +99,7 @@ with open(data_dir.joinpath('training_mask_raster.npy'), 'rb') as f:
     training_mask_raster = np.load(f)
 
 # %% [markdown]
-# # Crop raster and masks
+# ## Crop raster and masks <a name="cropraster"></a>
 #
 # UNET models downsample by a factor of repeatedly. So ideally want to work with tiles that are divible by two many times.
 #
@@ -73,7 +117,7 @@ training_mask_raster = training_mask_raster[0:img_size, 0:img_size]
 training_mask_raster.shape
 
 # %% [markdown]
-# ## Process training parameters
+# ## Training parameters <a name="trainingparameters"></a>
 
 # %%
 img_height, img_width, num_channels = normalised_sat_raster.shape
@@ -121,7 +165,7 @@ total_loss = dice_loss + (1 * focal_loss)
 metrics = ['accuracy', jacard_coef]
 
 # %% [markdown]
-# ## Get data into format the model expects
+# ## Get data into format the model expects <a name="formatdata"></a>
 
 # %%
 n_classes = len(np.unique(training_mask_raster))
@@ -178,7 +222,12 @@ model.compile(optimizer='adam', loss=total_loss, metrics=metrics)
 
 model.summary()
 
-num_epochs = 20
+callbacks = [
+    tf.keras.callbacks.EarlyStopping(patience = 2, monitor = 'val_loss'),
+    tf.keras.callbacks.TensorBoard(log_dir = 'logs')
+]
+
+num_epochs = 25
 
 history1 = model.fit(X_train,
                      y_train,
@@ -187,6 +236,7 @@ history1 = model.fit(X_train,
                      epochs=num_epochs,
                      validation_data=(X_test, y_test),
                      shuffle=False
+                     callbacks = callbacks
                     )
 
 # %%
@@ -199,11 +249,9 @@ y_pred = model.predict(X_test)
 predicted_img=np.argmax(y_pred, axis=3)[0,:,:]
 
 # %% [markdown]
-# ## Temp: output  predicted image for checking visually
+# ## Output visual checking <a name="output"></a>
 # matplotlib wont work in this environment currently, so need to switch environment and use the `model_results_exploration_notebook`.
 
 # %%
 with open(data_dir.joinpath('pred.npy'), 'wb') as f:
     np.save(f, y_pred)
-
-# %%
