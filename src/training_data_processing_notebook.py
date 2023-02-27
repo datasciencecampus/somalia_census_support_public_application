@@ -146,6 +146,26 @@ segment_rotate = ndimage.rotate(segmented_training_arr, 35,
 normalised_rotate = ndimage.rotate(normalised_img[:,:,:3], 35,
                               mode = 'constant')
 
+
+# %%
+# crop extra space due to rotation
+def crop_post_rotation(img_to_crop, desired_img_size=600, starting_coord=280):
+    if len(img_to_crop.shape) > 2:
+        cropped_img = img_to_crop[
+            starting_coord:starting_coord+desired_img_size,
+            starting_coord:starting_coord+desired_img_size,
+            :
+        ]
+    else:
+        cropped_img = img_to_crop[
+            starting_coord:starting_coord+desired_img_size,
+            starting_coord:starting_coord+desired_img_size
+        ]        
+    return(cropped_img)
+
+segment_rotate = crop_post_rotation(segment_rotate)
+normalised_rotate = crop_post_rotation(normalised_rotate)
+
 # %%
 plt.figure(figsize=(12, 6))
 plt.subplot(121)
