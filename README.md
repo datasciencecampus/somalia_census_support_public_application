@@ -48,9 +48,9 @@ This repository makes use of [pre-commit hooks](https://towardsdatascience.com/g
       ```
       pre-commit install
       ```
-Once pre-commits are activated, whenever you commit to this repository these will be excuted. The pre-commits include checking for security keys, large files, unresolved merge conflict headers and will also automatically format the code to an agreed standard. The use of active pre-commits are highly encouraged when working with this codebase.
+Once pre-commits are activated, whenever you commit to this repository a series of checks will be excuted. The pre-commits include checking for security keys, large files, unresolved merge conflict headers and will also automatically format the code to an agreed standard. The use of active pre-commits are highly encouraged when working with this codebase.
 
-*NOTE:* Pre-commit hooks will often automatically make modifications to the files you are attempting to commit. When this happens, the commit will not have been confirmed. You will be required to perform a `git add` and then redo the `git commit` in order to proceed.
+*NOTE:* When a pre-commit hook fails, it will often automatically make modifications to the files you are attempting to commit. However, the pre-commit set-up will not be able to correct all errors itself, so take note of any flagged issues and resolve these manually. In either event, the commit will not yet have been confirmed. You will be required to perform a `git add` and then redo the `git commit` in order to proceed (such as pushing to origin).
 
 ## Project structure tree
 Successful running of the scripts assumes a certain structure in how where data and other auxiliary inputs need to be located.
