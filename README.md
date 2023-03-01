@@ -15,11 +15,11 @@ For the benefit of proper version control, any notebooks in this project are sto
 #     formats: ipynb,py:percent
 ....
 ```
-In order to successfully use these as notebooks, you are required to have [Jupytext](https://jupytext.readthedocs.io/en/latest/install.html) installed (which can be achieved via a pip or conda install). After cloning the repository, run 
+In order to successfully use these as notebooks, you are required to have [Jupytext](https://jupytext.readthedocs.io/en/latest/install.html) installed (which can be achieved via a pip or conda install). After cloning the repository, run
 ```
 jupytext --to notebook <file_name>.py
 ```
-from your terminal. This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs. 
+from your terminal. This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs.
 
 Note you will want to sync your `.ipynb` files to your conda environment either via ipykernel:
 
@@ -36,6 +36,21 @@ Or you can open jupyter notebook from your environment:
 jupyter notebook
 ```
 
+### Pre-commit actions
+This repository makes use of [pre-commit hooks](https://towardsdatascience.com/getting-started-with-python-pre-commit-hooks-28be2b2d09d5). If approaching this project as a developer, you can install and enable `pre-commit` by running the following in your shell:
+   1. Install `pre-commit`: within your active virtual/conda environment, run
+
+      ```
+      pip install pre-commit
+      ```
+   2. Enable `pre-commit`: Ensure you at the base repository level and run
+
+      ```
+      pre-commit install
+      ```
+Once pre-commits are activated, whenever you commit to this repository a series of checks will be excuted. The pre-commits include checking for security keys, large files, unresolved merge conflict headers and will also automatically format the code to an agreed standard. The use of active pre-commits are highly encouraged when working with this codebase.
+
+*NOTE:* When a pre-commit hook fails, it will often automatically make modifications to the files you are attempting to commit. However, the pre-commit set-up will not be able to correct all errors itself, so take note of any flagged issues and resolve these manually. In either event, the commit will not yet have been confirmed. You will be required to perform a `git add` and then redo the `git commit` in order to proceed (such as pushing to origin).
 
 ## Project structure tree
 Successful running of the scripts assumes a certain structure in how where data and other auxiliary inputs need to be located.
@@ -86,7 +101,7 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  ┃ ┗ 📜training_data_preprocessing_notebook.py
  ┣ 📜.gitignore
  ┗ 📜README.md
- 
+
 ```
 
 ## Workflow
@@ -113,13 +128,13 @@ conda create -n environment-geo.yml
 
 then activate the environment:
 
-``` 
+```
 conda activate somalia-geo
 ```
 
-Convert the `training_data_processing_notebook.py` file into a `.ipynb` as shown above, and open the notebook in your conda environment. 
+Convert the `training_data_processing_notebook.py` file into a `.ipynb` as shown above, and open the notebook in your conda environment.
 
-Follow the steps in the notebook - making sure to change the input file names and the outputted file names (_better solution needed eventually_). This notebook will convert the training data into numpy binary outputs that can be handled in an environment without geospatial packages present. 
+Follow the steps in the notebook - making sure to change the input file names and the outputted file names (_better solution needed eventually_). This notebook will convert the training data into numpy binary outputs that can be handled in an environment without geospatial packages present.
 
 
 ## Things of note
