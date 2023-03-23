@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.8
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -14,25 +14,73 @@
 # ---
 
 # %% [markdown]
-# ### Load packages
+# # Model training
 #
+# This is step 2 in developing a training model. This notebook trains the model using the created and inputted training data
+#
+# <br>
+#
+# <div class="warning" style='background-color:#e9d8fd; color: #69337a; border-left: solid #805ad5 4px; border-radius: 2px; padding:0.7em;'>
+# <span>
+#     <p style='margin-left:0.5em;'>
 # *NOTE:* this notebook require Keras a installation, which itself requires tensorflow installed first. Installing tensorflow requires additional steps beyond a simple pip install. See https://www.tensorflow.org/install
+#     </p></span>
+#   </div>
+#
+# <br>
+#
+# <div class="warning" style='background-color:#e9d8fd; color: #69337a; border-left: solid #805ad5 4px; border-radius: 2px; padding:0.7em;'>
+# <span>
+#     <p style='margin-left:0.5em;'>
+# *NOTE:* if working on a mac then you will need to install tenfsorflow-metal, as tensorflow is not supported on apple systems. See https://developer.apple.com/metal/tensorflow-plugin/
+#     </p></span>
+#   </div>
+#
+# ## Contents
+#
+#
+# 1. ##### [Set-up](#setup)
+# 1. ##### [Load raster arrays](#loadraster)
+# 1. ##### [Crop raster and masks](#cropraster)
+# 1. ##### [Training parameters](#trainingparameters)
+# 1. ##### [Format data for model input](#formatdata)
+# 1. ##### [Outputs for visual checking](#output)
+#
+#
+
+# %% [markdown]
+# ## Set-up <a name="setup"></a>
+
+# %% [markdown]
+# ### Segmentation models work-around
 
 # %%
-# import standard and third party libraries
+# since this model was built segmentation models has been updated to tf.keras -
+# recommended work around is to set env var as below (note this is needed by Nicci but not Tim)
+
+# %env SM_FRAMEWORK = tf.keras
+
+# %% [markdown]
+# ### Import libraries
+
+# %%
 from pathlib import Path
+
 import numpy as np
-from multi_class_unet_model_build import multi_unet_model, jacard_coef
-from sklearn.utils.class_weight import compute_class_weight
 import segmentation_models as sm
+import tensorflow as tf
 from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
+from sklearn.utils.class_weight import compute_class_weight
 
 # %%
 # import custom functions
-from functions_library import (
-    setup_sub_dir
-)
+from functions_library import setup_sub_dir
+from multi_class_unet_model_build import jacard_coef, multi_unet_model
+
+# %% [markdown]
+# ### Custom functions
+
 
 # %% [markdown]
 # ### Set-up filepaths
@@ -40,22 +88,31 @@ from functions_library import (
 # %%
 data_dir = Path.cwd().parent.joinpath("data")
 
+# %%
+training_data_output_dir = data_dir.joinpath("training_data_output")
+img_dir = training_data_output_dir.joinpath("img")
+mask_dir = training_data_output_dir.joinpath("mask")
+
 # %% [markdown]
-# ### Load raster arrays
+# ## Load raster arrays <a name="loadraster"></a>
 
 # %%
-with open(data_dir.joinpath('normalised_sat_raster.npy'), 'rb') as f:
+# TODO: Set-up folder and file paths to open all the training data and then rasters -
+# requires good naming scheme and adding in folder at earlier stage (training_data_processing)
+
+# %%
+with open(img_dir.joinpath("d1_normalised_sat_raster.npy"), "rb") as f:
     normalised_sat_raster = np.load(f)
 
 # %%
 normalised_sat_raster_uncropped = normalised_sat_raster
 
 # %%
-with open(data_dir.joinpath('training_mask_raster.npy'), 'rb') as f:
+with open(mask_dir.joinpath("d1_training_mask_raster.npy"), "rb") as f:
     training_mask_raster = np.load(f)
 
 # %% [markdown]
-# # Crop raster and masks
+# ## Crop raster and masks <a name="cropraster"></a>
 #
 # UNET models downsample by a factor of repeatedly. So ideally want to work with tiles that are divible by two many times.
 #
@@ -73,7 +130,35 @@ training_mask_raster = training_mask_raster[0:img_size, 0:img_size]
 training_mask_raster.shape
 
 # %% [markdown]
-# ## Process training parameters
+# ## Manipulating training data
+#
+# Mirroring and rotating training images to 'beef' up the amount of training data inputted to model
+
+# %%
+# TODO: make into a function
+
+# flip vertically
+vflip_img = np.flipud(normalised_sat_raster)
+vflip_mask = np.flipud(training_mask_raster)
+
+# flip horizontal
+hflip_img = np.fliplr(normalised_sat_raster)
+hflip_mask = np.fliplr(training_mask_raster)
+
+# flip horizontal & vertical
+hvflip_img = np.flipud(hflip_img)
+hvflip_mask = np.flipud(hflip_mask)
+
+# rotate 90 degrees
+rot90_img = np.rot90(normalised_sat_raster)
+rot90_mask = np.rot90(training_mask_raster)
+
+# rotate 90 degrees & horizontal
+rot90h_img = np.flipud(rot90_img)
+rot90h_mask = np.flipud(rot90_mask)
+
+# %% [markdown]
+# ## Training parameters <a name="trainingparameters"></a>
 
 # %%
 img_height, img_width, num_channels = normalised_sat_raster.shape
@@ -84,19 +169,19 @@ img_height, img_width, num_channels = normalised_sat_raster.shape
 # The reltaive weights between building classes is one parameter that can be tweaked and optimised.
 
 # %%
-#Parameters for model
+# Parameters for model
 # Segmentation models losses can be combined together by '+' and scaled by integer or float factor
 # set class weights for dice_loss
 
 # Calaculates the relative frequency of each class within the lablled mask.
 weights = compute_class_weight(
-    'balanced',
+    "balanced",
     classes=np.unique(training_mask_raster),
-    y=np.ravel(training_mask_raster, order='C')
+    y=np.ravel(training_mask_raster, order="C"),
 )
 
 # Alternatively, could try balanced weights between classes:
-#weights = [0.25, 0.25, 0.25, 0.25]
+# weights = [0.25, 0.25, 0.25, 0.25]
 
 print(weights)
 
@@ -109,27 +194,23 @@ print(weights)
 # create custom loss function for model training
 # this is inspired from the tutorial used to create this initial code
 # TODO: Explore alternatives
-dice_loss = sm.losses.DiceLoss(class_weights=weights) # corrects for class imbalance
+dice_loss = sm.losses.DiceLoss(class_weights=weights)  # corrects for class imbalance
 focal_loss = sm.losses.CategoricalFocalLoss()
-total_loss = dice_loss + (1 * focal_loss) 
+total_loss = dice_loss + (1 * focal_loss)
 
 # %% [markdown]
 # ### Metrics
 # The metrics used to measure the model performance can be optimised also.
 
 # %%
-metrics = ['accuracy', jacard_coef]
+metrics = ["accuracy", jacard_coef]
 
 # %% [markdown]
-# ## Get data into format the model expects
+# ## Get data into format the model expects <a name="formatdata"></a>
 
 # %%
 n_classes = len(np.unique(training_mask_raster))
 n_classes
-
-# %%
-# TODO: add procedure to transform each training tile and its mask.
-# that is, created rotated and mirrored versions and stack them
 
 # %%
 # one-hot encode building classes in training mask
@@ -137,73 +218,89 @@ labels_categorical = to_categorical(training_mask_raster, num_classes=n_classes)
 
 # duplicates the single training mask to simulate the stack of training data
 # that will exist at some stage
-#TODO: Remove this later!
-labels_categorical = np.repeat(labels_categorical[...,None], 5, axis = 3)
+# TODO: Remove this later!
+labels_categorical = np.repeat(labels_categorical[..., None], 5, axis=3)
 
-# reorder the array to image list index, height, width, categorical class 
-labels_categorical = np.transpose(labels_categorical, axes = [3, 0, 1, 2])
+# reorder the array to image list index, height, width, categorical class
+labels_categorical = np.transpose(labels_categorical, axes=[3, 0, 1, 2])
 
 labels_categorical.shape
 
 # %%
 # duplicates the single training image to simulate the stack of training data
 # that will exist at some stage
-#TODO: Remove this later!
-stacked_training_rasters = np.repeat(normalised_sat_raster[...,None], 5, axis = 3)
+# TODO: Add manipulated training data
+# TODO: Remove this later!
+stacked_training_rasters = np.repeat(normalised_sat_raster[..., None], 5, axis=3)
 
-# reorder the array to image list index, height, width, categorical class 
-stacked_training_rasters = np.transpose(stacked_training_rasters, axes = [3, 0, 1, 2])
+# reorder the array to image list index, height, width, categorical class
+stacked_training_rasters = np.transpose(stacked_training_rasters, axes=[3, 0, 1, 2])
 
 stacked_training_rasters.shape
 
 # %%
 X_train, X_test, y_train, y_test = train_test_split(
-    stacked_training_rasters,
-    labels_categorical,
-    test_size = 0.20,
-    random_state = 42
-    )
+    stacked_training_rasters, labels_categorical, test_size=0.20, random_state=42
+)
 
 
 # %%
 def get_model():
-    return multi_unet_model(n_classes=n_classes, IMG_HEIGHT=img_height, IMG_WIDTH=img_width, IMG_CHANNELS=num_channels)
+    return multi_unet_model(
+        n_classes=n_classes,
+        IMG_HEIGHT=img_height,
+        IMG_WIDTH=img_width,
+        IMG_CHANNELS=num_channels,
+    )
 
 
 # %%
 model = get_model()
 
-model.compile(optimizer='adam', loss=total_loss, metrics=metrics)
-#model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=metrics)
+model.compile(optimizer="adam", loss=total_loss, metrics=metrics)
+# model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=metrics)
 
 model.summary()
 
-num_epochs = 20
+# how many times the model runs through training data
+# use with callbacks to find the optimum number
+num_epochs = 25
 
-history1 = model.fit(X_train,
-                     y_train,
-                     batch_size = 16,
-                     verbose=1,
-                     epochs=num_epochs,
-                     validation_data=(X_test, y_test),
-                     shuffle=False
-                    )
+# early stopping monitors the model to prevent under/over fitting by running too few/many epochs
+# monitors validation loss, with a set patience (i.e. if the model thinks it has found the right number
+# of epochs then it runs a few more to check it was correct)
+callbacks = [
+    tf.keras.callbacks.EarlyStopping(patience=4, monitor="val_loss"),
+    tf.keras.callbacks.TensorBoard(log_dir="logs"),
+]
+
+
+history1 = model.fit(
+    X_train,
+    y_train,
+    batch_size=16,
+    verbose=1,
+    epochs=num_epochs,
+    validation_data=(X_test, y_test),
+    shuffle=False,
+    callbacks=callbacks,
+)
 
 # %%
 models_dir = setup_sub_dir(Path.cwd().parent, "models")
-model.save(models_dir.joinpath(f'trail_run_{num_epochs}epochs_{img_size}pix_doolow.hdf5'))
+model.save(
+    models_dir.joinpath(f"trail_run_{num_epochs}epochs_{img_size}pix_doolow.hdf5")
+)
 
 # %%
 y_pred = model.predict(X_test)
 
-predicted_img=np.argmax(y_pred, axis=3)[0,:,:]
+predicted_img = np.argmax(y_pred, axis=3)[0, :, :]
 
 # %% [markdown]
-# ## Temp: output  predicted image for checking visually
+# ## Output visual checking <a name="output"></a>
 # matplotlib wont work in this environment currently, so need to switch environment and use the `model_results_exploration_notebook`.
 
 # %%
-with open(data_dir.joinpath('pred.npy'), 'wb') as f:
+with open(data_dir.joinpath("pred.npy"), "wb") as f:
     np.save(f, y_pred)
-
-# %%
