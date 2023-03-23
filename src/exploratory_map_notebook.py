@@ -13,37 +13,31 @@
 #     name: python3
 # ---
 
-# %%
-# import standard and third party libraries 
-import folium
 import json
 from pathlib import Path
+
+# %%
+# import standard and third party libraries
+import folium
 import geopandas as gpd
 import pandas as pd
 
 # %%
 # import custom functions
-from functions_library import (
-    setup_sub_dir,
-    list_directories_at_path
+from functions_library import list_directories_at_path, setup_sub_dir
+from geospatial_util_functions import (
+    check_crs_and_reset,
+    convert_shapefile_to_geojson,
+    get_reprojected_bounds,
 )
-
 from planet_img_processing_functions import (
+    change_band_order,
     check_zipped_dirs_and_unzip,
+    clip_and_normalize_raster,
     extract_dates_from_image_filenames,
     get_raster_list_for_given_area,
     return_array_from_tiff,
-    change_band_order,
-    clip_and_normalize_raster,
 )
-
-from geospatial_util_functions import (
-    convert_shapefile_to_geojson,
-    get_reprojected_bounds,
-    check_crs_and_reset
-)
-
-from modelling_preprocessing import rasterize_training_data
 
 # %% [markdown]
 # ### Set-up filepaths
@@ -67,7 +61,7 @@ tiff_img_list = get_raster_list_for_given_area(observation_path_list)
 
 observation_dates = [
     extract_dates_from_image_filenames(file_name.stem) for file_name in tiff_img_list
-    ]
+]
 
 raster_filepath = tiff_img_list[0]
 
@@ -88,36 +82,38 @@ m = folium.Map(location=doolow)
 
 # %%
 tile = folium.TileLayer(
-        tiles = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        attr = 'Esri',
-        name = 'Esri Satellite',
-        overlay = False,
-        control = True
-       ).add_to(m)
+    tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attr="Esri",
+    name="Esri Satellite",
+    overlay=False,
+    control=True,
+).add_to(m)
 
 # %% [markdown]
 # ### Add raster layer
 
 # %%
-folium.raster_layers.ImageOverlay(normalised_img.transpose(1, 2, 0),
-                                  bounds = get_reprojected_bounds(raster_filepath),
-                                  name="Baidoa Planet raster",
-                                  interactive=True,
-                                 ).add_to(m)
+folium.raster_layers.ImageOverlay(
+    normalised_img.transpose(1, 2, 0),
+    bounds=get_reprojected_bounds(raster_filepath),
+    name="Baidoa Planet raster",
+    interactive=True,
+).add_to(m)
 
 
 # %%
-priority_areas = ["Doolow",
-                  "Mogadishu",
-                  "Baidoa",
-                  "BeletWeyne",
-                  "Bossaso",
-                  "Burao",
-                  "Dhuusamarreeb",
-                  "Gaalkacyo",
-                  "Hargeisa",
-                  "Kismayo"
-                  ]
+priority_areas = [
+    "Doolow",
+    "Mogadishu",
+    "Baidoa",
+    "BeletWeyne",
+    "Bossaso",
+    "Burao",
+    "Dhuusamarreeb",
+    "Gaalkacyo",
+    "Hargeisa",
+    "Kismayo",
+]
 
 # %% [markdown]
 # ### Add UNFPA priority extents as layer
@@ -126,9 +122,9 @@ priority_areas = ["Doolow",
 priority_extents = folium.FeatureGroup(name="priority_extents")
 
 shapefiles_dir = data_dir.joinpath(
-        "IDP Priority Area Extent Shapefiles",
-        "IDP Priority Area Extent Shapefiles",
-        "IDP Survey Shapefiles",
+    "IDP Priority Area Extent Shapefiles",
+    "IDP Priority Area Extent Shapefiles",
+    "IDP Survey Shapefiles",
 )
 
 for area in priority_areas:
@@ -137,11 +133,13 @@ for area in priority_areas:
     convert_shapefile_to_geojson(
         shapefile_full_path,
         priority_area_geojsons_dir,
-        )
+    )
     extents_path = priority_area_geojsons_dir.joinpath(f"{area}_extent.geojson")
     area_of_interest = json.load(open(extents_path))
 
-    folium.GeoJson(area_of_interest, name=f"{area} UNFPA extent").add_to(priority_extents)
+    folium.GeoJson(area_of_interest, name=f"{area} UNFPA extent").add_to(
+        priority_extents
+    )
 
 # %%
 priority_extents.add_to(m)
@@ -153,21 +151,23 @@ priority_extents.add_to(m)
 training_data = gpd.read_file(data_dir.joinpath("training_data.geojson"))
 
 # %%
-folium.GeoJson(training_data, name=f"Doolow labelled training data").add_to(m);
+folium.GeoJson(training_data, name=f"Doolow labelled training data").add_to(m)
 
 # %% [markdown]
 # ## Add survey IDP location dataframe
 
 # %%
-#load in dataframe with locations
-survey_idp_locations = pd.read_csv(data_dir.joinpath("Q3_Coordinates_Only_Master_List.csv"))
+# load in dataframe with locations
+survey_idp_locations = pd.read_csv(
+    data_dir.joinpath("Q3_Coordinates_Only_Master_List.csv")
+)
 
 # %%
-#check dataframe has loaded
+# check dataframe has loaded
 survey_idp_locations.head()
 
 # %%
-#set index
+# set index
 survey_idp_locations.set_index("CCCM IDP Site Code", inplace=True)
 
 # %%
@@ -180,26 +180,37 @@ survey_idp_locations.tail()
 survey_idp_locations.isna().sum()
 
 # %%
-#drop columns to leave IDP site, long and lat
-idp_coordinates=survey_idp_locations.drop(["Region","District", "Neighbourhood", "Neighbourhood Type", "Date IDP site Established", "Source(Q3-2022)", "Comments(Q3-2022)"], axis=1)
+# drop columns to leave IDP site, long and lat
+idp_coordinates = survey_idp_locations.drop(
+    [
+        "Region",
+        "District",
+        "Neighbourhood",
+        "Neighbourhood Type",
+        "Date IDP site Established",
+        "Source(Q3-2022)",
+        "Comments(Q3-2022)",
+    ],
+    axis=1,
+)
 
 # %%
 idp_coordinates.head()
 
 # %%
-#drop 34 missing values for lat and long
-idp_coordinates=idp_coordinates.dropna()
+# drop 34 missing values for lat and long
+idp_coordinates = idp_coordinates.dropna()
 
 # %%
-#check no null values
+# check no null values
 idp_coordinates.isna().sum()
 
 # %% [markdown]
 # ## Separate IDP site, latitude and longitude
 
 # %%
-#create nested list to be used in for loop
-site_coord_list=idp_coordinates[['IDP Site','Latitude','Longitude']].values.tolist()
+# create nested list to be used in for loop
+site_coord_list = idp_coordinates[["IDP Site", "Latitude", "Longitude"]].values.tolist()
 
 # %%
 site_coord_list
@@ -209,16 +220,17 @@ site_coord_list
 
 # %%
 
-feature_group=folium.FeatureGroup(name=("site of interest"))
+feature_group = folium.FeatureGroup(name=("site of interest"))
 
 for i in site_coord_list:
-    feature_group.add_child(folium.Marker(location=[i[1],i[2]], popup=i[0], icon=folium.Icon(color="red")))
+    feature_group.add_child(
+        folium.Marker(location=[i[1], i[2]], popup=i[0], icon=folium.Icon(color="red"))
+    )
 m.add_child(feature_group)
 
 
-
 # %%
-folium.LayerControl().add_to(m);
+folium.LayerControl().add_to(m)
 
 # %%
 m

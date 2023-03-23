@@ -1,17 +1,19 @@
 """ Script of functions related to model training preprocessing. """
 
-import geopandas as gpd
-import rasterio as rio
 from pathlib import Path
-from rasterio import features
+
+import geopandas as gpd
 import numpy as np
+import rasterio as rio
+from rasterio import features
+
 
 def rasterize_training_data(
     training_data: gpd.GeoDataFrame,
     reference_satellite_raster: Path,
     building_class_list: list,
     output_tif_file_path,
-    binary_classify = False
+    binary_classify=False,
 ):
     """Generate segmented raster of training data from polygons.
 
@@ -42,14 +44,14 @@ def rasterize_training_data(
     if binary_classify:
         # assign all polygons with value 1 regardless of building class
         building_class_numerical_lookups = dict(
-            (building_class, 1) for
-            index, building_class in enumerate(building_class_list)
+            (building_class, 1)
+            for index, building_class in enumerate(building_class_list)
         )
     else:
         # create integer pairings to building classes, based on order of classes in list
         building_class_numerical_lookups = dict(
-            (building_class, index+1) for
-            index, building_class in enumerate(building_class_list)
+            (building_class, index + 1)
+            for index, building_class in enumerate(building_class_list)
         )
     # open corresponding satellite raster
     raster_tif = rio.open(reference_satellite_raster)
@@ -57,26 +59,33 @@ def rasterize_training_data(
     raster_meta = raster_tif.meta.copy()
 
     # create column of integer representations of the categorical building classes
-    training_data["building_class_int"] = training_data["Type"].replace(building_class_numerical_lookups)
+    training_data["building_class_int"] = training_data["Type"].replace(
+        building_class_numerical_lookups
+    )
     # ensure the CRS for the training data and satellite raster match
     training_data = training_data.to_crs(raster_tif.crs)
 
-    with rio.open(output_tif_file_path, 'w+', **raster_meta) as out:
+    with rio.open(output_tif_file_path, "w+", **raster_meta) as out:
         out_arr = out.read(1)
         # create a generator of geom, value pairs to use in rasterizing
-        shapes = ((geom,value) for geom, value in zip(training_data.geometry, training_data.building_class_int))
+        shapes = (
+            (geom, value)
+            for geom, value in zip(
+                training_data.geometry, training_data.building_class_int
+            )
+        )
         # rasterize by the training labelled polygons
         arr_to_burn = features.rasterize(
-            shapes = shapes,
-            out = out_arr,
-            transform = out.transform,
-            all_touched = True,
-            fill=0
+            shapes=shapes,
+            out=out_arr,
+            transform=out.transform,
+            all_touched=True,
+            fill=0,
         )
         # save raster as tif
         out.write_band(1, arr_to_burn)
         # return the array representation
-        return(arr_to_burn)
+        return arr_to_burn
 
 
 def reorder_array(img_arr, height_index, width_index, bands_index):

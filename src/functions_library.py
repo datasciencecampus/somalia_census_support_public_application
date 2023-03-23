@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import List
 
+
 def setup_sub_dir(data_dir: Path, sub_dir_name: str) -> Path:
     """
     Check if subdirectory of given name exists and create if not, return path.
@@ -68,4 +69,4 @@ def generate_file_list(
 
 def list_directories_at_path(dir_path):
     """Return list of subdirectories at given path directory."""
-    return([item for item in dir_path.iterdir() if item.is_dir()])
+    return [item for item in dir_path.iterdir() if item.is_dir()]
