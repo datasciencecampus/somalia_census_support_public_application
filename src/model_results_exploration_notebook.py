@@ -21,45 +21,34 @@
 # %%
 # import standard and third party libraries
 from pathlib import Path
-import geopandas as gpd
-import rasterio as rio
+
 import numpy as np
-
-# %%
-# import custom functions
-from functions_library import (
-    setup_sub_dir
-)
-
-from planet_img_processing_functions import (
-    return_array_from_tiff,
-    change_band_order,
-    clip_and_normalize_raster,
-)
-
-from modelling_preprocessing import rasterize_training_data
 
 # %% [markdown]
 # ### Set-up filepaths
 
 # %%
 data_dir = Path.cwd().parent.joinpath("data")
+training_data_output_dir = data_dir.joinpath("training_data_output")
+img_dir = training_data_output_dir.joinpath("img")
+mask_dir = training_data_output_dir.joinpath("mask")
 
 # %% [markdown]
-# ### Load prediceted data
+# ### Load predicted data
 
 # %%
-with open(data_dir.joinpath('pred.npy'), 'rb') as f:
-    pred = np.load(f)
+with open(data_dir.joinpath("pred.npy"), "rb") as f:
+    predicted_img = np.load(f)
+    
+img_size = predicted_img.shape[1]
 
 # %% [markdown]
 # ### Load original training image
 
 # %%
-with open(data_dir.joinpath('normalised_sat_raster.npy'), 'rb') as f:
+with open(img_dir.joinpath("d1_normalised_sat_raster.npy"), "rb") as f:
     normalised_sat_raster = np.load(f)
-    
-img_size = pred.shape[1]
+
 # Crop to size of modelling tile
 normalised_sat_raster = normalised_sat_raster[0:img_size, 0:img_size, :]
 normalised_sat_raster.shape
@@ -68,12 +57,11 @@ normalised_sat_raster.shape
 # ### Load original training mask
 
 # %%
-with open(data_dir.joinpath('training_mask_raster.npy'), 'rb') as f:
-    mask = np.load(f)
-    
-img_size = pred.shape[1]
+with open(mask_dir.joinpath("d1_training_mask_raster.npy"), "rb") as f:
+    training_mask_raster = np.load(f)
+
 # Crop to size of modelling tile
-mask = mask[0:img_size, 0:img_size]
+mask = training_mask_raster[0:img_size, 0:img_size]
 mask.shape
 
 # %% [markdown]
@@ -81,25 +69,26 @@ mask.shape
 
 # %%
 import matplotlib.pyplot as plt
+
 plt.figure(figsize=(13, 8))
 plt.subplot(231)
 plt.title("Image")
-plt.imshow(normalised_sat_raster[:,:,:3])
+plt.imshow(normalised_sat_raster[:, :, :3])
 plt.subplot(232)
 plt.title("Mask")
-plt.imshow(mask[:,:])
+plt.imshow(mask[:, :])
 plt.subplot(233)
 plt.title("Prediction of classes")
-plt.imshow(pred[0,:,:,0])
+plt.imshow(predicted_img[0, :, :, 0])
 plt.subplot(234)
 plt.title("Prediction of classes")
-plt.imshow(pred[0,:,:,1])
+plt.imshow(predicted_img[0, :, :, 1])
 plt.subplot(235)
 plt.title("Prediction of classes")
-plt.imshow(pred[0,:,:,2])
+plt.imshow(predicted_img[0, :, :, 2])
 plt.subplot(236)
 plt.title("Prediction of classes")
-plt.imshow(pred[0,:,:,3])
+plt.imshow(predicted_img[0, :, :, 3])
 plt.show()
 
 # %%
