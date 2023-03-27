@@ -65,39 +65,13 @@ The below tree demonstrates where each file/folder needs to be for successful ex
 ```
 📦somalia_unfpa_census_support
  ┣ 📂data
- ┃ ┣ 📂IDP Priority Area Extent Shapefiles
- ┃ ┃ ┗ 📂IDP Priority Area Extent Shapefiles
- ┃ ┃ ┃ ┗ 📂IDP Survey Shapefiles
- ┃ ┃ ┃ ┃ ┣ 📜<areas>_Extent.cpg
- ┃ ┃ ┃ ┃ ┣ 📜<areas>_Extent.dbf
- ┃ ┃ ┃ ┃ ┣ 📜<areas>_Extent.prj
- ┃ ┃ ┃ ┃ ┣ 📜<areas>_Extent.shp
- ┃ ┃ ┃ ┃ ┣ 📜<areas>_Extent.shx
- ┃ ┣ 📂planet_images
- ┃ ┃ ┣ 📂Baidoa
- ┃ ┃ ┃ ┣ 📂Baidoa_NE_61MB_20220324
- ┃ ┃ ┃ ┣ 📂Baidoa_N_43MB_20221125
- ┃ ┃ ┃ ┣ 📂Baidoa_SW_107MB_20221125
- ┃ ┃ ┃ ┣ 📂Baidoa_S_66MB_20220324
- ┃ ┃ ┃ ┣ 📜Baidoa_NE_61MB_20220324.zip
- ┃ ┃ ┃ ┣ 📜Baidoa_N_43MB_20221125.zip
- ┃ ┃ ┃ ┣ 📜Baidoa_SW_107MB_20221125.zip
- ┃ ┃ ┃ ┗ 📜Baidoa_S_66MB_20220324.zip
- ┃ ┃ ┣ 📂Beletweyne
- ┃ ┃ ┃ ┣ 📂Beletweyne_45MB_20220818
- ┃ ┃ ┃ ┗ 📜Beletweyne_45MB_20220818.zip
- ┃ ┃ ┗ 📂Doolow
- ┃ ┃ ┃ ┣ 📂Dolow_E_95MB_20220830
- ┃ ┃ ┃ ┣ 📂Doolow_W_50MB_20221101
- ┃ ┃ ┃ ┣ 📜Dolow_E_95MB_20220830.zip
- ┃ ┃ ┃ ┣ 📜Doolow_W_50MB_20221101.zip
- ┃ ┣ 📂priority_areas_geojson
- ┃ ┃ ┣ 📜<area>_Extent.geojson
- ┃ ┣ 📂Training_Data_Doolow
- ┃ ┃ ┣ 📜Doolow east and west training data.qgz
- ┃ ┃ ┣ 📜training_data_<area_number>.shp
- ┃ ┃ ┣ 📜training_data_<area_number>_extent.shp
- ┃ ┃ ┣ 📜training_data_<area_number>.tif
+ ┃ ┣ 📂training_data
+ ┃ ┃ ┗ 📂img
+ ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.tif
+  ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.npy
+ ┃ ┃ ┗ 📂mask
+  ┃ ┃ ┃ ┣ 📜training_mask_<area>_<initial>.shp
+   ┃ ┃ ┃ ┣ 📜training_mask_<area>_<initial>.npy
  ┣ 📂src
  ┃ ┣ 📜explore_imagery_and_data.py
  ┃ ┣ 📜functions_library.py
