@@ -16,13 +16,16 @@
 # %% [markdown]
 # # Training data processing
 #
-# This notebook will prepare training data for input into the U-Net model. Ouputs are saved as numpy binary objects to be later handled in the modelling environment without geospatial packages.
+# This is step 1 in the development of a training model. If all the training data is already processed (i.e. been through this process and then exported and saved as numpy binary objects) then you do not need to repeat this step.
 #
+# Ouputs are saved as numpy binary objects to be later handled in the modelling environment without geospatial packages.
+#
+# <br>
 #
 # <div class="warning" style='background-color:#e9d8fd; color: #69337a; border-left: solid #805ad5 4px; border-radius: 2px; padding:0.7em;'>
 # <span>
 #     <p style='margin-left:0.5em;'>
-#         Currently only have 2 training tiles both from Doolow
+#         Currently only have 1 training tile from Doolow
 #     </p></span>
 #   </div>
 #
@@ -35,6 +38,7 @@
 # 1. ##### [Training data to raster](#trainingraster)
 # 1. ##### [Check training tile and raster](#checktrainingtile)
 # 1. ##### [Output to numpy object](#outputnumpy)
+# 1. ##### [Manipulate training tiles](#trainingmanipulation)
 #
 
 # %% [markdown]
@@ -45,61 +49,61 @@
 
 # %%
 from pathlib import Path
+
 import geopandas as gpd
-import rasterio as rio
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
+# %%
+from functions_library import setup_sub_dir
+from modelling_preprocessing import rasterize_training_data, reorder_array
+from planet_img_processing_functions import (
+    change_band_order,
+    clip_and_normalize_raster,
+    return_array_from_tiff,
+)
 
 # %% [markdown]
 # ### Custom functions
 
-# %%
-from functions_library import (
-    setup_sub_dir
-)
-
-from planet_img_processing_functions import (
-    return_array_from_tiff,
-    change_band_order,
-    clip_and_normalize_raster,
-)
-
-from modelling_preprocessing import (
-    rasterize_training_data,
-    reorder_array
-)
 
 # %% [markdown]
 # ### Set-up filepaths
 
 # %%
-# TODO: Add to functions library?
+# set relevant filepaths
 data_dir = Path.cwd().parent.joinpath("data")
 planet_imgs_path = setup_sub_dir(data_dir, "planet_images")
 training_masks_dir = setup_sub_dir(data_dir, "training_masks")
 priority_area_geojsons_dir = setup_sub_dir(data_dir, "priority_areas_geojson")
-training_data_numpy_dir = setup_sub_dir(data_dir, "training_data_numpy")
+
+# for outputting data into two folders (images and mask)
+training_data_output_dir = setup_sub_dir(data_dir, "training_data_output")
+img_dir = setup_sub_dir(training_data_output_dir, "img")
+mask_dir = setup_sub_dir(training_data_output_dir, "mask")
 
 # %%
 # Doolow specific training data
-# TODO: Adjust as more training data added from other areas
-doolow_training_data_dir= data_dir.joinpath("training_data_doolow")
+# TODO: Adjust as more training data added from other areas?
+doolow_training_data_dir = data_dir.joinpath("training_data_doolow")
 
 # %% [markdown]
 # ## Load DSC training data <a name="loadtraining"></a>
 
 # %%
 # load training polygons and raster
-# TODO: Better system for loading in files - or will this not matter?
-training_data = gpd.read_file(doolow_training_data_dir.joinpath("training_data_doolow_1.shp"))
+# TODO: Better system for loading in files when they exist
+training_data = gpd.read_file(
+    doolow_training_data_dir.joinpath("training_data_doolow_1.shp")
+)
 raster_file_path = doolow_training_data_dir.joinpath("training_data_doolow_1.tif")
 
 # %%
 # remove unused column
-training_data = training_data.drop(columns=['fid'])
+training_data = training_data.drop(columns=["fid"])
 
 # check number of building type and no missing data
-# TODO: Can reference against QGIS outputs to ensure same value - overkill?
+# if NA values then go back to QGIS to fix
 training_data.Type.value_counts()
 
 # %% [markdown]
@@ -112,7 +116,7 @@ segmented_training_arr = rasterize_training_data(
     training_data,
     raster_file_path,
     building_class_list,
-    training_masks_dir.joinpath(f"{raster_file_path.stem}_mask.tif")
+    training_masks_dir.joinpath(f"{raster_file_path.stem}_mask.tif"),
 )
 
 # %% [markdown]
@@ -131,12 +135,11 @@ normalised_img = reorder_array(normalised_img, 1, 2, 0)
 # ## Check training tile and training mask <a name="checktrainingtile"></a>
 
 # %%
-#TODO: Clipping by extent in QGIS is overextending raster box - check impact
 plt.figure(figsize=(12, 6))
 plt.subplot(121)
-plt.imshow(segmented_training_arr)
+plt.imshow(normalised_img[:, :, :3])
 plt.subplot(122)
-plt.imshow(normalised_img[:,:,:3])
+plt.imshow(segmented_training_arr)
 plt.show()
 
 # %% [markdown]
@@ -145,10 +148,9 @@ plt.show()
 # >Need to load in data to modelling environment that has no geospatial packages present so converting to numpy binary objects.
 
 # %%
-# TODO : Better system for saving file names for different training tiles/areas currently using dx (doolow 1/2)
-with open(training_data_numpy_dir.joinpath('normalised_sat_raster_d1.npy'), 'wb') as f:
-    np.save(f, normalised_img)
+with open(img_dir.joinpath("d1_normalised_sat_raster.npy"), "wb") as f:
+    np.save(f, normalised_img[:, :, :3])
 
 # %%
-with open(training_data_numpy_dir.joinpath('training_mask_raster_d1.npy'), 'wb') as f:
+with open(mask_dir.joinpath("d1_training_mask_raster.npy"), "wb") as f:
     np.save(f, segmented_training_arr)
