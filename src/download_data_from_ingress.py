@@ -32,6 +32,7 @@ out = [print(blob.name) for blob in blobs]
 # +
 # Set location to copy blobs into local files
 path_to_data_folder = Path("../data/training_data_doolow/")
+path_to_data_folder.mkdir(parents=True, exist_ok=True)
 
 # Examine each blob
 for blob in blobs:
