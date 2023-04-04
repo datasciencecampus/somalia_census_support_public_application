@@ -27,7 +27,7 @@ bucket = client.bucket('ons-net-zero-data-prod-net-zero-somalia-des-ingress')
 blobs = list(bucket.list_blobs(prefix='ons-des-prod-net-zero-somalia-ingress/'))
 
 # Print all blobs available
-[print(blob.name) for blob in blobs]
+out = [print(blob.name) for blob in blobs]
 
 # +
 # Set location to copy blobs into local files
