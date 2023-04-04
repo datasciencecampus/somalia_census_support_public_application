@@ -47,4 +47,5 @@ for blob in blobs:
     print(f'Blob ({blob.name}) copied to local environment at {local_file_path}')
 # -
 
-read_csv(output_file_name)
+# Check files are present
+list(path_to_data_folder.iterdir())
