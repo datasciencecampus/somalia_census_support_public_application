@@ -1,6 +1,4 @@
-name: somalia-geo
-dependencies:
-  - python=3.9
+  - python=3.10
   - geopandas
   - rasterio
   - Path
@@ -9,3 +7,6 @@ dependencies:
   - scikit-learn
   - jupytext=1.14
   - jupyter
+  - tensorflow
+  - segmentation_models
+  - keras
