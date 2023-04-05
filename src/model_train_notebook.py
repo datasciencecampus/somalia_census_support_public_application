@@ -6,66 +6,56 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.14.5
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
+#     display_name: venv-somalia-gcp
 #     language: python
-#     name: python3
+#     name: venv-somalia-gcp
 # ---
 
 # %% [markdown]
-# # Model training
+# # Feasibility study - U-Net training model
 #
-# This is step 2 in developing a training model. This notebook trains the model using the created and inputted training data
+# This notebook is looking at the feasibility of applying the U-Net architecture to identify formal and in-formal building structures in IDP camps in areas of interest in Somalia.
 #
-# <br>
-#
-# <div class="warning" style='background-color:#e9d8fd; color: #69337a; border-left: solid #805ad5 4px; border-radius: 2px; padding:0.7em;'>
-# <span>
-#     <p style='margin-left:0.5em;'>
-# *NOTE:* this notebook require Keras a installation, which itself requires tensorflow installed first. Installing tensorflow requires additional steps beyond a simple pip install. See https://www.tensorflow.org/install
-#     </p></span>
-#   </div>
-#
-# <br>
-#
-# <div class="warning" style='background-color:#e9d8fd; color: #69337a; border-left: solid #805ad5 4px; border-radius: 2px; padding:0.7em;'>
-# <span>
-#     <p style='margin-left:0.5em;'>
-# *NOTE:* if working on a mac then you will need to install tenfsorflow-metal, as tensorflow is not supported on apple systems. See https://developer.apple.com/metal/tensorflow-plugin/
-#     </p></span>
-#   </div>
+# While the overall aim is to apply the model across Somalia, this feasibility study focuses on 5 areas of interest. These areas of interest were the subject of a recent SNBS survey, and so, provide a unique opportunity to add some element of ground-truthed data to the model.
 #
 # ## Contents
 #
 #
 # 1. ##### [Set-up](#setup)
-# 1. ##### [Load raster arrays](#loadraster)
-# 1. ##### [Crop raster and masks](#cropraster)
+# 1. ##### [Load training data](#loadraster)
+# 1. ##### [Data Augmentation](#dataaug)
 # 1. ##### [Training parameters](#trainingparameters)
 # 1. ##### [Format data for model input](#formatdata)
 # 1. ##### [Outputs for visual checking](#output)
-#
-#
+
+# %% [markdown]
+# > **Note**
+# > Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
 
 # %% [markdown]
 # ## Set-up <a name="setup"></a>
 
 # %% [markdown]
-# ### Segmentation models work-around
+# ### segmentation_models work-around
 
 # %%
-# since this model was built segmentation models has been updated to tf.keras -
-# recommended work around is to set env var as below (note this is needed by Nicci but not Tim)
+# since this model was built segmentation models has been updated to use tf.keras -
+# recommended work around is to set env var as below
 
 # %env SM_FRAMEWORK = tf.keras
 
 # %% [markdown]
 # ### Import libraries
 
-# %%
+import os
+import random
 from pathlib import Path
 
+# %%
+import geopandas as gpd
+import matplotlib.pyplot as plt
 import numpy as np
 import segmentation_models as sm
 import tensorflow as tf
@@ -74,12 +64,17 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 
 # %%
-# import custom functions
 from functions_library import setup_sub_dir
+from modelling_preprocessing import rasterize_training_data, reorder_array
 from multi_class_unet_model_build import jacard_coef, multi_unet_model
+from planet_img_processing_functions import (
+    change_band_order,
+    clip_and_normalize_raster,
+    return_array_from_tiff,
+)
 
 # %% [markdown]
-# ### Custom functions
+# ### Import custom functions
 
 
 # %% [markdown]
@@ -88,74 +83,182 @@ from multi_class_unet_model_build import jacard_coef, multi_unet_model
 # %%
 data_dir = Path.cwd().parent.joinpath("data")
 
-# %%
-training_data_output_dir = data_dir.joinpath("training_data_output")
-img_dir = training_data_output_dir.joinpath("img")
-mask_dir = training_data_output_dir.joinpath("mask")
+training_data_dir = data_dir.joinpath("training_data")
+img_dir = training_data_dir.joinpath("img")
+mask_dir = training_data_dir.joinpath("mask")
 
 # %% [markdown]
-# ## Load raster arrays <a name="loadraster"></a>
-
-# %%
-# TODO: Set-up folder and file paths to open all the training data and then rasters -
-# requires good naming scheme and adding in folder at earlier stage (training_data_processing)
-
-# %%
-with open(img_dir.joinpath("d1_normalised_sat_raster.npy"), "rb") as f:
-    normalised_sat_raster = np.load(f)
-
-# %%
-normalised_sat_raster_uncropped = normalised_sat_raster
-
-# %%
-with open(mask_dir.joinpath("d1_training_mask_raster.npy"), "rb") as f:
-    training_mask_raster = np.load(f)
+# ## Load training data <a name="loadraster"></a>
 
 # %% [markdown]
-# ## Crop raster and masks <a name="cropraster"></a>
-#
-# UNET models downsample by a factor of repeatedly. So ideally want to work with tiles that are divible by two many times.
-#
-# Our training data is created in 600x600 pixel areas, so currently cropping rasters to tiles of sizes 576x576, since 576=9x(2^6).
+# ### Image rasters
 
 # %%
-img_size = 576
+raster_dataset = []
+for path, subdirs, files in os.walk(training_data_dir):
+
+    dirname = path.split(os.path.sep)[-1]
+    if dirname == "img":
+        images = os.listdir(path)
+
+        for i, image_name in enumerate(images):
+            if image_name.endswith(".tif"):
+
+                img_array = return_array_from_tiff(img_dir.joinpath(image_name))
+                img_arr_reordered = change_band_order(img_array)
+                normalised_img = clip_and_normalize_raster(img_arr_reordered, 99)
+                normalised_img = reorder_array(normalised_img, 1, 2, 0)
+
+                raster_dataset.append(normalised_img)
 
 # %%
-normalised_sat_raster = normalised_sat_raster[0:img_size, 0:img_size, :]
+raster_dataset = np.array(raster_dataset)
+
+# %% [markdown]
+# ### Mask layers
+
+# %%
+mask_dataset = []
+
+building_class_list = ["House", "Tent", "Service"]
+
+for path, subdirs, files in os.walk(training_data_dir):
+
+    dirname = path.split(os.path.sep)[-1]
+    if dirname == "mask":
+        masks = os.listdir(path)
+
+        for i, mask_name in enumerate(masks):
+            if mask_name.endswith(".shp"):
+
+                mask_filename = Path(mask_name).stem
+                training_data = gpd.read_file(mask_dir.joinpath(mask_name))
+                training_data = training_data.drop(columns=["fid"])
+
+                segmented_training_arr = rasterize_training_data(
+                    training_data,
+                    img_dir.joinpath(image_name),
+                    building_class_list,
+                    mask_dir.joinpath(f"{mask_filename}.tif"),
+                )
+
+                mask_dataset.append(segmented_training_arr)
+
+
+# %%
+mask_dataset = np.array(mask_dataset)
+
+# %%
+# show random images for checking
+
+image_number = random.randint(0, len(raster_dataset))
+
+plt.figure(figsize=(12, 6))
+plt.subplot(121)
+plt.imshow(raster_dataset[image_number])
+plt.subplot(122)
+plt.imshow(mask_dataset[image_number])
+plt.show()
+
+# %% [markdown]
+# ### Old workflow for single images that can't yet be deleted!
+
+# %%
+# opening single files - old version but works so keeping until multi file version working
+
+
+training_data = gpd.read_file(mask_dir.joinpath("training_data_doolow_1.shp"))
+raster_file_path = img_dir.joinpath("training_data_doolow_1.tif")
+
+
+# remove unused column
+training_data = training_data.drop(columns=["fid"])
+
+building_class_list = ["House", "Tent", "Service"]
+
+segmented_training_arr = rasterize_training_data(
+    training_data,
+    raster_file_path,
+    building_class_list,
+    mask_dir.joinpath(f"{raster_file_path.stem}_mask.tif"),
+)
+
+img_array = return_array_from_tiff(raster_file_path)
+img_arr_reordered = change_band_order(img_array)
+normalised_img = clip_and_normalize_raster(img_arr_reordered, 99)
+
+# transpose array to (x, y, band) from (band, x, y)
+normalised_img = reorder_array(normalised_img, 1, 2, 0)
+
+plt.figure(figsize=(12, 6))
+plt.subplot(121)
+plt.imshow(normalised_img[:, :, :3])
+plt.subplot(122)
+plt.imshow(segmented_training_arr)
+plt.show()
+
+
+# with open(img_dir.joinpath("d1_normalised_sat_raster.npy"), "rb") as f:
+# normalised_sat_raster = np.load(f)
+
+# normalised_sat_raster_uncropped = normalised_sat_raster
+
+# with open(mask_dir.joinpath("d1_training_mask_raster.npy"), "rb") as f:
+# training_mask_raster = np.load(f)
+
+# %%
+img_size = 574
+
+normalised_sat_raster = normalised_img[0:img_size, 0:img_size, :]
 normalised_sat_raster.shape
 
 # %%
-training_mask_raster = training_mask_raster[0:img_size, 0:img_size]
+training_mask_raster = segmented_training_arr[0:img_size, 0:img_size]
 training_mask_raster.shape
 
 # %% [markdown]
-# ## Manipulating training data
+# ## Data Augmentation <a name="dataaug"></a>
 #
-# Mirroring and rotating training images to 'beef' up the amount of training data inputted to model
+
+# %% [markdown]
+# ### Image scaling
+#
+#
+# U-Net architecture uses max pooling to downsample images across 4 levels, so we need to work with tiles that are divisable by 4 x 2.
+#
+# Training data tiles created in QGIS as ~200 x 200 (which equates to ~400 x 400 as resolution is 0.5m/px). Intention is for tiles to be cropped to 192 (or should it be 384?)
 
 # %%
-# TODO: make into a function
+# img_size = 384
+
+# %% [markdown]
+# ### Image manipulation
+
+# %%
+# Not tested!
+
+# def augment(input_image, input_mask):
+# if tf.random.uniform(()) > 0.5:
+# input_image = tf.image.flip_left_right(input_image)
+# input_mask = tf.image.flip_left_right(input_mask)
+# return input_image, input_mask
+
+# not finished
+# def augment(input_image, input_mask):
 
 # flip vertically
-vflip_img = np.flipud(normalised_sat_raster)
-vflip_mask = np.flipud(training_mask_raster)
+# input_image = np.flipud(normalised_sat_raster)
+# input_mask = np.flipud(training_mask_raster)
 
 # flip horizontal
-hflip_img = np.fliplr(normalised_sat_raster)
-hflip_mask = np.fliplr(training_mask_raster)
-
-# flip horizontal & vertical
-hvflip_img = np.flipud(hflip_img)
-hvflip_mask = np.flipud(hflip_mask)
+# input_image = np.fliplr(normalised_sat_raster)
+# input_mask = np.fliplr(training_mask_raster)
 
 # rotate 90 degrees
-rot90_img = np.rot90(normalised_sat_raster)
-rot90_mask = np.rot90(training_mask_raster)
+# input_image = np.rot90(normalised_sat_raster)
+# input_mask = np.rot90(training_mask_raster)
 
-# rotate 90 degrees & horizontal
-rot90h_img = np.flipud(rot90_img)
-rot90h_mask = np.flipud(rot90_mask)
+# return input_image, input_mask
 
 # %% [markdown]
 # ## Training parameters <a name="trainingparameters"></a>
@@ -264,7 +367,7 @@ model.summary()
 
 # how many times the model runs through training data
 # use with callbacks to find the optimum number
-num_epochs = 25
+num_epochs = 50
 
 # early stopping monitors the model to prevent under/over fitting by running too few/many epochs
 # monitors validation loss, with a set patience (i.e. if the model thinks it has found the right number
@@ -287,6 +390,10 @@ history1 = model.fit(
 )
 
 # %%
+# %load_ext tensorboard
+# %tensorboard --logdir logs/
+
+# %%
 models_dir = setup_sub_dir(Path.cwd().parent, "models")
 model.save(
     models_dir.joinpath(f"trail_run_{num_epochs}epochs_{img_size}pix_doolow.hdf5")
@@ -299,8 +406,49 @@ predicted_img = np.argmax(y_pred, axis=3)[0, :, :]
 
 # %% [markdown]
 # ## Output visual checking <a name="output"></a>
-# matplotlib wont work in this environment currently, so need to switch environment and use the `model_results_exploration_notebook`.
 
 # %%
-with open(data_dir.joinpath("pred.npy"), "wb") as f:
-    np.save(f, y_pred)
+with open(data_dir.joinpath("pred.npy"), "rb") as f:
+    predicted_img = np.load(f)
+
+img_size = predicted_img.shape[1]
+
+# %%
+with open(mask_dir.joinpath("d1_training_mask_raster.npy"), "rb") as f:
+    training_mask_raster = np.load(f)
+
+# Crop to size of modelling tile
+mask = training_mask_raster[0:img_size, 0:img_size]
+mask.shape
+
+# %%
+with open(img_dir.joinpath("d1_normalised_sat_raster.npy"), "rb") as f:
+    normalised_sat_raster = np.load(f)
+
+# Crop to size of modelling tile
+normalised_sat_raster = normalised_sat_raster[0:img_size, 0:img_size, :]
+normalised_sat_raster.shape
+
+# %%
+plt.figure(figsize=(13, 8))
+plt.subplot(231)
+plt.title("Image")
+plt.imshow(normalised_sat_raster[:, :, :3])
+plt.subplot(232)
+plt.title("Mask")
+plt.imshow(mask[:, :])
+plt.subplot(233)
+plt.title("Prediction of classes")
+plt.imshow(predicted_img[0, :, :, 0])
+plt.subplot(234)
+plt.title("Prediction of classes")
+plt.imshow(predicted_img[0, :, :, 1])
+plt.subplot(235)
+plt.title("Prediction of classes")
+plt.imshow(predicted_img[0, :, :, 2])
+plt.subplot(236)
+plt.title("Prediction of classes")
+plt.imshow(predicted_img[0, :, :, 3])
+plt.show()
+
+# %%
