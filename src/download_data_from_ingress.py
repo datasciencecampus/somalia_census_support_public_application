@@ -21,34 +21,45 @@ from google.cloud import storage  # interact with data buckets
 # Initialise client and note bucket location
 client = storage.Client()
 bucket = client.bucket("ons-net-zero-data-prod-net-zero-somalia-des-ingress")
+bucket_prefix = "ons-des-prod-net-zero-somalia-ingress/"
 
 # +
 # Get all blobs in ingress area
 # - Blob is a Binary Large OBject (BLOB) is a collection of binary data stored as a single entity
-blobs = list(bucket.list_blobs(prefix="ons-des-prod-net-zero-somalia-ingress/"))
+blobs = list(bucket.list_blobs(prefix=bucket_prefix))
+
+# Note folder of interest in ingress area and filter blobs
+ingress_folder_of_interest = "training_data/" # slash important here as training_data_doolow folder stil in ingress
+blobs = [blob for blob in blobs if ingress_folder_of_interest in blob.name]
 
 # Print all blobs available
 out = [print(blob.name) for blob in blobs]
 
 # +
-# Set location to copy blobs into local files
-data_dir = Path.cwd().parent.joinpath("data")
-path_to_data_folder = data_dir.joinpath("training_data_doolow")
-path_to_data_folder.mkdir(parents=True, exist_ok=True)
+# Note local data folder path
+data_folder = Path.cwd().parent.joinpath("data")
 
 # Examine each blob
 for blob in blobs:
-
+    
     # Get file name
-    file_name = Path(blob.name).name
-    local_file_path = Path(path_to_data_folder, file_name)
-
+    file_path = Path(blob.name)
+    file_path = file_path.relative_to(*file_path.parts[:1]) # Trim bucket prefix
+    file_path = data_folder.joinpath(file_path)
+    
+    # Get parent folders for file and recreate structure
+    for folder in reversed(file_path.parents):
+        
+        # Create folder
+        if folder.exists() == False: folder.mkdir(parents=True, exist_ok=True)
+        
     # Copy file to local environment
-    blob.download_to_filename(local_file_path)
+    blob.download_to_filename(file_path)
 
     # Print progress
-    print(f"Blob ({blob.name}) copied to local environment at {local_file_path}")
+    print(f"Blob ({blob.name}) copied to local environment at {file_path}")
+
 # -
 
 # Check files are present
-list(path_to_data_folder.iterdir())
+list(data_folder.iterdir())
