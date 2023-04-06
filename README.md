@@ -10,9 +10,36 @@
 
 Automating building detection in satellite imagery over Somalia, with a focus on Internally displaced people (IDPs).
 
-## Getting set-up:
+## Getting set-up (GCP):
 
-### Notebooks and Jupytext
+This project uses GCP for development, so these instructions are talloired to the platform. But a determined user can hopefully generalise these across over tools. 
+
+### Virtual environments
+Once in the project space (i.e. the base repository level) it is recommended you set-up a virtual environment. To do this run:
+```
+python3 -m venv <your-chosen-environment-name>
+```
+Next, to activate your virtual environment run 
+```
+source <your-chosen-environment-name>/bin/activate
+```
+
+### Install dependencies
+While in your active virtual environment, perform a pip install of the `requirements.txt` file, which lists the required dependencies. To do this run:
+```
+pip install -r requirements.txt
+```
+
+### Set-up custom kernel from your virtual environment
+To access your installed packages from your virtual environment you need to set-up an ipython kernel from your environment. By default, the notebooks in GCP will access the base python. To set-up a custom kernel, ensure your virtual enivronment is active and from the terminal run: 
+```
+ipython kernel install --name "<your-chosen-environment-name>" --user
+``` 
+(e.g. with a virtual environment called `somalia-env` run ```ipython kernel install --name "somalia-env" --user```). 
+
+After some possible delay, the kernel should appear in the list of kernels available in the top right corner of your notebooks. 
+
+### A note on Notebooks and Jupytext
 For the benefit of proper version control, any notebooks in this project are stored as `.py` files with a hookup via Jupytext. The notebooks are distinguishable from modular python scripts via the following comments at their beginning:
 ```
 # ---
@@ -27,20 +54,6 @@ jupytext --to notebook <file_name>.py
 ```
 from your terminal. This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs.
 
-Note you will want to sync your `.ipynb` files to your conda environment either via ipykernel:
-
-```
-conda install -c anaconda ipykernel
-````
-then
-```
-python -m ipykernel install --user --name=myenv
-```
-and then selecting the relevant ipykernel on the notebook start-up.
-Or you can open jupyter notebook from your environment:
-```
-jupyter notebook
-```
 
 ### Pre-commit actions
 This repository makes use of [pre-commit hooks](https://towardsdatascience.com/getting-started-with-python-pre-commit-hooks-28be2b2d09d5). If approaching this project as a developer, you can install and enable `pre-commit` by running the following in your shell:
@@ -99,20 +112,6 @@ flowchart TD;
 ## Training data
 
 The training data only needs to be processed and outputted when first derived, or if changes are made to the polygons/raster. Follow the wiki guide to create training data and export as `.shp` files.
-
-Create your geospatial conda environment:
-
-```
-conda env create -f environment-geo.yml
-```
-
-then activate the environment:
-
-```
-conda activate somalia-geo
-```
-
-Convert the `training_data_processing_notebook.py` file into a `.ipynb` as shown above, and open the notebook in your conda environment.
 
 Follow the steps in the notebook - making sure to change the input file names and the outputted file names (_better solution needed eventually_). This notebook will convert the training data into numpy binary outputs that can be handled in an environment without geospatial packages present.
 
