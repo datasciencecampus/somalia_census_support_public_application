@@ -1,12 +1,11 @@
-  - python=3.10
-  - geopandas
-  - rasterio
-  - Path
-  - matplotlib
-  - numpy
-  - scikit-learn
-  - jupytext=1.14
-  - jupyter
-  - tensorflow
-  - segmentation_models
-  - keras
+geopandas
+matplotlib
+numpy
+pre-commit
+rasterio
+segmentation_models
+scikit-learn
+jupytext==1.14
+jupyter
+tensorflow
+keras
