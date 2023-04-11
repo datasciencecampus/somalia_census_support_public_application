@@ -8,20 +8,29 @@
 
 ## Description
 
-Automating building detection in satellite imagery over Somalia, with a focus on Internally displaced people (IDPs).
+Automating building detection in satellite imagery over Somalia, with a focus on Internally displaced people (IDP) camps.
+
+The first steps in this project is looking at the feasibility of applying the U-Net architecture to Planet SkySat Very-High-Resolution (VHR) satellite imagery. The U-Net model aims to detect formal and in-formal building structures to a high accuracy (>0.9). The feasibility study is focused on 5 areas in Somalia, with known IDP camps:
+
+* Baidoa
+* Beledweyne
+* Kismayo
+* Mogadishu
+
+These areas were chosen due to being the focus of a recent Somalia National Bureau of Statistics (SNBS) study that surveyed building numbers and populations across IDP camps in the regions. The hope is that this study will provide some opportunity to ground-truth model outputs.
 
 ## Getting set-up (GCP):
 
-This project uses GCP for development, so these instructions are talloired to the platform. But a determined user can hopefully generalise these across over tools. 
+This project is being developed in Google Cloud Platform (GCP), and so instructions will be specific to this environment. A determined user can hopefully generalise these across other tools.
 
-### Virtual environments
-Once in the project space (i.e. the base repository level) it is recommended you set-up a virtual environment. To do this run:
+### Virtual environment
+Once in the project space (i.e. the base repository level) it is recommended you set-up a virtual environment. In the terminal run:
 ```
-python3 -m venv <your-chosen-environment-name>
+python3 -m venv-somalia-gcp
 ```
-Next, to activate your virtual environment run 
+Next, to activate your virtual environment run
 ```
-source <your-chosen-environment-name>/bin/activate
+source venv-somalia-gcp/bin/activate
 ```
 
 ### Install dependencies
@@ -31,16 +40,15 @@ pip install -r requirements.txt
 ```
 
 ### Set-up custom kernel from your virtual environment
-To access your installed packages from your virtual environment you need to set-up an ipython kernel from your environment. By default, the notebooks in GCP will access the base python. To set-up a custom kernel, ensure your virtual enivronment is active and from the terminal run: 
+To access your installed packages from your virtual environment you need to set-up an ipython kernel from your environment. By default, the notebooks in GCP will access the base python. To set-up a custom kernel, ensure your virtual enivronment is active and from the terminal run:
 ```
-ipython kernel install --name "<your-chosen-environment-name>" --user
-``` 
-(e.g. with a virtual environment called `somalia-env` run ```ipython kernel install --name "somalia-env" --user```). 
+ipython kernel install --name "venv-somalia-gcp" --user
+```
 
-After some possible delay, the kernel should appear in the list of kernels available in the top right corner of your notebooks. 
+After some possible delay, the kernel should appear in the list of kernels available in the top right corner of your notebooks.
 
 ### A note on Notebooks and Jupytext
-For the benefit of proper version control, any notebooks in this project are stored as `.py` files with a hookup via Jupytext. The notebooks are distinguishable from modular python scripts via the following comments at their beginning:
+notebooks in this project are stored as `.py` files with a hookup via Jupytext, to ensure proper version control. The notebooks are distinguishable from modular python scripts via the following comments at their beginning:
 ```
 # ---
 # jupyter:
@@ -48,11 +56,11 @@ For the benefit of proper version control, any notebooks in this project are sto
 #     formats: ipynb,py:percent
 ....
 ```
-In order to successfully use these as notebooks, you are required to have [Jupytext](https://jupytext.readthedocs.io/en/latest/install.html) installed (which can be achieved via a pip or conda install). After cloning the repository, run
+After cloning the repository, from your terminal run:
 ```
 jupytext --to notebook <file_name>.py
 ```
-from your terminal. This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs.
+ This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs.
 
 
 ### Pre-commit actions
@@ -81,17 +89,17 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  ┃ ┣ 📂training_data
  ┃ ┃ ┗ 📂img
  ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.tif
-  ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.npy
+ ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.npy
  ┃ ┃ ┗ 📂mask
-  ┃ ┃ ┃ ┣ 📜training_mask_<area>_<initial>.shp
-   ┃ ┃ ┃ ┣ 📜training_mask_<area>_<initial>.npy
+ ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.shp
+ ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.npy
  ┣ 📂src
  ┃ ┣ 📜explore_imagery_and_data.py
  ┃ ┣ 📜functions_library.py
  ┃ ┣ 📜geospatial_util_functions.py
  ┃ ┣ 📜modelling_preprocessing.py
  ┃ ┣ 📜planet_img_processing_functions.py
- ┃ ┗ 📜training_data_preprocessing_notebook.py
+ ┃ ┗ 📜model_train_notebook.py
  ┣ 📜.gitignore
  ┗ 📜README.md
 
@@ -102,18 +110,30 @@ The below tree demonstrates where each file/folder needs to be for successful ex
 _in progress_
 
 ```mermaid
-flowchart TD;
-    A[Create training polygons in QGIS] --> B[Process training data];
-    C[Planet raster from training tile area] --> B;
-    B --> D[_modelling preprocess_]
+flowchart LR
+    id1[(planet<br>imagery)]-->id3{QGIS}
+    id2[(UNFPA<br>annotations)] -->id3{QGIS}
+    id3{QGIS}-->|planet<br>image|id4[/planet<br>image<br>processing<br>notebook\]
+    id4[/planet<br>image<br>processing<br>notebook\]-->|binary<br>mask|id3{QGIS}
+    id3{QGIS}-->|polygon<br>mask|id5{GCP<br>ingress<br>bucket}
+    id3{QGIS}-->|image<br>raster|id5{GCP<br>ingress<br>bucket}
 ```
+_note the below will need updated when we decide on final workflow_
 
+```mermaid
+flowchart LR
+    id1{GCP<br>ingress<br>bucket}-->|mask|id2[/training<br>data<br>processing<br>notebook\]
+    id1{GCP<br>ingress<br>bucket}-->|raster|id2[/training<br>data<br>processing<br>notebook\]
+    id2[/training<br>data<br>processing<br>notebook\]-->|numpy<br>arrays|id3[/model<br>train<br>notebook\]
+    id3[/model<br>train<br>notebook\]-->|numpy<br>arrays|id4[/model<br>results<br>exploration<br>notebook\]
+
+```
 
 ## Training data
 
-The training data only needs to be processed and outputted when first derived, or if changes are made to the polygons/raster. Follow the wiki guide to create training data and export as `.shp` files.
+The training data only needs to be processed and outputted when first derived, or if changes are made to the polygons/raster. Follow the wiki guide to create training data and export as `.shp` files - using project naming structure:
 
-Follow the steps in the notebook - making sure to change the input file names and the outputted file names (_better solution needed eventually_). This notebook will convert the training data into numpy binary outputs that can be handled in an environment without geospatial packages present.
+`training_data_<area>_<your initials>`
 
 
 ## Things of note
