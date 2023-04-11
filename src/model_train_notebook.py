@@ -13,6 +13,7 @@
 #     name: venv-somalia-gcp
 # ---
 
+
 # %% [markdown]
 # # Feasibility study - U-Net training model
 #
@@ -54,8 +55,8 @@
 
 # %% [markdown]
 # ### Import libraries
-#
 
+# %%
 from pathlib import Path
 
 # %%
@@ -353,3 +354,5 @@ plt.imshow(
     cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0.9)]),
 )
 plt.show()
+
+# %%
