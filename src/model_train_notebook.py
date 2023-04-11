@@ -6,11 +6,11 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.14.0
 #   kernelspec:
-#     display_name: venv-somalia-gcp
+#     display_name: env
 #     language: python
-#     name: venv-somalia-gcp
+#     name: env
 # ---
 
 # %% [markdown]
@@ -48,13 +48,16 @@
 
 # %% [markdown]
 # ### Import libraries
+#
 
+# %%
 import os
 import random
 from pathlib import Path
 
 # %%
 import geopandas as gpd
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import segmentation_models as sm
@@ -83,9 +86,9 @@ from planet_img_processing_functions import (
 # %%
 data_dir = Path.cwd().parent.joinpath("data")
 
-training_data_dir = data_dir.joinpath("training_data")
-img_dir = training_data_dir.joinpath("img")
-mask_dir = training_data_dir.joinpath("mask")
+training_data_dir = data_dir.joinpath("training_data_doolow")
+img_dir = setup_sub_dir(training_data_dir, "img")
+mask_dir = setup_sub_dir(training_data_dir, "mask")
 
 # %% [markdown]
 # ## Load training data <a name="loadraster"></a>
@@ -123,7 +126,6 @@ mask_dataset = []
 building_class_list = ["House", "Tent", "Service"]
 
 for path, subdirs, files in os.walk(training_data_dir):
-
     dirname = path.split(os.path.sep)[-1]
     if dirname == "mask":
         masks = os.listdir(path)
@@ -149,13 +151,19 @@ for path, subdirs, files in os.walk(training_data_dir):
 mask_dataset = np.array(mask_dataset)
 
 # %%
-# show random images for checking
+n_classes = len(np.unique(segmented_training_arr))
 
-image_number = random.randint(0, len(raster_dataset))
+# %%
+# Create colour map for preservation at point of displaying classes
+col_map = mpl.cm.get_cmap("viridis", n_classes)
+
+# %%
+# show random images for checking
+image_number = random.randint(0, len(raster_dataset) - 1)
 
 plt.figure(figsize=(12, 6))
 plt.subplot(121)
-plt.imshow(raster_dataset[image_number])
+plt.imshow(raster_dataset[image_number][:, :, 0:3])
 plt.subplot(122)
 plt.imshow(mask_dataset[image_number])
 plt.show()
@@ -165,7 +173,6 @@ plt.show()
 
 # %%
 # opening single files - old version but works so keeping until multi file version working
-
 
 training_data = gpd.read_file(mask_dir.joinpath("training_data_doolow_1.shp"))
 raster_file_path = img_dir.joinpath("training_data_doolow_1.tif")
@@ -190,24 +197,21 @@ normalised_img = clip_and_normalize_raster(img_arr_reordered, 99)
 # transpose array to (x, y, band) from (band, x, y)
 normalised_img = reorder_array(normalised_img, 1, 2, 0)
 
+
+# %%
+# Create colour map for preservation at point of displaying classes
+col_map = mpl.cm.get_cmap("viridis", n_classes)
+
+# %%
 plt.figure(figsize=(12, 6))
 plt.subplot(121)
 plt.imshow(normalised_img[:, :, :3])
 plt.subplot(122)
-plt.imshow(segmented_training_arr)
+plt.imshow(segmented_training_arr, cmap=col_map)
 plt.show()
 
-
-# with open(img_dir.joinpath("d1_normalised_sat_raster.npy"), "rb") as f:
-# normalised_sat_raster = np.load(f)
-
-# normalised_sat_raster_uncropped = normalised_sat_raster
-
-# with open(mask_dir.joinpath("d1_training_mask_raster.npy"), "rb") as f:
-# training_mask_raster = np.load(f)
-
 # %%
-img_size = 574
+img_size = 576
 
 normalised_sat_raster = normalised_img[0:img_size, 0:img_size, :]
 normalised_sat_raster.shape
@@ -226,7 +230,7 @@ training_mask_raster.shape
 #
 # U-Net architecture uses max pooling to downsample images across 4 levels, so we need to work with tiles that are divisable by 4 x 2.
 #
-# Training data tiles created in QGIS as ~200 x 200 (which equates to ~400 x 400 as resolution is 0.5m/px). Intention is for tiles to be cropped to 192 (or should it be 384?)
+# Training data tiles created in QGIS as ~200m x 200m (which equates to ~400 x 400 pixels as resolution is 0.5m/px). Intention is for tiles to be cropped to 384 pixels (or 192m)
 
 # %%
 # img_size = 384
@@ -402,53 +406,53 @@ model.save(
 # %%
 y_pred = model.predict(X_test)
 
-predicted_img = np.argmax(y_pred, axis=3)[0, :, :]
+# predicted_img = np.argmax(y_pred, axis=0)[:, :]
 
-# %% [markdown]
+# %% [markdown] tags=[]
 # ## Output visual checking <a name="output"></a>
 
 # %%
-with open(data_dir.joinpath("pred.npy"), "rb") as f:
-    predicted_img = np.load(f)
-
-img_size = predicted_img.shape[1]
-
-# %%
-with open(mask_dir.joinpath("d1_training_mask_raster.npy"), "rb") as f:
-    training_mask_raster = np.load(f)
-
 # Crop to size of modelling tile
-mask = training_mask_raster[0:img_size, 0:img_size]
-mask.shape
+# test_mask = np.argmax(y_test, axis=3)[0, :, :]
+# test_mask.shape
 
 # %%
-with open(img_dir.joinpath("d1_normalised_sat_raster.npy"), "rb") as f:
-    normalised_sat_raster = np.load(f)
+# "normalised_sat_raster" and "training_mask_raster" only work here because single image used
+# TODO: Update to be generalised from X_test and y_test files
 
-# Crop to size of modelling tile
-normalised_sat_raster = normalised_sat_raster[0:img_size, 0:img_size, :]
-normalised_sat_raster.shape
-
-# %%
-plt.figure(figsize=(13, 8))
+fig, axes = plt.subplots(figsize=(13, 8))
 plt.subplot(231)
-plt.title("Image")
-plt.imshow(normalised_sat_raster[:, :, :3])
+plt.title("Training tile")
+plt.imshow(normalised_sat_raster[:, :, 0:3])
 plt.subplot(232)
-plt.title("Mask")
-plt.imshow(mask[:, :])
+plt.title("Labelled mask")
+plt.imshow(training_mask_raster[:, :])
 plt.subplot(233)
-plt.title("Prediction of classes")
-plt.imshow(predicted_img[0, :, :, 0])
+plt.title("Prediction of class: Non-Building")
+plt.imshow(
+    y_pred[0, :, :, 0],
+    cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0)]),
+)
 plt.subplot(234)
-plt.title("Prediction of classes")
-plt.imshow(predicted_img[0, :, :, 1])
+plt.title(f"Prediction of class: {building_class_list[0]}")
+plt.imshow(
+    y_pred[0, :, :, 1],
+    cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0.40)]),
+)
 plt.subplot(235)
-plt.title("Prediction of classes")
-plt.imshow(predicted_img[0, :, :, 2])
+plt.title(f"Prediction of class: {building_class_list[1]}")
+plt.imshow(
+    y_pred[0, :, :, 2],
+    cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0.60)]),
+)
 plt.subplot(236)
-plt.title("Prediction of classes")
-plt.imshow(predicted_img[0, :, :, 3])
+plt.title(f"Prediction of class: {building_class_list[2]}")
+plt.imshow(
+    y_pred[0, :, :, 3],
+    cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0.9)]),
+)
 plt.show()
+
+# %%
 
 # %%
