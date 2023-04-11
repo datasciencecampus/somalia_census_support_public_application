@@ -19,6 +19,30 @@ The first steps in this project is looking at the feasibility of applying the U-
 
 These areas were chosen due to being the focus of a recent Somalia National Bureau of Statistics (SNBS) study that surveyed building numbers and populations across IDP camps in the regions. The hope is that this study will provide some opportunity to ground-truth model outputs.
 
+## Workflow
+
+_in progress_
+
+```mermaid
+flowchart LR
+    id1[(planet<br>imagery)]-->id3{QGIS}
+    id2[(UNFPA<br>annotations)] -->id3{QGIS}
+    id3{QGIS}-->|planet<br>image|id4[/planet<br>image<br>processing<br>notebook\]
+    id4[/planet<br>image<br>processing<br>notebook\]-->|binary<br>mask|id3{QGIS}
+    id3{QGIS}-->|polygon<br>mask|id5{GCP<br>ingress<br>bucket}
+    id3{QGIS}-->|image<br>raster|id5{GCP<br>ingress<br>bucket}
+```
+_note the below will need updated when we decide on final workflow_
+
+```mermaid
+flowchart LR
+    id1{GCP<br>ingress<br>bucket}-->|mask|id2[/training<br>data<br>processing<br>notebook\]
+    id1{GCP<br>ingress<br>bucket}-->|raster|id2[/training<br>data<br>processing<br>notebook\]
+    id2[/training<br>data<br>processing<br>notebook\]-->|numpy<br>arrays|id3[/model<br>train<br>notebook\]
+    id3[/model<br>train<br>notebook\]-->|numpy<br>arrays|id4[/model<br>results<br>exploration<br>notebook\]
+
+```
+
 ## Getting set-up (GCP):
 
 This project is being developed in Google Cloud Platform (GCP), and so instructions will be specific to this environment. A determined user can hopefully generalise these across other tools.
@@ -26,7 +50,7 @@ This project is being developed in Google Cloud Platform (GCP), and so instructi
 ### Virtual environment
 Once in the project space (i.e. the base repository level) it is recommended you set-up a virtual environment. In the terminal run:
 ```
-python3 -m venv-somalia-gcp
+python3 -m venv venv-somalia-gcp
 ```
 Next, to activate your virtual environment run
 ```
@@ -102,30 +126,6 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  ┃ ┗ 📜model_train_notebook.py
  ┣ 📜.gitignore
  ┗ 📜README.md
-
-```
-
-## Workflow
-
-_in progress_
-
-```mermaid
-flowchart LR
-    id1[(planet<br>imagery)]-->id3{QGIS}
-    id2[(UNFPA<br>annotations)] -->id3{QGIS}
-    id3{QGIS}-->|planet<br>image|id4[/planet<br>image<br>processing<br>notebook\]
-    id4[/planet<br>image<br>processing<br>notebook\]-->|binary<br>mask|id3{QGIS}
-    id3{QGIS}-->|polygon<br>mask|id5{GCP<br>ingress<br>bucket}
-    id3{QGIS}-->|image<br>raster|id5{GCP<br>ingress<br>bucket}
-```
-_note the below will need updated when we decide on final workflow_
-
-```mermaid
-flowchart LR
-    id1{GCP<br>ingress<br>bucket}-->|mask|id2[/training<br>data<br>processing<br>notebook\]
-    id1{GCP<br>ingress<br>bucket}-->|raster|id2[/training<br>data<br>processing<br>notebook\]
-    id2[/training<br>data<br>processing<br>notebook\]-->|numpy<br>arrays|id3[/model<br>train<br>notebook\]
-    id3[/model<br>train<br>notebook\]-->|numpy<br>arrays|id4[/model<br>results<br>exploration<br>notebook\]
 
 ```
 
