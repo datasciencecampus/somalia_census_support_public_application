@@ -6,11 +6,11 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.0
+#       jupytext_version: 1.14.5
 #   kernelspec:
-#     display_name: env
+#     display_name: venv-somalia-gcp
 #     language: python
-#     name: env
+#     name: venv-somalia-gcp
 # ---
 
 # %% [markdown]
@@ -18,7 +18,13 @@
 #
 # This notebook is looking at the feasibility of applying the U-Net architecture to identify formal and in-formal building structures in IDP camps in areas of interest in Somalia.
 #
-# While the overall aim is to apply the model across Somalia, this feasibility study focuses on 5 areas of interest. These areas of interest were the subject of a recent SNBS survey, and so, provide a unique opportunity to add some element of ground-truthed data to the model.
+# While the overall aim is to apply the model across all IDP camps in Somalia, this feasibility study focuses on 5 areas of interest:
+# * Baidoa
+# * Beledweyne
+# * Kismayo
+# * Mogadishu
+#
+# These areas of interest were the subject of a recent Somalia National Bureau of Statistics (SNBS) survey, and so, provide a unique opportunity to add some element of ground-truthed data to the model.
 #
 # ## Contents
 #
@@ -50,9 +56,6 @@
 # ### Import libraries
 #
 
-# %%
-import os
-import random
 from pathlib import Path
 
 # %%
@@ -86,90 +89,12 @@ from planet_img_processing_functions import (
 # %%
 data_dir = Path.cwd().parent.joinpath("data")
 
-training_data_dir = data_dir.joinpath("training_data_doolow")
+training_data_dir = data_dir.joinpath("training_data")
 img_dir = setup_sub_dir(training_data_dir, "img")
 mask_dir = setup_sub_dir(training_data_dir, "mask")
 
 # %% [markdown]
 # ## Load training data <a name="loadraster"></a>
-
-# %% [markdown]
-# ### Image rasters
-
-# %%
-raster_dataset = []
-for path, subdirs, files in os.walk(training_data_dir):
-
-    dirname = path.split(os.path.sep)[-1]
-    if dirname == "img":
-        images = os.listdir(path)
-
-        for i, image_name in enumerate(images):
-            if image_name.endswith(".tif"):
-
-                img_array = return_array_from_tiff(img_dir.joinpath(image_name))
-                img_arr_reordered = change_band_order(img_array)
-                normalised_img = clip_and_normalize_raster(img_arr_reordered, 99)
-                normalised_img = reorder_array(normalised_img, 1, 2, 0)
-
-                raster_dataset.append(normalised_img)
-
-# %%
-raster_dataset = np.array(raster_dataset)
-
-# %% [markdown]
-# ### Mask layers
-
-# %%
-mask_dataset = []
-
-building_class_list = ["House", "Tent", "Service"]
-
-for path, subdirs, files in os.walk(training_data_dir):
-    dirname = path.split(os.path.sep)[-1]
-    if dirname == "mask":
-        masks = os.listdir(path)
-
-        for i, mask_name in enumerate(masks):
-            if mask_name.endswith(".shp"):
-
-                mask_filename = Path(mask_name).stem
-                training_data = gpd.read_file(mask_dir.joinpath(mask_name))
-                training_data = training_data.drop(columns=["fid"])
-
-                segmented_training_arr = rasterize_training_data(
-                    training_data,
-                    img_dir.joinpath(image_name),
-                    building_class_list,
-                    mask_dir.joinpath(f"{mask_filename}.tif"),
-                )
-
-                mask_dataset.append(segmented_training_arr)
-
-
-# %%
-mask_dataset = np.array(mask_dataset)
-
-# %%
-n_classes = len(np.unique(segmented_training_arr))
-
-# %%
-# Create colour map for preservation at point of displaying classes
-col_map = mpl.cm.get_cmap("viridis", n_classes)
-
-# %%
-# show random images for checking
-image_number = random.randint(0, len(raster_dataset) - 1)
-
-plt.figure(figsize=(12, 6))
-plt.subplot(121)
-plt.imshow(raster_dataset[image_number][:, :, 0:3])
-plt.subplot(122)
-plt.imshow(mask_dataset[image_number])
-plt.show()
-
-# %% [markdown]
-# ### Old workflow for single images that can't yet be deleted!
 
 # %%
 # opening single files - old version but works so keeping until multi file version working
@@ -177,7 +102,7 @@ plt.show()
 training_data = gpd.read_file(mask_dir.joinpath("training_data_doolow_1.shp"))
 raster_file_path = img_dir.joinpath("training_data_doolow_1.tif")
 
-
+# %%
 # remove unused column
 training_data = training_data.drop(columns=["fid"])
 
@@ -199,6 +124,8 @@ normalised_img = reorder_array(normalised_img, 1, 2, 0)
 
 
 # %%
+n_classes = len(np.unique(segmented_training_arr))
+
 # Create colour map for preservation at point of displaying classes
 col_map = mpl.cm.get_cmap("viridis", n_classes)
 
@@ -237,32 +164,6 @@ training_mask_raster.shape
 
 # %% [markdown]
 # ### Image manipulation
-
-# %%
-# Not tested!
-
-# def augment(input_image, input_mask):
-# if tf.random.uniform(()) > 0.5:
-# input_image = tf.image.flip_left_right(input_image)
-# input_mask = tf.image.flip_left_right(input_mask)
-# return input_image, input_mask
-
-# not finished
-# def augment(input_image, input_mask):
-
-# flip vertically
-# input_image = np.flipud(normalised_sat_raster)
-# input_mask = np.flipud(training_mask_raster)
-
-# flip horizontal
-# input_image = np.fliplr(normalised_sat_raster)
-# input_mask = np.fliplr(training_mask_raster)
-
-# rotate 90 degrees
-# input_image = np.rot90(normalised_sat_raster)
-# input_mask = np.rot90(training_mask_raster)
-
-# return input_image, input_mask
 
 # %% [markdown]
 # ## Training parameters <a name="trainingparameters"></a>
@@ -371,7 +272,7 @@ model.summary()
 
 # how many times the model runs through training data
 # use with callbacks to find the optimum number
-num_epochs = 50
+num_epochs = 25
 
 # early stopping monitors the model to prevent under/over fitting by running too few/many epochs
 # monitors validation loss, with a set patience (i.e. if the model thinks it has found the right number
@@ -408,7 +309,7 @@ y_pred = model.predict(X_test)
 
 # predicted_img = np.argmax(y_pred, axis=0)[:, :]
 
-# %% [markdown] tags=[]
+# %% [markdown]
 # ## Output visual checking <a name="output"></a>
 
 # %%
@@ -452,7 +353,3 @@ plt.imshow(
     cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0.9)]),
 )
 plt.show()
-
-# %%
-
-# %%
