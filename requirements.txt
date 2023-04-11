@@ -1,0 +1,12 @@
+geopandas
+matplotlib
+numpy
+pre-commit
+rasterio
+segmentation_models
+scikit-learn
+jupytext==1.14.5
+jupyter
+tensorflow
+keras
+Path
