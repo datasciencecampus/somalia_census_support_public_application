@@ -13,19 +13,22 @@
 #     name: venv-somalia-gcp
 # ---
 
-
 # %% [markdown]
 # # Feasibility study - U-Net training model
 #
 # This notebook is looking at the feasibility of applying the U-Net architecture to identify formal and in-formal building structures in IDP camps in areas of interest in Somalia.
 #
-# While the overall aim is to apply the model across all IDP camps in Somalia, this feasibility study focuses on 5 areas of interest:
+# While the overall aim is to apply the model across all IDP camps in Somalia, this feasibility study focuses on 4 areas of interest:
 # * Baidoa
 # * Beledweyne
 # * Kismayo
 # * Mogadishu
 #
 # These areas of interest were the subject of a recent Somalia National Bureau of Statistics (SNBS) survey, and so, provide a unique opportunity to add some element of ground-truthed data to the model.
+#
+# <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #31708f; background-color: #d9edf7; border-color: #bce8f1;">
+# Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
+# </div>
 #
 # ## Contents
 #
@@ -35,17 +38,14 @@
 # 1. ##### [Data Augmentation](#dataaug)
 # 1. ##### [Training parameters](#trainingparameters)
 # 1. ##### [Format data for model input](#formatdata)
+# 1. ##### [Model](#model)
 # 1. ##### [Outputs for visual checking](#output)
-
-# %% [markdown]
-# > **Note**
-# > Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
 
 # %% [markdown]
 # ## Set-up <a name="setup"></a>
 
 # %% [markdown]
-# ### segmentation_models work-around
+# ### segmentation_models work around
 
 # %%
 # since this model was built segmentation models has been updated to use tf.keras -
@@ -54,9 +54,10 @@
 # %env SM_FRAMEWORK = tf.keras
 
 # %% [markdown]
-# ### Import libraries
+# ### Import libraries & custom functions
 
 # %%
+import os
 from pathlib import Path
 
 # %%
@@ -81,10 +82,6 @@ from planet_img_processing_functions import (
 )
 
 # %% [markdown]
-# ### Import custom functions
-
-
-# %% [markdown]
 # ### Set-up filepaths
 
 # %%
@@ -94,20 +91,85 @@ training_data_dir = data_dir.joinpath("training_data")
 img_dir = setup_sub_dir(training_data_dir, "img")
 mask_dir = setup_sub_dir(training_data_dir, "mask")
 
+models_dir = setup_sub_dir(Path.cwd().parent, "models")
+
 # %% [markdown]
 # ## Load training data <a name="loadraster"></a>
 
-# %%
-# opening single files - old version but works so keeping until multi file version working
+# %% [markdown]
+# ### Image rasters
 
-training_data = gpd.read_file(mask_dir.joinpath("training_data_doolow_1.shp"))
-raster_file_path = img_dir.joinpath("training_data_doolow_1.tif")
+# %%
+image_dataset = []
+for path, subdirs, files in os.walk(training_data_dir):
+
+    dirname = path.split(os.path.sep)[-1]
+    if dirname == "img":
+        images = os.listdir(path)
+
+        for i, image_name in enumerate(images):
+            if image_name.endswith(".tif"):
+
+                img_array = return_array_from_tiff(img_dir.joinpath(image_name))
+                img_arr_reordered = change_band_order(img_array)
+                normalised_img = clip_and_normalize_raster(img_arr_reordered, 99)
+                normalised_img = reorder_array(normalised_img, 1, 2, 0)
+
+                image_dataset.append(normalised_img)
+
+# %%
+image_dataset = np.array(image_dataset)
+
+# %% [markdown]
+# ### Mask layers - NOT CURRENTLY WORKING
+
+# %% jupyter={"outputs_hidden": true}
+mask_dataset = []
+
+building_class_list = ["House", "Tent", "Service"]
+
+for path, subdirs, files in os.walk(training_data_dir):
+    dirname = path.split(os.path.sep)[-1]
+    if dirname == "mask":
+        masks = os.listdir(path)
+
+        for i, mask_name in enumerate(masks):
+            if mask_name.endswith(".shp"):
+
+                mask_filename = Path(mask_name).stem
+                training_data = gpd.read_file(mask_dir.joinpath(mask_name))
+                training_data["Typenew"] = "0"
+                training_data = training_data[["geometry", "Typenew"]]
+
+            segmented_training_arr = rasterize_training_data(
+                training_data,
+                img_dir.joinpath(image_name),
+                building_class_list,  # NOT WORKING
+                mask_dir.joinpath(f"{mask_filename}.tif"),
+            )
+
+            mask_dataset.append(segmented_training_arr)
+
+# %%
+mask_dataset = np.array(mask_dataset)
+
+# %% [markdown]
+# ### Load training data - old system
+
+# %%
+training_data = gpd.read_file(mask_dir.joinpath("training_data_beledweyne_LJ.shp"))
+raster_file_path = img_dir.joinpath("training_data_beledweyne_LJ.tif")
+
+# %%
+training_data["Type"] = training_data["Type"].fillna(0)
+
+building_class_list = [0]
 
 # %%
 # remove unused column
-training_data = training_data.drop(columns=["fid"])
+# training_data = training_data.drop(columns=["fid"])
 
-building_class_list = ["House", "Tent", "Service"]
+# building_class_list = ["House", "Tent", "Service"]
 
 segmented_training_arr = rasterize_training_data(
     training_data,
@@ -197,19 +259,27 @@ print(weights)
 
 # %% [markdown]
 # ### Loss function
-# The loss function is an additional parameter that can be tweaked and optimised.
+# Here we are using focal loss, an extension of cross-entropy loss. By default, focal loss reduces the weights of well-classified objects, those that have a probability >0.5, and increases the weights of objects with a probability of <0.5. In practice what this means is it reduces the weight (i.e. spends less time focusing on) easily classifable objects (i.e. service buildings) and instead focuses on hard to classify objects (i.e. tents).
+#
+# <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #8a6d3b;; background-color: #fcf8e3; border-color: #faebcc;">
+# TODO: create custom loss function that prioritises objects with a small number of pixels and that are close of other objects
+# </div>
+#
 
 # %%
-# create custom loss function for model training
-# this is inspired from the tutorial used to create this initial code
-# TODO: Explore alternatives
 dice_loss = sm.losses.DiceLoss(class_weights=weights)  # corrects for class imbalance
 focal_loss = sm.losses.CategoricalFocalLoss()
 total_loss = dice_loss + (1 * focal_loss)
 
 # %% [markdown]
 # ### Metrics
-# The metrics used to measure the model performance can be optimised also.
+# As we are using segmentation for object detection accuracy is not the best metric for model fit. Instead we should use the Intersection over Union (IoU), also known as the Jaccard index. This is the term used to describe the extent of overlap between two boxes (circles in the diagram below). The greater the region of overlap the greater the IoU.
+#
+# If one box (or circle) is the object, the other is our model prediction. To improve model prediction would be to create two boxes (circles) that completely overlap i.e. the IoU becomes equal to 1, where is varies between 0-1.
+#
+# This metric is often used with a dice coefficient (which is a loss function - see above).
+#
+# ![image.png](attachment:57bd2855-dc83-471c-9d5e-e7437f6ea7fa.png)!
 
 # %%
 metrics = ["accuracy", jacard_coef]
@@ -263,26 +333,34 @@ def get_model():
     )
 
 
+# %% [markdown]
+# ## Model <a name="model"></a>
+
+# %% [markdown]
+# ### Adjustable parameters
+#
+# Epochs = this is how many times the model runs through the training data. Running too few epochs will under fit the model, running too many will overfit. Use callbacks to find the optimum number of epochs - but this will change depending on other input parameters!
+#
+# Callbacks = Performs actions at the beginning or end of an epoch or batch. The ones used here are early stopping to monitor how the model is performing, if fit isn't improving over epochs then the model will stop (to prevent overfitting, although note will run for 4 more epochs to check it was correct - this is the patience parameter and can be adjusted). The parameter used to monitor if the model has reached it's best is validation loss. Also saving data to tensorboard logs.
+
 # %%
+num_epochs = 25
+
+callbacks = [
+    tf.keras.callbacks.EarlyStopping(patience=4, monitor="val_loss"),
+    tf.keras.callbacks.TensorBoard(log_dir="logs"),
+]
+
+# %% [markdown]
+# ### Model
+
+# %% jupyter={"outputs_hidden": true}
 model = get_model()
 
 model.compile(optimizer="adam", loss=total_loss, metrics=metrics)
 # model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=metrics)
 
 model.summary()
-
-# how many times the model runs through training data
-# use with callbacks to find the optimum number
-num_epochs = 25
-
-# early stopping monitors the model to prevent under/over fitting by running too few/many epochs
-# monitors validation loss, with a set patience (i.e. if the model thinks it has found the right number
-# of epochs then it runs a few more to check it was correct)
-callbacks = [
-    tf.keras.callbacks.EarlyStopping(patience=4, monitor="val_loss"),
-    tf.keras.callbacks.TensorBoard(log_dir="logs"),
-]
-
 
 history1 = model.fit(
     X_train,
@@ -300,7 +378,7 @@ history1 = model.fit(
 # %tensorboard --logdir logs/
 
 # %%
-models_dir = setup_sub_dir(Path.cwd().parent, "models")
+
 model.save(
     models_dir.joinpath(f"trail_run_{num_epochs}epochs_{img_size}pix_doolow.hdf5")
 )
