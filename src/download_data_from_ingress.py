@@ -1,7 +1,6 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -13,9 +12,11 @@
 #     name: python3
 # ---
 
+# %%
+# %%
 from pathlib import Path  # handling file paths
 
-# +
+# %%
 # Load packages
 from google.cloud import storage  # interact with data buckets
 
@@ -24,7 +25,7 @@ client = storage.Client()
 bucket = client.bucket("ons-net-zero-data-prod-net-zero-somalia-des-ingress")
 bucket_prefix = "ons-des-prod-net-zero-somalia-ingress/"
 
-# +
+# %%
 # Get all blobs in ingress area
 # - Blob is a Binary Large OBject (BLOB) is a collection of binary data stored as a single entity
 blobs = list(bucket.list_blobs(prefix=bucket_prefix))
@@ -36,7 +37,7 @@ blobs = [blob for blob in blobs if ingress_folder_of_interest in blob.name]
 # Print all blobs available
 out = [print(blob.name) for blob in blobs]
 
-# +
+# %%
 # Note local data folder path
 data_folder = Path.cwd().parent.joinpath("data")
 
@@ -60,9 +61,9 @@ for blob in blobs:
     # Print progress
     print(f"Blob ({blob.name}) copied to local environment at {file_path}")
 
-# -
 
+# %%
 # Check files are present
 list(data_folder.iterdir())
 
-
+# %%
