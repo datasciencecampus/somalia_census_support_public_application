@@ -8,12 +8,71 @@
 
 ## Description
 
-Automating building detection in satellite imagery over Somalia, with a focus on Internally displaced people (IDPs).
+Automating building detection in satellite imagery over Somalia, with a focus on Internally displaced people (IDP) camps.
 
-## Getting set-up:
+The first steps in this project is looking at the feasibility of applying the U-Net architecture to Planet SkySat Very-High-Resolution (VHR) satellite imagery. The U-Net model aims to detect formal and in-formal building structures to a high accuracy (>0.9). The feasibility study is focused on 5 areas in Somalia, with known IDP camps:
 
-### Notebooks and Jupytext
-For the benefit of proper version control, any notebooks in this project are stored as `.py` files with a hookup via Jupytext. The notebooks are distinguishable from modular python scripts via the following comments at their beginning:
+* Baidoa
+* Beledweyne
+* Kismayo
+* Mogadishu
+
+These areas were chosen due to being the focus of a recent Somalia National Bureau of Statistics (SNBS) study that surveyed building numbers and populations across IDP camps in the regions. The hope is that this study will provide some opportunity to ground-truth model outputs.
+
+## Workflow
+
+_in progress_
+
+```mermaid
+flowchart LR
+    id1[(planet<br>imagery)]-->id3{QGIS}
+    id2[(UNFPA<br>annotations)] -->id3{QGIS}
+    id3{QGIS}-->|planet<br>image|id4[/planet<br>image<br>processing<br>notebook\]
+    id4[/planet<br>image<br>processing<br>notebook\]-->|binary<br>mask|id3{QGIS}
+    id3{QGIS}-->|polygon<br>mask|id5{GCP<br>ingress<br>bucket}
+    id3{QGIS}-->|image<br>raster|id5{GCP<br>ingress<br>bucket}
+```
+_note the below will need updated when we decide on final workflow_
+
+```mermaid
+flowchart LR
+    id1{GCP<br>ingress<br>bucket}-->|mask|id2[/training<br>data<br>processing<br>notebook\]
+    id1{GCP<br>ingress<br>bucket}-->|raster|id2[/training<br>data<br>processing<br>notebook\]
+    id2[/training<br>data<br>processing<br>notebook\]-->|numpy<br>arrays|id3[/model<br>train<br>notebook\]
+    id3[/model<br>train<br>notebook\]-->|numpy<br>arrays|id4[/model<br>results<br>exploration<br>notebook\]
+
+```
+
+## Getting set-up (GCP):
+
+This project is being developed in Google Cloud Platform (GCP), and so instructions will be specific to this environment. A determined user can hopefully generalise these across other tools.
+
+### Virtual environment
+Once in the project space (i.e. the base repository level) it is recommended you set-up a virtual environment. In the terminal run:
+```
+python3 -m venv venv-somalia-gcp
+```
+Next, to activate your virtual environment run
+```
+source venv-somalia-gcp/bin/activate
+```
+
+### Install dependencies
+While in your active virtual environment, perform a pip install of the `requirements.txt` file, which lists the required dependencies. To do this run:
+```
+pip install -r requirements.txt
+```
+
+### Set-up custom kernel from your virtual environment
+To access your installed packages from your virtual environment you need to set-up an ipython kernel from your environment. By default, the notebooks in GCP will access the base python. To set-up a custom kernel, ensure your virtual enivronment is active and from the terminal run:
+```
+ipython kernel install --name "venv-somalia-gcp" --user
+```
+
+After some possible delay, the kernel should appear in the list of kernels available in the top right corner of your notebooks.
+
+### A note on Notebooks and Jupytext
+notebooks in this project are stored as `.py` files with a hookup via Jupytext, to ensure proper version control. The notebooks are distinguishable from modular python scripts via the following comments at their beginning:
 ```
 # ---
 # jupyter:
@@ -21,26 +80,12 @@ For the benefit of proper version control, any notebooks in this project are sto
 #     formats: ipynb,py:percent
 ....
 ```
-In order to successfully use these as notebooks, you are required to have [Jupytext](https://jupytext.readthedocs.io/en/latest/install.html) installed (which can be achieved via a pip or conda install). After cloning the repository, run
+After cloning the repository, from your terminal run:
 ```
 jupytext --to notebook <file_name>.py
 ```
-from your terminal. This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs.
+ This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs.
 
-Note you will want to sync your `.ipynb` files to your conda environment either via ipykernel:
-
-```
-conda install -c anaconda ipykernel
-````
-then
-```
-python -m ipykernel install --user --name=myenv
-```
-and then selecting the relevant ipykernel on the notebook start-up.
-Or you can open jupyter notebook from your environment:
-```
-jupyter notebook
-```
 
 ### Pre-commit actions
 This repository makes use of [pre-commit hooks](https://towardsdatascience.com/getting-started-with-python-pre-commit-hooks-28be2b2d09d5). If approaching this project as a developer, you can install and enable `pre-commit` by running the following in your shell:
@@ -65,82 +110,30 @@ The below tree demonstrates where each file/folder needs to be for successful ex
 ```
 📦somalia_unfpa_census_support
  ┣ 📂data
- ┃ ┣ 📂IDP Priority Area Extent Shapefiles
- ┃ ┃ ┗ 📂IDP Priority Area Extent Shapefiles
- ┃ ┃ ┃ ┗ 📂IDP Survey Shapefiles
- ┃ ┃ ┃ ┃ ┣ 📜<areas>_Extent.cpg
- ┃ ┃ ┃ ┃ ┣ 📜<areas>_Extent.dbf
- ┃ ┃ ┃ ┃ ┣ 📜<areas>_Extent.prj
- ┃ ┃ ┃ ┃ ┣ 📜<areas>_Extent.shp
- ┃ ┃ ┃ ┃ ┣ 📜<areas>_Extent.shx
- ┃ ┣ 📂planet_images
- ┃ ┃ ┣ 📂Baidoa
- ┃ ┃ ┃ ┣ 📂Baidoa_NE_61MB_20220324
- ┃ ┃ ┃ ┣ 📂Baidoa_N_43MB_20221125
- ┃ ┃ ┃ ┣ 📂Baidoa_SW_107MB_20221125
- ┃ ┃ ┃ ┣ 📂Baidoa_S_66MB_20220324
- ┃ ┃ ┃ ┣ 📜Baidoa_NE_61MB_20220324.zip
- ┃ ┃ ┃ ┣ 📜Baidoa_N_43MB_20221125.zip
- ┃ ┃ ┃ ┣ 📜Baidoa_SW_107MB_20221125.zip
- ┃ ┃ ┃ ┗ 📜Baidoa_S_66MB_20220324.zip
- ┃ ┃ ┣ 📂Beletweyne
- ┃ ┃ ┃ ┣ 📂Beletweyne_45MB_20220818
- ┃ ┃ ┃ ┗ 📜Beletweyne_45MB_20220818.zip
- ┃ ┃ ┗ 📂Doolow
- ┃ ┃ ┃ ┣ 📂Dolow_E_95MB_20220830
- ┃ ┃ ┃ ┣ 📂Doolow_W_50MB_20221101
- ┃ ┃ ┃ ┣ 📜Dolow_E_95MB_20220830.zip
- ┃ ┃ ┃ ┣ 📜Doolow_W_50MB_20221101.zip
- ┃ ┣ 📂priority_areas_geojson
- ┃ ┃ ┣ 📜<area>_Extent.geojson
- ┃ ┣ 📂Training_Data_Doolow
- ┃ ┃ ┣ 📜Doolow east and west training data.qgz
- ┃ ┃ ┣ 📜training_data_<area_number>.shp
- ┃ ┃ ┣ 📜training_data_<area_number>_extent.shp
- ┃ ┃ ┣ 📜training_data_<area_number>.tif
+ ┃ ┣ 📂training_data
+ ┃ ┃ ┗ 📂img
+ ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.tif
+ ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.npy
+ ┃ ┃ ┗ 📂mask
+ ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.shp
+ ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.npy
  ┣ 📂src
  ┃ ┣ 📜explore_imagery_and_data.py
  ┃ ┣ 📜functions_library.py
  ┃ ┣ 📜geospatial_util_functions.py
  ┃ ┣ 📜modelling_preprocessing.py
  ┃ ┣ 📜planet_img_processing_functions.py
- ┃ ┗ 📜training_data_preprocessing_notebook.py
+ ┃ ┗ 📜model_train_notebook.py
  ┣ 📜.gitignore
  ┗ 📜README.md
 
 ```
 
-## Workflow
-
-_in progress_
-
-```mermaid
-flowchart TD;
-    A[Create training polygons in QGIS] --> B[Process training data];
-    C[Planet raster from training tile area] --> B;
-    B --> D[_modelling preprocess_]
-```
-
-
 ## Training data
 
-The training data only needs to be processed and outputted when first derived, or if changes are made to the polygons/raster. Follow the wiki guide to create training data and export as `.shp` files.
+The training data only needs to be processed and outputted when first derived, or if changes are made to the polygons/raster. Follow the wiki guide to create training data and export as `.shp` files - using project naming structure:
 
-Create your geospatial conda environment:
-
-```
-conda env create -f environment-geo.yml
-```
-
-then activate the environment:
-
-```
-conda activate somalia-geo
-```
-
-Convert the `training_data_processing_notebook.py` file into a `.ipynb` as shown above, and open the notebook in your conda environment.
-
-Follow the steps in the notebook - making sure to change the input file names and the outputted file names (_better solution needed eventually_). This notebook will convert the training data into numpy binary outputs that can be handled in an environment without geospatial packages present.
+`training_data_<area>_<your initials>`
 
 
 ## Things of note
