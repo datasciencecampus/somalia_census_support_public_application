@@ -31,15 +31,15 @@ bucket_prefix = "ons-des-prod-net-zero-somalia-ingress/"
 blobs = list(bucket.list_blobs(prefix=bucket_prefix))
 
 # Note folder of interest in ingress area and filter blobs
-ingress_folder_of_interest = "training_data/" # slash important here as training_data_doolow folder stil in ingress
-blobs = [blob for blob in blobs if ingress_folder_of_interest in blob.name]
+ingress_dir_of_interest = "training_data/" # slash important here as training_data_doolow folder still in ingress
+blobs = [blob for blob in blobs if ingress_dir_of_interest in blob.name]
 
 # Print all blobs available
 out = [print(blob.name) for blob in blobs]
 
 # %%
 # Note local data folder path
-data_folder = Path.cwd().parent.joinpath("data")
+data_dir = Path.cwd().parent.joinpath("data")
 
 # Examine each blob
 for blob in blobs:
@@ -47,7 +47,7 @@ for blob in blobs:
     # Get file name
     file_path = Path(blob.name)
     file_path = file_path.relative_to(*file_path.parts[:1]) # Trim bucket prefix
-    file_path = data_folder.joinpath(file_path)
+    file_path = data_dir.joinpath(file_path)
     
     # Get parent folders for file and recreate structure
     for folder in reversed(file_path.parents):
@@ -65,5 +65,3 @@ for blob in blobs:
 # %%
 # Check files are present
 list(data_folder.iterdir())
-
-# %%
