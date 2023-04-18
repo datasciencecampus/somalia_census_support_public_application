@@ -45,11 +45,10 @@
 # ## Set-up <a name="setup"></a>
 
 # %% [markdown]
-# ### segmentation_models work around
+# ### segmentation_models framework
 
 # %%
-# since this model was built segmentation models has been updated to use tf.keras -
-# recommended work around is to set env var as below
+# choosing segmentation_models framework
 
 # %env SM_FRAMEWORK = tf.keras
 
@@ -118,15 +117,19 @@ for path, subdirs, files in os.walk(training_data_dir):
                 image_dataset.append(normalised_img)
 
 # %%
-image_dataset = np.array(image_dataset)
+image_dataset = np.array(image_dataset, dtype=object)
 
 # %% [markdown]
 # ### Mask layers - NOT CURRENTLY WORKING
 
-# %% jupyter={"outputs_hidden": true}
+# %%
+training_data = gpd.read_file(mask_dir.joinpath("training_data_baidoa_jo.shp"))
+training_data["Type"].value_counts(dropna=False)
+
+# %%
 mask_dataset = []
 
-building_class_list = ["House", "Tent", "Service"]
+building_class_list = ["Building", "Tent"]
 
 for path, subdirs, files in os.walk(training_data_dir):
     dirname = path.split(os.path.sep)[-1]
@@ -137,24 +140,37 @@ for path, subdirs, files in os.walk(training_data_dir):
             if mask_name.endswith(".shp"):
 
                 mask_filename = Path(mask_name).stem
+                print(mask_filename)
                 training_data = gpd.read_file(mask_dir.joinpath(mask_name))
-                training_data["Typenew"] = "0"
-                training_data = training_data[["geometry", "Typenew"]]
+                training_data = training_data["Type"].replace(
+                    ["Service", "House"], "Building"
+                )
 
-            segmented_training_arr = rasterize_training_data(
-                training_data,
-                img_dir.joinpath(image_name),
-                building_class_list,  # NOT WORKING
-                mask_dir.joinpath(f"{mask_filename}.tif"),
-            )
+                segmented_training_arr = rasterize_training_data(
+                    training_data,
+                    img_dir.joinpath(f"{mask_filename}.tif"),
+                    building_class_list,
+                    mask_dir.joinpath(f"{mask_filename}.tif"),
+                )
 
-            mask_dataset.append(segmented_training_arr)
+            # mask_dataset.append(segmented_training_arr)
 
 # %%
-mask_dataset = np.array(mask_dataset)
+mask_dataset = np.array(mask_dataset, dtype=object)
 
 # %% [markdown]
 # ### Load training data - old system
+
+# %%
+test_1 = image_dataset[1]
+test_2 = image_dataset[2]
+
+plt.figure(figsize=(12, 6))
+plt.subplot(121)
+plt.imshow(test_1[:, :, :3])
+plt.subplot(122)
+plt.imshow(test_2[:, :, :3])
+plt.show()
 
 # %%
 training_data = gpd.read_file(mask_dir.joinpath("training_data_beledweyne_LJ.shp"))
@@ -354,7 +370,7 @@ callbacks = [
 # %% [markdown]
 # ### Model
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 model = get_model()
 
 model.compile(optimizer="adam", loss=total_loss, metrics=metrics)
