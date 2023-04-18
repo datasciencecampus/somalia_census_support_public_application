@@ -5,11 +5,11 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.14.4
 #   kernelspec:
-#     display_name: venv-somalia-gcp
+#     display_name: Python 3
 #     language: python
-#     name: venv-somalia-gcp
+#     name: python3
 # ---
 
 # %% [markdown]
