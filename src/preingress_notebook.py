@@ -1,6 +1,7 @@
 # ---
 # jupyter:
 #   jupytext:
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -36,64 +37,47 @@
 # ## Set-up
 
 # %%
-import os
-from pathlib import Path
+# Load required libraries
+from pathlib import Path # working with file paths
+import geopandas as gpd # working with geospatial files and data
 
-import geopandas as gpd
-
-# %%
+# Local imports
 from functions_library import setup_sub_dir
 
 # %%
+# Note directories of interest
 data_dir = Path.cwd().parent.joinpath("data")
-
 training_data_dir = data_dir.joinpath("training_data")
-img_dir = setup_sub_dir(training_data_dir, "img")
+img_dir = setup_sub_dir(training_data_dir, "img") # Note setup_sub_dir creates these if not present
 mask_dir = setup_sub_dir(training_data_dir, "mask")
 
 # %% [markdown]
-# ## Image file cleaning
+# ## General file cleaning
 #
-# * change all file names to lower case
-# * check there is a corresponding mask file
-# * check banding?
-# * ensure naming convention upheld?
+# * change all file names to lower case (see [`Path.rename()`](https://docs.python.org/3/library/pathlib.html#pathlib.Path.rename) and [`str.lower()`](https://www.programiz.com/python-programming/methods/string/lower)
+# * check there each img file has corresponding mask file and _vice versa_ - both img and mask files should have same name except suffix
+# * ensure naming convention upheld? Should be: `training_data_<area>_<tile no>_<initials>_<bgr>.tif`
 
 # %%
-img_count = len(list(img_dir.glob("*.tif")))
-mask_count = len(list(mask_dir.glob("*.tif")))
+# Get all the img and mask files present
+img_files = list(img_dir.glob("*.tif"))
+mask_files = list(mask_dir.glob("*.geojson"))
 
-print("there are", img_count, "image files and", mask_count, "mask files")
+print("there are", len(img_files), "image files and", len(mask_files), "mask files")
+
+# %% [markdown]
+# # Image file cleaning
+#
+# * check banding? Check in with Laurence on this and see: https://github.com/datasciencecampus/somalia_unfpa_census_support/issues/173
 
 # %% [markdown]
 # ## Mask file cleaning
 #
-# * change all files to lower case
-# * check there is a corresponding image file
-# * check there is a type column
-# * remove fid or id column
-# * check for na
-# * ensure naming convention upheld
+# * check data in each geojson (see [reading geojson](https://docs.astraea.earth/hc/en-us/articles/360043919911-Read-a-GeoJSON-File-into-a-GeoPandas-DataFrame)):
+#    * check there is a type column
+#    * remove fid or id column
+#    * check for na
 
 # %%
-for path, subdirs, files in os.walk(training_data_dir):
-    dirname = path.split(os.path.sep)[-1]
-    if dirname == "mask":
-        masks = os.listdir(path)
-
-        for i, mask_name in enumerate(masks):
-            if mask_name.endswith(".shp"):
-
-                mask_filename = Path(mask_name).stem
-
-                training_data = gpd.read_file(mask_dir.joinpath(mask_name))
-
-                if "fid" in training_data:
-                    training_data = training_data.drop(columns=["fid"])
-                else:
-                    training_data = training_data.drop(columns=["id"])
-
-                if training_data["Type"].isnull().values.any():
-                    print("Oh no")
 
 # %%
