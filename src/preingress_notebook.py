@@ -56,7 +56,8 @@ img_file_names = [file.name for file in img_files]
 img_file_names
 
 # %%
-# do same for mask files here also
+mask_file_names = [file.name for file in mask_files]
+mask_file_names
 
 # %% [markdown]
 # ## General file cleaning
@@ -64,12 +65,22 @@ img_file_names
 # * change all file names to lower case (see [`Path.rename()`](https://docs.python.org/3/library/pathlib.html#pathlib.Path.rename) and [`str.lower()`](https://www.programiz.com/python-programming/methods/string/lower)
 # * check there each img file has corresponding mask file and _vice versa_ - both img and mask files should have same name except suffix
 # * ensure naming convention upheld? Should be: `training_data_<area>_<tile no>_<initials>_<bgr>.tif`
+# * check banding? Check in with Laurence on this and see: https://github.com/datasciencecampus/somalia_unfpa_census_support/issues/173
 
 # %%
 img_files
 
 # %%
-img_files[0].name = img_files[0].name.lower()
+# for loop to go through img names and convert to lower case
+for i in range(len(img_files)):
+    lower_case_img_files_names = img_files[i].name.lower()
+    print(lower_case_img_files_names)
+
+# %%
+# for loop to go through mask names and convert to lower case
+for i in range(len(mask_files)):
+    lower_case_mask_files_names = mask_files[i].name.lower()
+    print(lower_case_mask_files_names)
 
 # %%
 # chop off file name in path lib
@@ -77,11 +88,6 @@ img_files[0].name = img_files[0].name.lower()
 # combine string with lowercase name
 # convert to path
 # rename the file
-
-# %% [markdown]
-# # Image file cleaning
-#
-# * check banding? Check in with Laurence on this and see: https://github.com/datasciencecampus/somalia_unfpa_census_support/issues/173
 
 # %% [markdown]
 # ### List files in mask folder
