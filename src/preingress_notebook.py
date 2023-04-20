@@ -40,7 +40,7 @@ img_dir = setup_sub_dir(training_data_dir, "img") # Note setup_sub_dir creates t
 mask_dir = setup_sub_dir(training_data_dir, "mask")
 
 # %% [markdown]
-# ### Explore files
+# ## Explore files
 
 # %%
 # Get all the img and mask files present
@@ -51,9 +51,15 @@ mask_files = list(mask_dir.glob("*.geojson"))
 if len(img_files) != len(mask_files):
     warnings.warn(f"Number of image files {len(img_files)} doesn't match number of mask files {len(mask_files)}")
 
+# %% [markdown]
+# ### List img files in img folder
+
 # %%
 img_file_names = [file.name for file in img_files]
 img_file_names
+
+# %% [markdown]
+# ### List mask files in mask folder
 
 # %%
 mask_file_names = [file.name for file in mask_files]
@@ -73,14 +79,17 @@ img_files
 # %%
 # for loop to go through img names and convert to lower case
 for i in range(len(img_files)):
-    lower_case_img_files_names = img_files[i].name.lower()
-    print(lower_case_img_files_names)
+    lower_case_img_file_names = img_files[i].name.lower()
+    print(lower_case_img_file_names)
+
+# %%
+mask_files
 
 # %%
 # for loop to go through mask names and convert to lower case
 for i in range(len(mask_files)):
-    lower_case_mask_files_names = mask_files[i].name.lower()
-    print(lower_case_mask_files_names)
+    lower_case_mask_file_names = mask_files[i].name.lower()
+    print(lower_case_mask_file_names)
 
 # %%
 # chop off file name in path lib
@@ -90,12 +99,30 @@ for i in range(len(mask_files)):
 # rename the file
 
 # %% [markdown]
-# ### List files in mask folder
-
-# %% [markdown]
 # ## Mask file cleaning
 #
 # * check data in each geojson (see [reading geojson](https://docs.astraea.earth/hc/en-us/articles/360043919911-Read-a-GeoJSON-File-into-a-GeoPandas-DataFrame)):
 #    * check there is a type column
 #    * remove fid or id column
 #    * check for na
+
+# %%
+#NOT SURE IF NEEDED SO CAN DELETE MAYBE? 
+
+# Joins all geopandas df together
+bring_in = []
+
+for filename in mask_files:
+    df = gpd.read_file(filename, index_col=None, header=0)
+    bring_in.append(df)
+    
+df.tail()
+
+# %%
+training_data_baidoa_1_JO = gpd.read_file(mask_dir.joinpath("training_data_baidoa_1_JO.geojson"))
+training_data_baidoa_1_JO.head()
+
+# %%
+list(training_data_baidoa_1_JO.columns.values)
+
+# %%
