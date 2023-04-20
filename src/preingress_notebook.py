@@ -120,9 +120,30 @@ df.tail()
 
 # %%
 training_data_baidoa_1_JO = gpd.read_file(mask_dir.joinpath("training_data_baidoa_1_JO.geojson"))
-training_data_baidoa_1_JO.head()
+# training_data_baidoa_1_JO.head()
 
 # %%
-list(training_data_baidoa_1_JO.columns.values)
+# Check there is a type column and to see whether any missing values
+
+training_data_baidoa_1_JO.info()
+
+# %%
+# Drop "fid" column
+
+if "fid" in training_data_baidoa_1_JO:
+    training_data_baidoa_1_JO = training_data_baidoa_1_JO.drop(columns=["fid"])
+else:
+    training_data_baidoa_1_JO = training_data_baidoa_1_JO.drop(columns=["id"])
+
+# %%
+training_data_baidoa_1_JO.isnull().values.any()
+
+# %%
+# If statement with warning to see if "Type" column has missing values
+
+if training_data_baidoa_1_JO["Type"].isnull().values.any():
+    warnings.warn(f"Type has null values")
+else: 
+    print("No null values")
 
 # %%
