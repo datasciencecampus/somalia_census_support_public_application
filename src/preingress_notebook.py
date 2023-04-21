@@ -53,14 +53,14 @@ if len(img_files) != len(mask_files):
     warnings.warn(f"Number of image files {len(img_files)} doesn't match number of mask files {len(mask_files)}")
 
 # %% [markdown]
-# ### List img files in img folder
+# ##### List img files in img folder
 
 # %%
 img_file_names = [file.name for file in img_files]
 img_file_names
 
 # %% [markdown]
-# ### List mask files in mask folder
+# ##### List mask files in mask folder
 
 # %%
 mask_file_names = [file.name for file in mask_files]
@@ -74,6 +74,9 @@ mask_file_names
 # * check there each img file has corresponding mask file and _vice versa_ - both img and mask files should have same name except suffix
 # * ensure naming convention upheld for tif and geojson? Should be: `training_data_<area>_<tile no>_<initials>_<bgr>.tif`
 # * specific for img files! check banding? Check in with Laurence on this and see: https://github.com/datasciencecampus/somalia_unfpa_census_support/issues/173
+
+# %% [markdown]
+# ##### Change all file names to lower case
 
 # %%
 def change_to_lower_case(files):
@@ -92,6 +95,9 @@ def change_to_lower_case(files):
 img_files_lower = change_to_lower_case(img_files)
 mask_files_lower = change_to_lower_case(mask_files)
 
+
+# %% [markdown]
+# ###### Check each mask file has corresponding img file
 
 # %%
 def check_mask_file_for_img_file(img_files_lower, mask_files_lower):
@@ -123,6 +129,9 @@ def check_mask_file_for_img_file(img_files_lower, mask_files_lower):
 check_mask_file_for_img_file(img_files_lower, mask_files_lower)
 
 
+# %% [markdown]
+# ###### Check each img file has corresponding mask file 
+
 # %%
 def check_img_file_for_mask_file(img_files_lower, mask_files_lower):
     
@@ -143,15 +152,22 @@ def check_img_file_for_mask_file(img_files_lower, mask_files_lower):
 # %%
 check_img_file_for_mask_file(img_files_lower, mask_files_lower)
 
-# %%
-for file in img_files_lower + mask_files_lower:
-    
-    if re.match(r"training_data_.+_[0-9]+_*", file.name):
-        print("this is great")
-        # warning for when it doesn't match
+
+# %% [markdown]
+# ##### Check to ensure naming convention held for masks and img files
 
 # %%
-mask_files_lower[0].name
+def check_naming_convention_upheld(img_files_lower, mask_files_lower):
+    
+    for file in img_files_lower + mask_files_lower:
+    
+        # checks if naming convention correct for mask and img files
+        if not re.match(r"training_data_.+_[0-9]+_*", file.name):
+            warnings.warn(f"The naming convention for ({file.name}) is not correct. Please change")
+
+
+# %%
+check_naming_convention_upheld(img_files_lower, mask_files_lower)
 
 # %% [markdown]
 # ## Mask file cleaning
