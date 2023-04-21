@@ -98,6 +98,9 @@ for i in range(len(mask_files)):
 # convert to path
 # rename the file
 
+# %%
+str(mask_files[0])
+
 # %% [markdown]
 # ## Mask file cleaning
 #
@@ -107,16 +110,25 @@ for i in range(len(mask_files)):
 #    * check for na
 
 # %%
-#NOT SURE IF NEEDED SO CAN DELETE MAYBE? 
+# Read multiple geojsons files into separate geopandas DataFrames
 
-# Joins all geopandas df together
-bring_in = []
+# assign dataset names from list
+mask_files
 
-for filename in mask_files:
-    df = gpd.read_file(filename, index_col=None, header=0)
-    bring_in.append(df)
+# create empty list
+dataframes_list = []
+
+# append geojsons into the list
+for i in range(len(mask_files)):
+    temp_df = gpd.read_file(str(mask_files[i]))
+    dataframes_list.append(temp_df)
     
-df.tail()
+# display geopandas dataframe
+for dataset in dataframes_list:
+    display(dataset)
+
+# %%
+dataframes_list[4]
 
 # %%
 training_data_baidoa_1_JO = gpd.read_file(mask_dir.joinpath("training_data_baidoa_1_JO.geojson"))
