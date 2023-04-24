@@ -176,6 +176,7 @@ def check_naming_convention_upheld(img_files_lower, mask_files_lower):
 # %%
 check_naming_convention_upheld(img_files_lower, mask_files_lower)
 
+
 # %% [markdown]
 # ## Mask file cleaning
 #
@@ -184,124 +185,44 @@ check_naming_convention_upheld(img_files_lower, mask_files_lower)
 #    * remove fid or id column
 #    * check for na
 
-# %%
-# Read multiple geojsons files into separate geopandas DataFrames
-
-# Append geojsons into the list
-for mask_file in mask_files_lower:
-    temp_df = gpd.read_file(str(mask_file))
-    
-    # drop fid and id columns
-    
-    if not "fid" in temp_df:
-        print("No fid in columns")
-    
-    if "id" in temp_df:
-        temp_df = temp_df.drop(columns=["id"])
-        
-    else:
-        temp_df = temp_df.drop(columns=["fid"])
-        
-    # check for type column - if not send error
-    
-    if "Type" in temp_df.columns:
-        print(f"Type column is present for {(temp_df)}")
-        
-    else:
-        warnings.warn(f"The Type column for {(temp_df)} is not present")
-    
-    # check any null values in type column - send error
-    
-    if temp_df["Type"].isnull().values.any():
-        warnings.warn(f"Type column for ({mask_file}) has null values")
-        
-    else: 
-        print(f"No null values present in Type column for ({mask_file})")
-   
-    # check for na values in area column - send error or warning
-    
-    if temp_df["Area"].isnull().values.any():
-        warnings.warn(f"Area column for ({mask_file}) has null values")
-    
-    else: 
-        print(f"No null values present in Area column for ({mask_file})")
-        
-    # write back to geojson
-    
-    temp_df.to_file(mask_dir.joinpath(f"{(mask_file)}"))
-
-
-# %%
-#################################################
-
-# %%
-temp_df = gpd.read_file(str(mask_files_lower[]))
-
-# %%
-temp_df.info()
-
-# %%
-temp_df.columns
-
 # %% [markdown]
 # ### Start data cleaning
 
 # %%
-# Drop "fid" or "id" column
-for i in temp_df:
+def cleaning_of_mask_files(mask_files_lower):
     
-    if not "fid" in temp_df:
-        print("No fid in columns")
+    for mask_file in mask_files_lower:
+        temp_df = gpd.read_file(str(mask_file))
     
-    if "id" in temp_df:
-        temp_df = temp_df.drop(columns=["id"])
+        # drop fid and id columns
+     
+        if "id" in temp_df:
+            temp_df = temp_df.drop(columns=["id"])
         
-    else:
-        temp_df = temp_df.drop(columns=["fid"])
+        elif "fid" in temp_df:
+            temp_df = temp_df.drop(columns=["fid"])
         
+        # check for type column - if not send error
     
+        if "Type" in temp_df.columns:
+            print(f"Type column is present for {(mask_file.name)}")
         
-
-
-# %%
-temp_df.head()
-
-# %%
-# If statement with warning to see if "Type" column has missing values
-
-for i in temp_df:
+        else:
+            temp_df["Type"] = 0
+            warnings.warn(f"The Type column not found {(mask_file.name)} setting to background")
     
-    if temp_df["Type"].isnull().values.any():
-        warnings.warn(f"Type column for ({temp_df}) has null values")
-        
-    else: 
-        print(f"No null values present for ({temp_df})")
-
-# %%
-# check there is a type column
-
-for i in temp_df:
+        # check any null values in type column - send error
     
-    if "Type" in temp_df.columns:
-        print(f"Type column is present for {(temp_df)}")
+        if temp_df["Type"].isnull().values.any():
+            warnings.warn(f"Type column for ({mask_file.name}) has null values")
         
-    else:
-        warnings.warn(f"The Type column for {(temp_df)} is not present")
+        else: 
+            print(f"No null values present in Type column for ({mask_file.name})")
+        
+        # write back to geojson
+    
+        temp_df.to_file(mask_dir.joinpath(f"{(mask_file)}"), driver="GeoJSON")
 
 
 # %%
-temp_df_1.head()
-
-# %%
-temp_df_1.isnull().values.any()
-
-# %%
-temp_df_1.isnull().sum().sum()
-
-# %%
-temp_df_1["Area"].isnull().sum()
-
-# %%
-# Write back file to geojson and save in mask folder (relative path)
-
-temp_df.to_file(mask_dir.joinpath(f"{(mask_file_names[0])}"))
+cleaning_of_mask_files(mask_files_lower)
