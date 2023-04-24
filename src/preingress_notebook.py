@@ -86,7 +86,7 @@ mask_file_names
 def change_to_lower_case(files):
     
     """
-    Changes file names for img and mask files to lower case.
+    Changes file names for img and mask files to lower case in training data before ingress to GCP.
     
     Parameters
     ----------
@@ -124,7 +124,7 @@ mask_files_lower = change_to_lower_case(mask_files)
 def check_mask_file_for_img_file(img_files_lower, mask_files_lower):
     
      """
-    Checks mask file names to see if they have a corresponding img file
+    Checks mask file names to see if they have a corresponding img file in training data before ingress to GCP 
     
     Parameters
     ----------
@@ -135,7 +135,7 @@ def check_mask_file_for_img_file(img_files_lower, mask_files_lower):
     
     Returns
     -------
-    
+    Warning if there is not a corresponding img file for mask file name
     """
         
     # get mask file names
@@ -172,18 +172,18 @@ check_mask_file_for_img_file(img_files_lower, mask_files_lower)
 def check_img_file_for_mask_file(img_files_lower, mask_files_lower):
     
      """
-    Checks img file names to see if they have a corresponding mask file
+    Checks img file names to see if they have a corresponding mask file in training data before ingress to GCP
     
     Parameters
     ----------
     img_files_lower: list
         List of img files in lower case
     mask_files_lower: list
-       List of mask files in lower case 
+        List of mask files in lower case 
         
     Returns
     -------
-    
+    Warning if img file name does not have a corresponding mask file
     """
         
     # get img file names
@@ -211,20 +211,25 @@ check_img_file_for_mask_file(img_files_lower, mask_files_lower)
 def check_naming_convention_upheld(img_files_lower, mask_files_lower):
     
      """
+    Checks correct naming convention is being used for img and mask files in training data before ingress to GCP.
     
     Parameters
     ----------
+    img_files_lower: list
+        List of img files in lower case
+    mask_files_lower: list
+        List of mask files in lower case 
     
     Returns
     -------
-    
+    Warning if naming convention for mask or img file is incorrect and informs what to change to
     """
         
     for file in img_files_lower + mask_files_lower:
     
         # checks if naming convention correct for mask and img files
         if not re.match(r"training_data_.+_[0-9]+_*", file.name):
-            warnings.warn(f"The naming convention for ({file.name}) is not correct. Please change")
+            warnings.warn(f"The naming convention for ({file.name}) is not correct. Please change to training_data_<area>_<tile no>_<initials>_<bgr>.tif for imgs or training_data_<area>_<tile no>_<initials>.geojson for masks ")
 
 
 # %%
@@ -246,13 +251,18 @@ check_naming_convention_upheld(img_files_lower, mask_files_lower)
 def cleaning_of_mask_files(mask_files_lower):
     
      """
+    Cleans geopandas dataframes of all mask files and then overwrites them in the mask folder. Checks for
+    additional columns, missing columns and null values.
     
     Parameters
     ----------
+    mask_files_lower: list
+        List of mask files in lower case 
     
     Returns
     -------
-    
+    Warning message if "Type" column not found along with creation of new column in geopandas dataframe, 
+    print message and lastly a GeoJSON file that has been cleaned. 
     """
         
     for mask_file in mask_files_lower:
