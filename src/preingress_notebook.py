@@ -18,7 +18,7 @@
 #
 # > Notebook to be run before any files are transferred to the SharePoint GCP ingress folder
 #
-# > You will need to copy contents of GCP_ingress folder on Sharepoint to your local machine
+# > You will need to manually copy contents of GCP_ingress folder on Sharepoint to your local machine and vice-versa
 
 # %% [markdown]
 # ## Set-up
@@ -45,10 +45,14 @@ mask_dir = setup_sub_dir(training_data_dir, "mask")
 
 # %%
 # Get all the img and mask files present
+
+# Absolute path for img files
 img_files = list(img_dir.glob("*.tif"))
+
+# Absolute path for mask files
 mask_files = list(mask_dir.glob("*.geojson"))
 
-# Check that same number of imgs and mask files present
+# Check that same number of imgs and mask files present - if not then warning
 if len(img_files) != len(mask_files):
     warnings.warn(f"Number of image files {len(img_files)} doesn't match number of mask files {len(mask_files)}")
 
@@ -70,7 +74,7 @@ mask_file_names
 # %% [markdown]
 # ## General file cleaning
 #
-# * change all file names to lower case (see [`Path.rename()`](https://docs.python.org/3/library/pathlib.html#pathlib.Path.rename) and [`str.lower()`](https://www.programiz.com/python-programming/methods/string/lower)
+# * change all file names to lower case (see [`Path.rename()`](https://docs.python.org/3/library/pathlib.html#pathlib.Path.rename) and [`str.lower()`](https://www.programiz.com/python-programming/methods/string/lower) 
 # * check there each img file has corresponding mask file and _vice versa_ - both img and mask files should have same name except suffix
 # * ensure naming convention upheld for tif and geojson? Should be: `training_data_<area>_<tile no>_<initials>_<bgr>.tif`
 # * specific for img files! check banding? Check in with Laurence on this and see: https://github.com/datasciencecampus/somalia_unfpa_census_support/issues/173
@@ -92,7 +96,10 @@ def change_to_lower_case(files):
 
 
 # %%
+# Lower case img file names
 img_files_lower = change_to_lower_case(img_files)
+
+# Lower case mask file names
 mask_files_lower = change_to_lower_case(mask_files)
 
 
@@ -119,7 +126,7 @@ def check_mask_file_for_img_file(img_files_lower, mask_files_lower):
             mask_file_name = img_file.name[:-4] + ".geojson"
             warnings.warn(f"banding pattern isn't present in {img_file.name}")
         
-        # check if mask file present
+        # check if mask file present - if not then warning
         if not mask_file_name in mask_file_names:
             warnings.warn(f"The mask file ({mask_file_name}) for img_file ({img_file.name}) doesn't exist")
     
@@ -144,7 +151,7 @@ def check_img_file_for_mask_file(img_files_lower, mask_files_lower):
         # build img file name
         img_file_name = mask_file.name[:-8] + "_bgr.tif"
         
-        # check if img file present
+        # check if img file present - if not then warning
         if not img_file_name in img_file_names:
             warnings.warn(f"The img file ({img_file_name}) for mask_file ({mask_file.name}) doesn't exist")
 
@@ -180,82 +187,121 @@ check_naming_convention_upheld(img_files_lower, mask_files_lower)
 # %%
 # Read multiple geojsons files into separate geopandas DataFrames
 
-# assign dataset names from list
-mask_files
-
-# append geojsons into the list
+# Append geojsons into the list
 for mask_file in mask_files_lower:
     temp_df = gpd.read_file(str(mask_file))
     
     # drop fid and id columns
     
+    if not "fid" in temp_df:
+        print("No fid in columns")
+    
+    if "id" in temp_df:
+        temp_df = temp_df.drop(columns=["id"])
+        
+    else:
+        temp_df = temp_df.drop(columns=["fid"])
+        
     # check for type column - if not send error
     
-        # check any null values in type - send error
-      
-    # check for na values - send error or warning
+    if "Type" in temp_df.columns:
+        print(f"Type column is present for {(temp_df)}")
+        
+    else:
+        warnings.warn(f"The Type column for {(temp_df)} is not present")
     
+    # check any null values in type column - send error
+    
+    if temp_df["Type"].isnull().values.any():
+        warnings.warn(f"Type column for ({mask_file}) has null values")
+        
+    else: 
+        print(f"No null values present in Type column for ({mask_file})")
+   
+    # check for na values in area column - send error or warning
+    
+    if temp_df["Area"].isnull().values.any():
+        warnings.warn(f"Area column for ({mask_file}) has null values")
+    
+    else: 
+        print(f"No null values present in Area column for ({mask_file})")
+        
     # write back to geojson
-
+    
+    temp_df.to_file(mask_dir.joinpath(f"{(mask_file)}"))
 
 
 # %%
-temp_df = gpd.read_file(str(mask_files_lower[0]))
+#################################################
 
 # %%
-temp_df
+temp_df = gpd.read_file(str(mask_files_lower[]))
+
+# %%
+temp_df.info()
+
+# %%
+temp_df.columns
 
 # %% [markdown]
 # ### Start data cleaning
 
 # %%
-
-# %%
-# Drop "fid" column
-for i in :
+# Drop "fid" or "id" column
+for i in temp_df:
     
-    if "fid" in dataframes_list:
-        dataset = dataset.drop(columns=["fid"])
+    if not "fid" in temp_df:
+        print("No fid in columns")
+    
+    if "id" in temp_df:
+        temp_df = temp_df.drop(columns=["id"])
+        
     else:
-        dataset = dataset.drop(columns=["id"])
+        temp_df = temp_df.drop(columns=["fid"])
+        
+    
+        
+
+
+# %%
+temp_df.head()
 
 # %%
 # If statement with warning to see if "Type" column has missing values
 
-    if dataframes_list["Type"].isnull().values.any():
-        warnings.warn(f"Type has null values")
+for i in temp_df:
+    
+    if temp_df["Type"].isnull().values.any():
+        warnings.warn(f"Type column for ({temp_df}) has null values")
+        
     else: 
-        print("No null values")
+        print(f"No null values present for ({temp_df})")
 
 # %%
-dataframes_list[2].head()
+# check there is a type column
+
+for i in temp_df:
+    
+    if "Type" in temp_df.columns:
+        print(f"Type column is present for {(temp_df)}")
+        
+    else:
+        warnings.warn(f"The Type column for {(temp_df)} is not present")
+
 
 # %%
-training_data_baidoa_1_JO = gpd.read_file(mask_dir.joinpath("training_data_baidoa_1_JO.geojson"))
-# training_data_baidoa_1_JO.head()
+temp_df_1.head()
 
 # %%
-# Check there is a type column and to see whether any missing values
-
-training_data_baidoa_1_JO.info()
+temp_df_1.isnull().values.any()
 
 # %%
-# Drop "fid" column
-
-if "fid" in training_data_baidoa_1_JO:
-    training_data_baidoa_1_JO = training_data_baidoa_1_JO.drop(columns=["fid"])
-else:
-    training_data_baidoa_1_JO = training_data_baidoa_1_JO.drop(columns=["id"])
+temp_df_1.isnull().sum().sum()
 
 # %%
-training_data_baidoa_1_JO.isnull().values.any()
+temp_df_1["Area"].isnull().sum()
 
 # %%
-# If statement with warning to see if "Type" column has missing values
+# Write back file to geojson and save in mask folder (relative path)
 
-if training_data_baidoa_1_JO["Type"].isnull().values.any():
-    warnings.warn(f"Type has null values")
-else: 
-    print("No null values")
-
-# %%
+temp_df.to_file(mask_dir.joinpath(f"{(mask_file_names[0])}"))
