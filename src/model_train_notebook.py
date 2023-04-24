@@ -56,11 +56,9 @@
 # ### Import libraries & custom functions
 
 # %%
-import os
 from pathlib import Path
 
 # %%
-import geopandas as gpd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -72,177 +70,134 @@ from sklearn.utils.class_weight import compute_class_weight
 
 # %%
 from functions_library import setup_sub_dir
-from modelling_preprocessing import rasterize_training_data, reorder_array
 from multi_class_unet_model_build import jacard_coef, multi_unet_model
-from planet_img_processing_functions import (
-    change_band_order,
-    clip_and_normalize_raster,
-    return_array_from_tiff,
-)
 
 # %% [markdown]
 # ### Set-up filepaths
 
 # %%
+# set data directory
 data_dir = Path.cwd().parent.joinpath("data")
 
+# set training_data directory within data folder
 training_data_dir = data_dir.joinpath("training_data")
-img_dir = setup_sub_dir(training_data_dir, "img")
-mask_dir = setup_sub_dir(training_data_dir, "mask")
 
+# set img and mask directories within training_data directory
+img_dir = training_data_dir.joinpath("img")
+mask_dir = training_data_dir.joinpath("mask")
+
+
+# set-up model directory for model outputs
 models_dir = setup_sub_dir(Path.cwd().parent, "models")
 
 # %% [markdown]
-# ## Load training data <a name="loadraster"></a>
-
-# %% [markdown]
-# ### Image rasters
-
-# %%
-image_dataset = []
-for path, subdirs, files in os.walk(training_data_dir):
-
-    dirname = path.split(os.path.sep)[-1]
-    if dirname == "img":
-        images = os.listdir(path)
-
-        for i, image_name in enumerate(images):
-            if image_name.endswith(".tif"):
-
-                img_array = return_array_from_tiff(img_dir.joinpath(image_name))
-                img_arr_reordered = change_band_order(img_array)
-                normalised_img = clip_and_normalize_raster(img_arr_reordered, 99)
-                normalised_img = reorder_array(normalised_img, 1, 2, 0)
-
-                image_dataset.append(normalised_img)
-
-# %%
-image_dataset = np.array(image_dataset, dtype=object)
-
-# %% [markdown]
-# ### Mask layers - NOT CURRENTLY WORKING
-
-# %%
-training_data = gpd.read_file(mask_dir.joinpath("training_data_baidoa_jo.shp"))
-training_data["Type"].value_counts(dropna=False)
-
-# %%
-mask_dataset = []
-
-building_class_list = ["Building", "Tent"]
-
-for path, subdirs, files in os.walk(training_data_dir):
-    dirname = path.split(os.path.sep)[-1]
-    if dirname == "mask":
-        masks = os.listdir(path)
-
-        for i, mask_name in enumerate(masks):
-            if mask_name.endswith(".shp"):
-
-                mask_filename = Path(mask_name).stem
-                print(mask_filename)
-                training_data = gpd.read_file(mask_dir.joinpath(mask_name))
-                training_data = training_data["Type"].replace(
-                    ["Service", "House"], "Building"
-                )
-
-                segmented_training_arr = rasterize_training_data(
-                    training_data,
-                    img_dir.joinpath(f"{mask_filename}.tif"),
-                    building_class_list,
-                    mask_dir.joinpath(f"{mask_filename}.tif"),
-                )
-
-            # mask_dataset.append(segmented_training_arr)
-
-# %%
-mask_dataset = np.array(mask_dataset, dtype=object)
-
-# %% [markdown]
-# ### Load training data - old system
-
-# %%
-test_1 = image_dataset[1]
-test_2 = image_dataset[2]
-
-plt.figure(figsize=(12, 6))
-plt.subplot(121)
-plt.imshow(test_1[:, :, :3])
-plt.subplot(122)
-plt.imshow(test_2[:, :, :3])
-plt.show()
-
-# %%
-training_data = gpd.read_file(mask_dir.joinpath("training_data_beledweyne_LJ.shp"))
-raster_file_path = img_dir.joinpath("training_data_beledweyne_LJ.tif")
-
-# %%
-training_data["Type"] = training_data["Type"].fillna(0)
-
-building_class_list = [0]
-
-# %%
-# remove unused column
-# training_data = training_data.drop(columns=["fid"])
-
-# building_class_list = ["House", "Tent", "Service"]
-
-segmented_training_arr = rasterize_training_data(
-    training_data,
-    raster_file_path,
-    building_class_list,
-    mask_dir.joinpath(f"{raster_file_path.stem}_mask.tif"),
-)
-
-img_array = return_array_from_tiff(raster_file_path)
-img_arr_reordered = change_band_order(img_array)
-normalised_img = clip_and_normalize_raster(img_arr_reordered, 99)
-
-# transpose array to (x, y, band) from (band, x, y)
-normalised_img = reorder_array(normalised_img, 1, 2, 0)
-
-
-# %%
-n_classes = len(np.unique(segmented_training_arr))
-
-# Create colour map for preservation at point of displaying classes
-col_map = mpl.cm.get_cmap("viridis", n_classes)
-
-# %%
-plt.figure(figsize=(12, 6))
-plt.subplot(121)
-plt.imshow(normalised_img[:, :, :3])
-plt.subplot(122)
-plt.imshow(segmented_training_arr, cmap=col_map)
-plt.show()
-
-# %%
-img_size = 576
-
-normalised_sat_raster = normalised_img[0:img_size, 0:img_size, :]
-normalised_sat_raster.shape
-
-# %%
-training_mask_raster = segmented_training_arr[0:img_size, 0:img_size]
-training_mask_raster.shape
-
-# %% [markdown]
-# ## Data Augmentation <a name="dataaug"></a>
+# ## Set validation file <a name="validation"></a>
 #
+# > this will be removed when there is more data
+
+# %%
+# set validation file - until we have more training data
+validation_image = img_dir.joinpath("training_data_doolow_1_jo_bgr.npy")
+validation_mask = mask_dir.joinpath("training_data_doolow_1_jo_bgr_mask.npy")
 
 # %% [markdown]
-# ### Image scaling
-#
+# ## Data augmentation
+
+# %% [markdown]
+# ### Image augmentation
 #
 # U-Net architecture uses max pooling to downsample images across 4 levels, so we need to work with tiles that are divisable by 4 x 2.
 #
 # Training data tiles created in QGIS as ~200m x 200m (which equates to ~400 x 400 pixels as resolution is 0.5m/px). Intention is for tiles to be cropped to 384 pixels (or 192m)
 
 # %%
-# img_size = 384
+# list all .npy files in img_dir
+image_files = [f for f in img_dir.glob("*.npy") if f.name != validation_image]
+
+# empty list to store images
+image_arrays = []
+
+for file in image_files:
+
+    # load the array
+    img_arr = np.load(file)
+
+    # check array has the correct shape
+    if img_arr.shape != (384, 384, 4):
+        print(f"skipping {file} due to incorrect shape: {img_arr.shape}")
+
+    # rotate the array by 90 degrees and add to list
+    image_arrays.append(np.rot90(img_arr, k=1, axes=(0, 1)))
+
+    # rotate the array by 180 degrees and add to list
+    image_arrays.append(np.rot90(img_arr, k=2, axes=(0, 1)))
+
+    # rotate the array by 270 degrees and add to list
+    image_arrays.append(np.rot90(img_arr, k=3, axes=(0, 1)))
+
+    # flip the array horizontally and add to list
+    image_arrays.append(np.fliplr(img_arr))
+
+    # flip the array verticallyand add to list
+    image_arrays.append(np.flipud(img_arr))
+
+# stack all the images in the list
+stacked_images = np.stack(image_arrays)
+
+print(stacked_images.shape)
 
 # %% [markdown]
-# ### Image manipulation
+# ### Mask augmentation
+
+# %%
+# list all .npy files in img_dir
+mask_files = [f for f in mask_dir.glob("*.npy") if f.name != validation_mask]
+
+# empty list to store masks
+mask_arrays = []
+
+for file in mask_files:
+
+    # load the array
+    mask_arr = np.load(file)
+
+    # check array has the correct shape
+    if mask_arr.shape != (384, 384):
+        print(f"skipping {file} due to incorrect shape: {mask_arr.shape}")
+        continue
+
+    # rotate the array by 90 degrees and add to list
+    mask_arrays.append(np.rot90(mask_arr, k=1, axes=(0, 1)))
+
+    # rotate the array by 180 degrees and add to list
+    mask_arrays.append(np.rot90(mask_arr, k=2, axes=(0, 1)))
+
+    # rotate the array by 270 degrees and add to list
+    mask_arrays.append(np.rot90(mask_arr, k=3, axes=(0, 1)))
+
+    # flip the array horizontally and add to list
+    mask_arrays.append(np.fliplr(mask_arr))
+
+    # flip the array verticallyand add to list
+    mask_arrays.append(np.flipud(mask_arr))
+
+# stack all the mask in the list
+stacked_masks = np.stack(mask_arrays)
+
+print(stacked_masks.shape)
+
+# %%
+# remnant code
+
+# n_classes = len(np.unique(segmented_training_arr))
+n_classes = len(np.unique(stacked_masks))
+
+# Create colour map for preservation at point of displaying classes
+col_map = mpl.cm.get_cmap("viridis", n_classes)
+
+# %%
+training_mask_raster = stacked_masks
+normalised_sat_raster = stacked_images
 
 # %% [markdown]
 # ## Training parameters <a name="trainingparameters"></a>
@@ -394,6 +349,9 @@ history1 = model.fit(
 # %tensorboard --logdir logs/
 
 # %%
+img_size = 384
+
+# %%
 
 model.save(
     models_dir.joinpath(f"trail_run_{num_epochs}epochs_{img_size}pix_doolow.hdf5")
@@ -415,6 +373,8 @@ y_pred = model.predict(X_test)
 # %%
 # "normalised_sat_raster" and "training_mask_raster" only work here because single image used
 # TODO: Update to be generalised from X_test and y_test files
+
+building_class_list = ["Building", "Tent"]
 
 fig, axes = plt.subplots(figsize=(13, 8))
 plt.subplot(231)
