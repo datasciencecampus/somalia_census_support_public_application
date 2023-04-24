@@ -85,10 +85,24 @@ mask_file_names
 # %%
 def change_to_lower_case(files):
     
-    # Makes img and mask file names lower case and stores in list
+    """
+    Changes file names for img and mask files to lower case.
+    
+    Parameters
+    ----------
+    files: list
+        Absolute paths for img or mask files on local machine
+        
+    Returns
+    -------
+    files_lower : list
+        Lower case img and mask file names stored in list.
+    """
+    
+    # Makes img and mask file names lower case and stored in list
     files_lower = [Path(file.parent, file.name.lower()) for file in files]
     
-    # Loop through both lists to rename original img files name
+    # Loop through both lists to rename original img or mask file name
     for file_original, file_lower in zip(files, files_lower):
         file_original.rename(file_lower)
         
@@ -109,6 +123,21 @@ mask_files_lower = change_to_lower_case(mask_files)
 # %%
 def check_mask_file_for_img_file(img_files_lower, mask_files_lower):
     
+     """
+    Checks mask file names to see if they have a corresponding img file
+    
+    Parameters
+    ----------
+    img_files_lower: list
+        List of img files in lower case
+    mask_files_lower: list
+       List of mask files in lower case 
+    
+    Returns
+    -------
+    
+    """
+        
     # get mask file names
     mask_file_names = [mask_file.name for mask_file in mask_files_lower]
 
@@ -142,6 +171,21 @@ check_mask_file_for_img_file(img_files_lower, mask_files_lower)
 # %%
 def check_img_file_for_mask_file(img_files_lower, mask_files_lower):
     
+     """
+    Checks img file names to see if they have a corresponding mask file
+    
+    Parameters
+    ----------
+    img_files_lower: list
+        List of img files in lower case
+    mask_files_lower: list
+       List of mask files in lower case 
+        
+    Returns
+    -------
+    
+    """
+        
     # get img file names
     img_file_names = [img_file.name for img_file in img_files_lower]
 
@@ -166,6 +210,16 @@ check_img_file_for_mask_file(img_files_lower, mask_files_lower)
 # %%
 def check_naming_convention_upheld(img_files_lower, mask_files_lower):
     
+     """
+    
+    Parameters
+    ----------
+    
+    Returns
+    -------
+    
+    """
+        
     for file in img_files_lower + mask_files_lower:
     
         # checks if naming convention correct for mask and img files
@@ -191,6 +245,16 @@ check_naming_convention_upheld(img_files_lower, mask_files_lower)
 # %%
 def cleaning_of_mask_files(mask_files_lower):
     
+     """
+    
+    Parameters
+    ----------
+    
+    Returns
+    -------
+    
+    """
+        
     for mask_file in mask_files_lower:
         temp_df = gpd.read_file(str(mask_file))
     
