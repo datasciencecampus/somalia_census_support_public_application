@@ -79,6 +79,9 @@ img_dir = training_data_dir.joinpath("img")
 mask_dir = training_data_dir.joinpath("mask")
 
 
+# %%
+img_size = 384
+
 # %% [markdown]
 # ## Image files <a name="images"></a>
 
@@ -103,11 +106,27 @@ for tif_file in tif_files:
         # reorder into height, width, band order
         arr_normalised = reorder_array(arr_normalised, 1, 2, 0)
 
+        # re-sizing to img_size (defined above as 384)
+        arr_normalised = arr_normalised[0:img_size, 0:img_size, :]
+
         # create a new filename
         npy_file = img_dir / (tif_file.stem)
 
         # save the NumPy array
         np.save(npy_file, arr_normalised)
+
+# %%
+# checking all image arrays have the same shape
+
+img_file_list = img_dir.glob("*npy")
+
+ref_shape = (384, 4, 4)
+
+for file in img_file_list:
+    img_array = np.load(file)
+
+    if img_array.shape != ref_shape:
+        print(f"{file} has a different shape than the reference file")
 
 # %% [markdown]
 # ## Mask files <a name="masks"></a>
@@ -139,6 +158,7 @@ for mask_path in mask_dir.glob("*.geojson"):
 
         # create a coresponding NumPy array of zeros
         zeros_array = np.zeros((mask_gdf.shape[0], 1))
+
         # create a new filename
         npy_mask_file = mask_dir / (mask_filename)
 
@@ -153,5 +173,22 @@ for mask_path in mask_dir.glob("*.geojson"):
             mask_dir.joinpath(f"{mask_filename}_mask.tif"),
         )
 
+        normalised_training_arr = segmented_training_arr[0:img_size, 0:img_size]
+
         # save the NumPy array
-        np.save(f"{npy_mask_file}_mask.npy", segmented_training_arr)
+        np.save(f"{npy_mask_file}_mask.npy", normalised_training_arr)
+
+# %%
+# checking all mask arrays have the same shape
+
+mask_file_list = mask_dir.glob("*npy")
+
+ref_shape = (384, 384)
+
+for file in mask_file_list:
+    mask_array = np.load(file)
+
+    if mask_array.shape != ref_shape:
+        print(f"{file} has a different shape than the reference file")
+
+# %%
