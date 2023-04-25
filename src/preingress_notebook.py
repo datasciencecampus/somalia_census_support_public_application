@@ -280,3 +280,6 @@ def cleaning_of_mask_files(mask_files_lower):
 
 # %%
 cleaning_of_mask_files(mask_files_lower)
+
+# %% [markdown]
+# # Checking complete remember to copy data files back into Sharepoint data ingest area once happy
