@@ -166,31 +166,32 @@ for mask_path in mask_dir.glob("*.geojson"):
     mask_filename = Path(mask_path).stem
     image_filename = f"{mask_filename}_bgr.tif"
     image_file = img_dir.joinpath(image_filename)
+    # print(mask_filename)
 
     # if the geometry is empty (background tiles)
-    if mask_gdf.geometry.is_empty.all():
+    # if mask_gdf.geometry.is_empty.all():
 
-        # create a coresponding NumPy array of zeros
-        zeros_array = np.zeros((mask_gdf.shape[0], 1))
+    # create a coresponding NumPy array of zeros
+    # zeros_array = np.zeros((mask_gdf.shape[0],1))
 
-        # create a new filename
-        npy_mask_file = mask_dir / (mask_filename)
+    # create a new filename
+    # npy_mask_file = mask_dir /(mask_filename)
 
-        np.save(f"{npy_mask_file}_mask.npy", zeros_array)
-    else:
+    # np.save(f'{npy_mask_file}_mask.npy', zeros_array)
+    # else:
 
-        # create rasterized training image
-        segmented_training_arr = rasterize_training_data(
-            mask_gdf,
-            image_file,
-            building_class_list,
-            mask_dir.joinpath(f"{mask_filename}_mask.tif"),
-        )
+    # create rasterized training image
+    segmented_training_arr = rasterize_training_data(
+        mask_gdf,
+        image_file,
+        building_class_list,
+        mask_dir.joinpath(f"{mask_filename}_mask.tif"),
+    )
 
-        normalised_training_arr = segmented_training_arr[0:img_size, 0:img_size]
+    normalised_training_arr = segmented_training_arr[0:img_size, 0:img_size]
 
-        # save the NumPy array
-        np.save(f"{npy_mask_file}_mask.npy", normalised_training_arr)
+    # save the NumPy array
+    np.save(mask_dir.joinpath(f"{mask_filename}_mask.npy"), normalised_training_arr)
 
 # %%
 # checking all mask arrays have the same shape
@@ -233,3 +234,5 @@ for file in mask_dir.iterdir():
 # %%
 # counts of type column
 training_data.groupby("Type").size()
+
+# %%
