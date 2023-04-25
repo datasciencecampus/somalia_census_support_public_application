@@ -114,55 +114,40 @@ validation_mask = mask_dir.joinpath("training_data_doolow_1_jo_bgr_mask.npy")
 # To input more training data (than we actually have) into the model we augment the existing tiles by rotating and mirroring them. This is done to the `.npy` arrays and then all the arrays are stacked together.
 
 # %%
-# list all .npy files in img_dir but ignore the image we are using for validation
-# TODO: CHANGE train/val split when there is more data
+# all .npy files in a directory
+# image_files = list(img_dir.glob('*.npy'))
 
-# removing all the background images as need to fix the mask situation
+# read in all .npy files except those that are just background
 image_files = [
-    f
-    for f in img_dir.glob("**/*.npy")
-    if "background" not in f.parts and f.name != validation_image
+    file
+    for file in img_dir.glob("*.npy")
+    if not file.name.endswith("background_bgr.npy")
 ]
-# when above fixed can use line below
-# image_files = [f for f in img_dir.glob("*.npy") if f.name != validation_image]
 
-# empty list to store images
-image_arrays = []
+# load each .npy and stack along a new axis
+image_arrays = np.stack([np.load(file) for file in image_files], axis=0)
 
-for file in image_files:
+# create a rotated version of each image and stack along the same axis
+rotations = []
+for i in range(4):
+    rotated = np.rot90(image_arrays, k=1, axes=(1, 2))
+    if i > 0:
+        rotated = np.fliplr(rotated)
+    rotations.append(rotated)
 
-    # load the array
-    img_arr = np.load(file)
+# create horizontal mirror of each image and stack along the same axis
+mirrors = [
+    np.fliplr(image_arrays),
+    np.fliplr(rotations[0]),
+    np.fliplr(rotations[1]),
+    np.fliplr(rotations[2]),
+]
 
-    # check array has the correct shape
-    if img_arr.shape != (384, 384, 4):
-        print(f"skipping {file} due to incorrect shape: {img_arr.shape}")
+# stack the original arrays, rotated versions and mirror versions
 
-    # rotate the array by 90 degrees and add to list
-    image_arrays.append(np.rot90(img_arr, k=1, axes=(0, 1)))
+stacked_images = np.concatenate([image_arrays] + rotations + mirrors, axis=0)
 
-    # rotate the array by 180 degrees and add to list
-    image_arrays.append(np.rot90(img_arr, k=2, axes=(0, 1)))
-
-    # rotate the array by 270 degrees and add to list
-    image_arrays.append(np.rot90(img_arr, k=3, axes=(0, 1)))
-
-    # flip the array horizontally and add to list
-    image_arrays.append(np.fliplr(img_arr))
-
-    # flip the array verticallyand add to list
-    image_arrays.append(np.flipud(img_arr))
-
-# stack all the images in the list
-stacked_images = np.stack(image_arrays)
-
-print(stacked_images.shape)
-
-# %%
-# reorder the array to image list index, height, width, categorical class
-# stacked_training_rasters = np.transpose(stacked_images, axes=[3, 0, 1, 2])
-
-# stacked_training_rasters.shape
+stacked_images.shape
 
 # %% [markdown]
 # ### Mask augmentation
@@ -170,42 +155,40 @@ print(stacked_images.shape)
 # Performing same augmentation on masks as images.
 
 # %%
-# list all .npy files in mask_dir but ignore the image we are using for validation
-# TODO: CHANGE train/val split when there is more data
-mask_files = [f for f in mask_dir.glob("*.npy") if f.name != validation_mask]
+# all .npy files in a directory
+# mask_files = list(mask_dir.glob('*.npy'))
 
-# empty list to store masks
-mask_arrays = []
+# read in all .npy files except those that are just background
+mask_files = [
+    file
+    for file in mask_dir.glob("*.npy")
+    if not file.name.endswith("background_mask.npy")
+]
 
-for file in mask_files:
+# load each .npy and stack along a new axis
+mask_arrays = np.stack([np.load(file) for file in mask_files], axis=0)
 
-    # load the array
-    mask_arr = np.load(file)
+# create a rotated version of each image and stack along the same axis
+rotations = []
+for i in range(4):
+    rotated = np.rot90(mask_arrays, k=1, axes=(1, 2))
+    if i > 0:
+        rotated = np.fliplr(rotated)
+    rotations.append(rotated)
 
-    # check array has the correct shape
-    if mask_arr.shape != (384, 384):
-        print(f"skipping {file} due to incorrect shape: {mask_arr.shape}")
-        continue
+# create horizontal mirror of each image and stack along the same axis
+mirrors = [
+    np.fliplr(mask_arrays),
+    np.fliplr(rotations[0]),
+    np.fliplr(rotations[1]),
+    np.fliplr(rotations[2]),
+]
 
-    # rotate the array by 90 degrees and add to list
-    mask_arrays.append(np.rot90(mask_arr, k=1, axes=(0, 1)))
+# stack the original arrays, rotated versions and mirror versions
 
-    # rotate the array by 180 degrees and add to list
-    mask_arrays.append(np.rot90(mask_arr, k=2, axes=(0, 1)))
+stacked_masks = np.concatenate([mask_arrays] + rotations + mirrors, axis=0)
 
-    # rotate the array by 270 degrees and add to list
-    mask_arrays.append(np.rot90(mask_arr, k=3, axes=(0, 1)))
-
-    # flip the array horizontally and add to list
-    mask_arrays.append(np.fliplr(mask_arr))
-
-    # flip the array verticallyand add to list
-    mask_arrays.append(np.flipud(mask_arr))
-
-# stack all the mask in the list
-stacked_masks = np.stack(mask_arrays)
-
-print(stacked_masks.shape)
+stacked_masks.shape
 
 # %%
 # number of classes (i.e. building, tent, background)
@@ -220,9 +203,6 @@ n_classes
 # %%
 # encode building classes into training mask arrays
 stacked_masks_cat = to_categorical(stacked_masks, num_classes=n_classes)
-
-# reorder array to list index, height, width, categorical class - used in original but might not be needed anymore?
-# masks_categorical = np.transpose(labels_categorical, axes=[3, 0, 1, 2])
 
 stacked_masks_cat.shape
 
