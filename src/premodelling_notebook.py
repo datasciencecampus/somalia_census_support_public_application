@@ -118,11 +118,12 @@ for tif_file in tif_files:
     # re-sizing to img_size (defined above as 384)
     arr_normalised = arr_normalised[0:img_size, 0:img_size, :]
 
-    # create a new filename
-    npy_file = img_dir / (tif_file.stem)
+    # create a new filename without bgr
+    tif_filename = Path(tif_file).stem
+    tif_filename = tif_filename[:-4]
 
     # save the NumPy array
-    np.save(npy_file, arr_normalised)
+    np.save(img_dir.joinpath(f"{tif_filename}.npy"), arr_normalised)
 
 # %%
 # checking all image arrays have the same shape
@@ -185,13 +186,13 @@ for mask_path in mask_dir.glob("*.geojson"):
         mask_gdf,
         image_file,
         building_class_list,
-        mask_dir.joinpath(f"{mask_filename}_mask.tif"),
+        mask_dir.joinpath(f"{mask_filename}.tif"),
     )
 
     normalised_training_arr = segmented_training_arr[0:img_size, 0:img_size]
 
     # save the NumPy array
-    np.save(mask_dir.joinpath(f"{mask_filename}_mask.npy"), normalised_training_arr)
+    np.save(mask_dir.joinpath(f"{mask_filename}.npy"), normalised_training_arr)
 
 # %%
 # checking all mask arrays have the same shape
@@ -234,5 +235,3 @@ for file in mask_dir.iterdir():
 # %%
 # counts of type column
 training_data.groupby("Type").size()
-
-# %%
