@@ -119,8 +119,7 @@ for tif_file in tif_files:
     arr_normalised = arr_normalised[0:img_size, 0:img_size, :]
 
     # create a new filename without bgr
-    tif_filename = Path(tif_file).stem
-    tif_filename = tif_filename[:-4]
+    tif_filename = Path(tif_file).stem.replace("_bgr", "").replace("_rgb", "")
 
     # save the NumPy array
     np.save(img_dir.joinpath(f"{tif_filename}.npy"), arr_normalised)
