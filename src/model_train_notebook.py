@@ -69,11 +69,13 @@ import segmentation_models as sm
 import tensorflow as tf
 from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
-from sklearn.utils.class_weight import compute_class_weight
 
 # %%
 from functions_library import setup_sub_dir
 from multi_class_unet_model_build import jacard_coef, multi_unet_model
+
+# from sklearn.utils.class_weight import compute_class_weight
+
 
 # %% [markdown]
 # ### Set-up filepaths
@@ -92,16 +94,6 @@ mask_dir = training_data_dir.joinpath("mask")
 
 # set-up model directory for model outputs
 models_dir = setup_sub_dir(Path.cwd().parent, "models")
-
-# %% [markdown]
-# ## Set validation file <a name="validation"></a>
-#
-# > this will be removed when there is more data
-
-# %%
-# set validation file - until we have more training data
-validation_image = img_dir.joinpath("training_data_doolow_1_jo_bgr.npy")
-validation_mask = mask_dir.joinpath("training_data_doolow_1_jo_bgr_mask.npy")
 
 # %% [markdown]
 # ## Data augmentation <a name="dataaug"></a>
@@ -124,8 +116,14 @@ image_files = [
     if not file.name.endswith("background_bgr.npy")
 ]
 
-# load each .npy and stack along a new axis
-image_arrays = np.stack([np.load(file) for file in image_files], axis=0)
+# empty list for appending original images
+image_arrays = []
+
+# load each .npy and append to a list
+for file in image_files:
+    np_array = np.load(file)
+    image_arrays.append(np_array)
+
 
 # create a rotated version of each image and stack along the same axis
 rotations = []
@@ -165,8 +163,13 @@ mask_files = [
     if not file.name.endswith("background_mask.npy")
 ]
 
-# load each .npy and stack along a new axis
-mask_arrays = np.stack([np.load(file) for file in mask_files], axis=0)
+# empty list for appending original images
+mask_arrays = []
+
+# load each .npy and append to a list
+for file in mask_files:
+    np_array = np.load(file)
+    mask_arrays.append(np_array)
 
 # create a rotated version of each image and stack along the same axis
 rotations = []
@@ -194,10 +197,6 @@ stacked_masks.shape
 # number of classes (i.e. building, tent, background)
 n_classes = len(np.unique(stacked_masks))
 
-# create colour map for preservation at point of displaying classes
-# TODO: MOVE to more logical place
-col_map = mpl.cm.get_cmap("viridis", n_classes)
-
 n_classes
 
 # %%
@@ -210,7 +209,7 @@ stacked_masks_cat.shape
 # ## Training parameters <a name="trainingparameters"></a>
 
 # %%
-# to use this remove the validation image
+# setting out number of train and validation tiles
 X_train, X_test, y_train, y_test = train_test_split(
     stacked_images, stacked_masks_cat, test_size=0.20, random_state=42
 )
@@ -240,14 +239,14 @@ def get_model():
 
 # %%
 # calculating weight for dice loss function
-weights = compute_class_weight(
-    "balanced",
-    classes=np.unique(stacked_masks_cat),
-    y=np.ravel(stacked_masks_cat, order="C"),
-)
+# weights = compute_class_weight(
+#    "balanced",
+#    classes=np.unique(stacked_masks_cat),
+#    y=np.ravel(stacked_masks_cat, order="C"),
+# )
 
 # Alternatively, could try balanced weights between classes:
-# weights = [0.25, 0.25, 0.25, 0.25]
+weights = [0.25, 0.25, 0.25]
 
 # only producing 2 weights?
 print(weights)
@@ -344,13 +343,12 @@ history1 = model.fit(
     callbacks=callbacks,
 )
 
-# %%
+# %% jupyter={"outputs_hidden": true}
 # %load_ext tensorboard
 # %tensorboard --logdir logs/
 
 # %%
-
-model.save(models_dir.joinpath(f"trail_run_{num_epochs}epochs_pix_doolow.hdf5"))
+model.save(models_dir.joinpath(f"trail_run_{num_epochs}epochs_pix.hdf5"))
 
 # %%
 y_pred = model.predict(X_test)
@@ -361,9 +359,51 @@ y_pred = model.predict(X_test)
 # ## Output visual checking <a name="output"></a>
 
 # %%
-# Crop to size of modelling tile
-# test_mask = np.argmax(y_test, axis=3)[0, :, :]
-# test_mask.shape
+# rescale the pixel values to [0,1]
+output = y_pred / np.max(y_pred)
+
+# define a list of labels to assign to each subplot - don't currently know what each is
+labels = [
+    "Image 1",
+    "Image 2",
+    "Image 3",
+    "Image 4",
+    "Image 5",
+    "Image 6",
+    "Image 7",
+    "Image 8",
+    "Image 9",
+]
+
+# create a figure with 3 rows and 3 columns to display the 9 output images
+fig, ax = plt.subplots(3, 3, figsize=(10, 10))
+
+# iterate over the rows and columns of the subplot array
+for i in range(3):
+    for j in range(3):
+
+        # select the ith and jth output image
+        ax[i, j].imshow(output[i * 3 + j])
+        # ax[i, j].axis('off')
+
+        # add a title to the subplot
+        ax[i, j].set_title(labels[i * 3 + j])
+
+# add a main title to the figure
+fig.suptitle("U-Net Model Output")
+
+# adjust the spacing between subplots
+fig.tight_layout()
+
+# show the plot
+plt.show()
+
+# %%
+# create colour map for preservation at point of displaying classes
+col_map = mpl.cm.get_cmap("viridis", n_classes)
+
+# %%
+y_pred.shape
 
 # %%
 # "normalised_sat_raster" and "training_mask_raster" only work here because single image used
@@ -371,35 +411,35 @@ y_pred = model.predict(X_test)
 
 building_class_list = ["Building", "Tent"]
 
-# fig, axes = plt.subplots(figsize=(13, 8))
-# plt.subplot(231)
+fig, axes = plt.subplots(figsize=(13, 8))
+plt.subplot(231)
 plt.title("Training tile")
-plt.imshow(validation_image[:, :, 0:3])
+plt.imshow(y_pred[0, :, :, 0])
 plt.subplot(232)
 plt.title("Labelled mask")
-plt.imshow(validation_mask[:, :])
+plt.imshow(y_pred[0, :, :, 1])
 plt.subplot(233)
 plt.title("Prediction of class: Non-Building")
 plt.imshow(
-    y_pred[0, :, :, 0],
+    y_pred[0, :, :, 2],
     cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0)]),
 )
 plt.subplot(234)
 plt.title(f"Prediction of class: {building_class_list[0]}")
 plt.imshow(
-    y_pred[0, :, :, 1],
+    y_pred[0, :, :, 3],
     cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0.40)]),
 )
 plt.subplot(235)
 plt.title(f"Prediction of class: {building_class_list[1]}")
 plt.imshow(
-    y_pred[0, :, :, 2],
+    y_pred[0, :, :, 4],
     cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0.60)]),
 )
 plt.subplot(236)
 plt.title(f"Prediction of class: {building_class_list[2]}")
 plt.imshow(
-    y_pred[0, :, :, 3],
+    y_pred[0, :, :, 5],
     cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0.9)]),
 )
 plt.show()
