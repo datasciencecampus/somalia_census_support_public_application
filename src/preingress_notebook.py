@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -121,67 +121,63 @@ mask_files_lower = change_to_lower_case(mask_files)
 # ###### Check each mask file has corresponding img file & check each img file has corresponding mask file 
 
 # %%
-def vice_versa_check_mask_file_for_img_file(img_files_lower, mask_files_lower, for_mask_or_img):
+def vice_versa_check_mask_file_for_img_file(img_files, mask_files, for_mask_or_img):
 
     """
-        Checks mask file names to see if they have a corresponding img file in training data before ingress to GCP.
-        Will also check if img file names to see if they have a corresponding mask file
+    Checks mask file names to see if they have a corresponding img file in training data before ingress to GCP.
+    Will also check if img file names to see if they have a corresponding mask file
     
-        Parameters
-        ----------
-        img_files_lower: list
-            List of img files in lower case
-        mask_files_lower: list
-           List of mask files in lower case 
-        for_mask_or_img: character
-           If "mask" then will check whether mask files have an img file with the same name. If "img" will do
-           check whether img files have a mask file with the same name.
+    Parameters
+    ----------
+    img_files: list
+        List of img files in lower case
+    mask_files: list
+        List of mask files in lower case 
+    for_mask_or_img: character
+        If "mask" then will check whether mask files have an img file with the same name. If "img" will do
+        check whether img files have a mask file with the same name.
        
-        Returns
-        -------
-        Warning if there is not a corresponding img file for mask file name or vice versa
-        """
+    Returns
+    -------
+    Warning if there is not a corresponding img file for mask file name or vice versa
+    """
     
+    # Note whether working on mask or image files
+    files_of_interest = None
+    paired_files = None
     if for_mask_or_img == "mask":
-        print("Checking mask file names for corresponding img file")
-    
-        # get mask file names
-        mask_file_names = [mask_file.name for mask_file in mask_files_lower]
-
-        # examine each img file
-        for img_file in img_files_lower:
-        
-            # initialise mask name variable
-            mask_file_name = None
-        
-            # check if banding present
-            if "bgr" in img_file.name or "rgb" in img_file.name:
-                mask_file_name = img_file.name[:-8] + ".geojson"
-        
-            else:
-                mask_file_name = img_file.name[:-4] + ".geojson"
-                warnings.warn(f"banding pattern isn't present in {img_file.name}")
-        
-            # check if mask file present - if not then warning
-            if not mask_file_name in mask_file_names:
-                warnings.warn(f"The mask file ({mask_file_name}) for img_file ({img_file.name}) doesn't exist")
-    
-    
+        files_of_interest = mask_files
+        paired_files = img_files
     elif for_mask_or_img == "img":
-            print("Checking img file names for corresponding mask file")
+        files_of_interest = img_files
+        paired_files = mask_files
+    else:
+        raise Exception(f"Option for for_mask_or_img paramater ({for_mask_or_img})) not recognised. Use either \"mask\" or \"img\"")
         
-            # get img file names
-            img_file_names = [img_file.name for img_file in img_files_lower]
+    # Get names of paired files
+    paired_file_names = [file.name for file in paired_files]
+    
+    # Examine each file of interest
+    for file in files_of_interest:
+        
+        # Initialise string to store 
+        file_pair = None
+        
+        # Check if banding present (relevant for image files)
+        if "bgr" in file.name or "rgb" in file.name:
+            file_pair = file.name[:-8] + ".geojson"
+        
+        elif for_mask_or_img == "img":
+            file_pair = file.name[:-4] + ".geojson"
+            warnings.warn(f"banding pattern isn't present in {file.name}")
+        
+        else: # 
+            file_pair = file.name[:-8] + "_bgr.tif"
+            
+        if not file_pair in paired_file_names:
+            warnings.warn(f"Equivalent ({file_pair}) for current file ({file}) doesn't exist")
 
-            # examine each mask file
-            for mask_file in mask_files_lower:
-        
-                # build img file name
-                img_file_name = mask_file.name[:-8] + "_bgr.tif"
-        
-                # check if img file present - if not then warning
-                if not img_file_name in img_file_names:
-                    warnings.warn(f"The img file ({img_file_name}) for mask_file ({mask_file.name}) doesn't exist")
+
 
 # %%
 vice_versa_check_mask_file_for_img_file(img_files_lower, mask_files_lower, for_mask_or_img = "mask")
@@ -196,7 +192,7 @@ vice_versa_check_mask_file_for_img_file(img_files_lower, mask_files_lower, for_m
 # %%
 def check_naming_convention_upheld(img_files_lower, mask_files_lower):
     
-     """
+    """
     Checks correct naming convention is being used for img and mask files in training data before ingress to GCP.
     
     Parameters
@@ -233,7 +229,7 @@ check_naming_convention_upheld(img_files_lower, mask_files_lower)
 # %%
 def cleaning_of_mask_files(mask_files_lower):
     
-     """
+    """
     Cleans geopandas dataframes of all mask files and then overwrites them in the mask folder. Checks for
     additional columns, missing columns and null values.
     
@@ -247,38 +243,38 @@ def cleaning_of_mask_files(mask_files_lower):
     Warning message if "Type" column not found along with creation of new column in geopandas dataframe, 
     print message and lastly a GeoJSON file that has been cleaned. 
     """
-        
+    
+    # Examine each mask file
     for mask_file in mask_files_lower:
-        temp_df = gpd.read_file(str(mask_file))
+        
+        # Load mask
+        mask_gdf = gpd.read_file(str(mask_file))
+        column_names = mask_gdf.columns
     
         # drop fid and id columns
-     
-        if "id" in temp_df:
-            temp_df = temp_df.drop(columns=["id"])
+        if "id" in column_names:
+            mask_gdf = mask_gdf.drop(columns=["id"])
         
-        elif "fid" in temp_df:
-            temp_df = temp_df.drop(columns=["fid"])
+        elif "fid" in column_names:
+            mask_gdf = mask_gdf.drop(columns=["fid"])
         
         # check for type column - if not send error
-    
-        if "Type" in temp_df.columns:
+        if "Type" in column_names:
             print(f"Type column is present for {(mask_file.name)}")
         
         else:
-            temp_df["Type"] = 0
+            mask_gdf["Type"] = 0
             warnings.warn(f"The Type column not found {(mask_file.name)} setting to background")
     
         # check any null values in type column - send error
-    
-        if temp_df["Type"].isnull().values.any():
+        if mask_gdf["Type"].isnull().values.any():
             warnings.warn(f"Type column for ({mask_file.name}) has null values")
         
         else: 
             print(f"No null values present in Type column for ({mask_file.name})")
         
         # write back to geojson
-    
-        temp_df.to_file(mask_dir.joinpath(f"{(mask_file)}"), driver="GeoJSON")
+        mask_gdf.to_file(mask_dir.joinpath(f"{(mask_file)}"), driver="GeoJSON")
 
 
 # %%
