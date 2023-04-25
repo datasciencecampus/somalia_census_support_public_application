@@ -74,14 +74,18 @@ def rasterize_training_data(
                 training_data.geometry, training_data.building_class_int
             )
         )
-        # rasterize by the training labelled polygons
-        arr_to_burn = features.rasterize(
-            shapes=shapes,
-            out=out_arr,
-            transform=out.transform,
-            all_touched=True,
-            fill=0,
-        )
+        # check if any polygons present - if not, i.e. background tile, then generate zero array
+        if len(training_data) == 0:
+            arr_to_burn = np.zeros(out_arr.shape)
+        else:
+            # rasterize by the training labelled polygons
+            arr_to_burn = features.rasterize(
+                shapes=shapes,
+                out=out_arr,
+                transform=out.transform,
+                all_touched=True,
+                fill=0,
+            )
         # save raster as tif
         out.write_band(1, arr_to_burn)
         # return the array representation
