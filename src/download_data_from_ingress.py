@@ -64,4 +64,4 @@ for blob in blobs:
 
 # %%
 # Check files are present
-list(data_folder.iterdir())
+list(data_dir.iterdir())
