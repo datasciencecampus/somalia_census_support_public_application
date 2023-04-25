@@ -118,90 +118,76 @@ mask_files_lower = change_to_lower_case(mask_files)
 
 
 # %% [markdown]
-# ###### Check each mask file has corresponding img file
+# ###### Check each mask file has corresponding img file & check each img file has corresponding mask file 
 
 # %%
-def check_mask_file_for_img_file(img_files_lower, mask_files_lower):
-    
-     """
-    Checks mask file names to see if they have a corresponding img file in training data before ingress to GCP 
-    
-    Parameters
-    ----------
-    img_files_lower: list
-        List of img files in lower case
-    mask_files_lower: list
-       List of mask files in lower case 
-    
-    Returns
-    -------
-    Warning if there is not a corresponding img file for mask file name
+def vice_versa_check_mask_file_for_img_file(img_files_lower, mask_files_lower, for_mask_or_img):
+
     """
-        
-    # get mask file names
-    mask_file_names = [mask_file.name for mask_file in mask_files_lower]
-
-    # examine each img file
-    for img_file in img_files_lower:
-        
-        # initialise mask name variable
-        mask_file_name = None
-        
-        # check if banding present
-        if "bgr" in img_file.name or "rgb" in img_file.name:
-            mask_file_name = img_file.name[:-8] + ".geojson"
-        
-        else:
-            mask_file_name = img_file.name[:-4] + ".geojson"
-            warnings.warn(f"banding pattern isn't present in {img_file.name}")
-        
-        # check if mask file present - if not then warning
-        if not mask_file_name in mask_file_names:
-            warnings.warn(f"The mask file ({mask_file_name}) for img_file ({img_file.name}) doesn't exist")
+        Checks mask file names to see if they have a corresponding img file in training data before ingress to GCP.
+        Will also check if img file names to see if they have a corresponding mask file
     
+        Parameters
+        ----------
+        img_files_lower: list
+            List of img files in lower case
+        mask_files_lower: list
+           List of mask files in lower case 
+        for_mask_or_img: character
+           If "mask" then will check whether mask files have an img file with the same name. If "img" will do
+           check whether img files have a mask file with the same name.
+       
+        Returns
+        -------
+        Warning if there is not a corresponding img file for mask file name or vice versa
+        """
+    
+    if for_mask_or_img == "mask":
+        print("Checking mask file names for corresponding img file")
+    
+        # get mask file names
+        mask_file_names = [mask_file.name for mask_file in mask_files_lower]
 
+        # examine each img file
+        for img_file in img_files_lower:
+        
+            # initialise mask name variable
+            mask_file_name = None
+        
+            # check if banding present
+            if "bgr" in img_file.name or "rgb" in img_file.name:
+                mask_file_name = img_file.name[:-8] + ".geojson"
+        
+            else:
+                mask_file_name = img_file.name[:-4] + ".geojson"
+                warnings.warn(f"banding pattern isn't present in {img_file.name}")
+        
+            # check if mask file present - if not then warning
+            if not mask_file_name in mask_file_names:
+                warnings.warn(f"The mask file ({mask_file_name}) for img_file ({img_file.name}) doesn't exist")
+    
+    
+    elif for_mask_or_img == "img":
+            print("Checking img file names for corresponding mask file")
+        
+            # get img file names
+            img_file_names = [img_file.name for img_file in img_files_lower]
+
+            # examine each mask file
+            for mask_file in mask_files_lower:
+        
+                # build img file name
+                img_file_name = mask_file.name[:-8] + "_bgr.tif"
+        
+                # check if img file present - if not then warning
+                if not img_file_name in img_file_names:
+                    warnings.warn(f"The img file ({img_file_name}) for mask_file ({mask_file.name}) doesn't exist")
 
 # %%
-check_mask_file_for_img_file(img_files_lower, mask_files_lower)
-
-
-# %% [markdown]
-# ###### Check each img file has corresponding mask file 
+vice_versa_check_mask_file_for_img_file(img_files_lower, mask_files_lower, for_mask_or_img = "mask")
 
 # %%
-def check_img_file_for_mask_file(img_files_lower, mask_files_lower):
-    
-     """
-    Checks img file names to see if they have a corresponding mask file in training data before ingress to GCP
-    
-    Parameters
-    ----------
-    img_files_lower: list
-        List of img files in lower case
-    mask_files_lower: list
-        List of mask files in lower case 
-        
-    Returns
-    -------
-    Warning if img file name does not have a corresponding mask file
-    """
-        
-    # get img file names
-    img_file_names = [img_file.name for img_file in img_files_lower]
-
-    # examine each mask file
-    for mask_file in mask_files_lower:
-        
-        # build img file name
-        img_file_name = mask_file.name[:-8] + "_bgr.tif"
-        
-        # check if img file present - if not then warning
-        if not img_file_name in img_file_names:
-            warnings.warn(f"The img file ({img_file_name}) for mask_file ({mask_file.name}) doesn't exist")
-
-
-# %%
-check_img_file_for_mask_file(img_files_lower, mask_files_lower)
+vice_versa_check_mask_file_for_img_file(img_files_lower, mask_files_lower, for_mask_or_img = "img")
 
 
 # %% [markdown]
@@ -243,9 +229,6 @@ check_naming_convention_upheld(img_files_lower, mask_files_lower)
 #    * check there is a type column
 #    * remove fid or id column
 #    * check for na
-
-# %% [markdown]
-# ### Start data cleaning
 
 # %%
 def cleaning_of_mask_files(mask_files_lower):
