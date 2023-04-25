@@ -171,9 +171,10 @@ def vice_versa_check_mask_file_for_img_file(img_files, mask_files, for_mask_or_i
             file_pair = file.name[:-4] + ".geojson"
             warnings.warn(f"banding pattern isn't present in {file.name}")
         
-        else: # 
+        else: # files with no banding should be mask files (geojsons)
             file_pair = file.name[:-8] + "_bgr.tif"
-            
+        
+        # Check if equivalent file exists
         if not file_pair in paired_file_names:
             warnings.warn(f"Equivalent ({file_pair}) for current file ({file}) doesn't exist")
 
