@@ -29,7 +29,7 @@
 # Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
 # </div>
 #
-# This notebook does the geospatial processing of training images and masks and outputs as `.npy` arrays for input into the modelling notebook.
+# This notebook performs the geospatial processing of training images and masks and outputs as `.npy` arrays for input into the modelling notebook. This notebook only has to be run once and when new training data is added.
 #
 # ## Contents
 #
@@ -37,6 +37,7 @@
 # 1. ##### [Set-up](#setup)
 # 1. ##### [Image files](#images)
 # 1. ##### [Mask files](#masks)
+# 1. ##### [Training data summary](#trainingsummary)
 
 # %% [markdown]
 # ## Set up <a name="setup"></a>
@@ -51,10 +52,13 @@ from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
-from PIL import Image
 
 from modelling_preprocessing import rasterize_training_data, reorder_array
-from planet_img_processing_functions import change_band_order, clip_and_normalize_raster
+from planet_img_processing_functions import (
+    change_band_order,
+    clip_and_normalize_raster,
+    return_array_from_tiff,
+)
 
 # %%
 # import custom functions
@@ -62,6 +66,7 @@ from planet_img_processing_functions import change_band_order, clip_and_normaliz
 # TODO: MOVE reorder_array into planet_img_processing_functions
 # TODO: CLEAN plant_img_processing_functions
 # TODO: RATIONALISE functions into one script?
+# TODO: MOVE column functions out of rasterize_training_data and into function script with mask functions below?
 
 
 # %% [markdown]
@@ -78,12 +83,19 @@ training_data_dir = data_dir.joinpath("training_data")
 img_dir = training_data_dir.joinpath("img")
 mask_dir = training_data_dir.joinpath("mask")
 
+# %% [markdown]
+# ### Set image size
+#
+# U-Net architecture uses max pooling to downsample images across 4 levels, so we need to work with tiles that are divisable by 4 x 2.
+# Training data tiles created in QGIS as ~200m x 200m (which equates to ~400 x 400 pixels as resolution is 0.5m/px). Tiles are cropped to 384 pixels (or 192m) as it is easier to crop than be completely accurate in QGIS.
 
 # %%
 img_size = 384
 
 # %% [markdown]
 # ## Image files <a name="images"></a>
+#
+# Reading in all `.tif` files in the `img_dir` then performing geospatial processing on them using functions from the `planet_processing_functions.py` and saving outputted files as `npt` arrays into the same folder
 
 # %%
 # list all .tif files in directoy
@@ -91,45 +103,47 @@ tif_files = list(img_dir.glob("*.tif"))
 
 for tif_file in tif_files:
 
-    # open the tif file
-    with Image.open(tif_file) as im:
+    # reading in file with rasterio
+    img_array = return_array_from_tiff(tif_file)
 
-        # convert image to a NumPy array
-        arr = np.array(im)
+    # reorder bands
+    arr_reordered = change_band_order(img_array)
 
-        # reorder bands
-        arr_reordered = change_band_order(arr)
+    # clip to percentile
+    arr_normalised = clip_and_normalize_raster(arr_reordered, 99)
 
-        # clip to percentile
-        arr_normalised = clip_and_normalize_raster(arr_reordered, 99)
+    # reorder into height, width, band order
+    arr_normalised = reorder_array(arr_normalised, 1, 2, 0)
 
-        # reorder into height, width, band order
-        arr_normalised = reorder_array(arr_normalised, 1, 2, 0)
+    # re-sizing to img_size (defined above as 384)
+    arr_normalised = arr_normalised[0:img_size, 0:img_size, :]
 
-        # re-sizing to img_size (defined above as 384)
-        arr_normalised = arr_normalised[0:img_size, 0:img_size, :]
+    # create a new filename
+    npy_file = img_dir / (tif_file.stem)
 
-        # create a new filename
-        npy_file = img_dir / (tif_file.stem)
-
-        # save the NumPy array
-        np.save(npy_file, arr_normalised)
+    # save the NumPy array
+    np.save(npy_file, arr_normalised)
 
 # %%
 # checking all image arrays have the same shape
 
+# list all .tif files in directory
 img_file_list = img_dir.glob("*npy")
 
-ref_shape = (384, 4, 4)
+# the shape we want all files to have
+ref_shape = (384, 384, 4)
 
 for file in img_file_list:
     img_array = np.load(file)
 
+    # checking each file compared to reference shape. Will return error if one doesn't match
     if img_array.shape != ref_shape:
-        print(f"{file} has a different shape than the reference file")
+        print(f"{file} has a different shape than the reference shape")
 
 # %% [markdown]
 # ## Mask files <a name="masks"></a>
+#
+# Reading in all `.GeoJSON` files in the `mask_dir`, matching files to corresponding `img`, performing geospatial processing and saving outputted files as `npt` arrays into the same folder
 
 # %%
 building_class_list = ["Building", "Tent"]
@@ -181,14 +195,41 @@ for mask_path in mask_dir.glob("*.geojson"):
 # %%
 # checking all mask arrays have the same shape
 
+# list all files in directory
 mask_file_list = mask_dir.glob("*npy")
 
+# the shape we want each file to have
 ref_shape = (384, 384)
 
 for file in mask_file_list:
     mask_array = np.load(file)
 
+    # returns an error if any of the files don't match reference shape
     if mask_array.shape != ref_shape:
-        print(f"{file} has a different shape than the reference file")
+        print(f"{file} has a different shape than the reference shape")
+
+# %% [markdown]
+# ## Training data summary<a name="trainingsummary"></a>
 
 # %%
+# iterate over all the files in the directroy
+for file in mask_dir.iterdir():
+
+    # check for file extension .geojson
+    if file.suffix == ".geojson":
+
+        # open the file and read its contents
+        training_data = gpd.read_file(file)
+
+    # add a 'Type' column if it doesn't exist (should be background tiles only)
+    if "Type" not in training_data.columns:
+        training_data["Type"] = ""
+
+    # replace values in 'Type' column
+    training_data["Type"].replace(
+        {"House": "Building", "Service": "Building"}, inplace=True
+    )
+
+# %%
+# counts of type column
+training_data.groupby("Type").size()
