@@ -151,7 +151,6 @@ building_class_list = ["Building", "Tent"]
 
 # %%
 # loop through the GeoJSON files
-num = 0
 for mask_path in mask_dir.glob("*.geojson"):
     
     # load the GeoJSON into a GeoPandas dataframe
@@ -198,7 +197,6 @@ for mask_path in mask_dir.glob("*.geojson"):
     )
 
     normalised_training_arr = segmented_training_arr[0:img_size, 0:img_size]
-    num += 1
     # save the NumPy array
     np.save(mask_dir.joinpath(f"{mask_filename}.npy"), normalised_training_arr)
 
