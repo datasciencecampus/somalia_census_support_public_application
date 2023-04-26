@@ -38,6 +38,8 @@
 # 1. ##### [Image files](#images)
 # 1. ##### [Mask files](#masks)
 # 1. ##### [Training data summary](#trainingsummary)
+# 1. ##### [Visual checking - images](#imagevisual)
+# 1. ##### [Visual checking - masks](#maskvisual)
 
 # %% [markdown]
 # ## Set up <a name="setup"></a>
@@ -95,7 +97,7 @@ img_size = 384
 # %% [markdown]
 # ## Image files <a name="images"></a>
 #
-# Reading in all `.tif` files in the `img_dir` then performing geospatial processing on them using functions from the `planet_processing_functions.py` and saving outputted files as `npt` arrays into the same folder
+# Reading in all `.tif` files in the `img_dir` then performing geospatial processing on them using functions from the `planet_processing_functions.py` and saving outputted files as `npy` arrays into the same folder
 
 # %%
 # list all .tif files in directoy
@@ -222,7 +224,7 @@ for file in mask_dir.iterdir():
         # open the file and read its contents
         training_data = gpd.read_file(file)
 
-    # add a 'Type' column if it doesn't exist (should be background tiles only)
+        # add a 'Type' column if it doesn't exist (should be background tiles only)
     if "Type" not in training_data.columns:
         training_data["Type"] = ""
 
@@ -234,3 +236,74 @@ for file in mask_dir.iterdir():
 # %%
 # counts of type column
 training_data.groupby("Type").size()
+
+# %% [markdown]
+# ## Visual checking - images <a name="imagevisual"></a>
+
+import matplotlib.pyplot as plt
+
+# %%
+import tifffile as tiff
+
+# identifying .tif files with 4 channels
+file_list = [f for f in img_dir.glob("*.tif") if tiff.imread(f).shape[-1] == 4]
+
+# reading in .tif files
+image_list = [tiff.imread(f) for f in file_list]
+
+# plot the images
+for i, img in enumerate(image_list):
+
+    plt.subplot(4, 4, i + 1)  # create a 4 x 4 grid
+    plt.imshow(img[..., :3])  # show the first 3 channels (RGB)
+    # plt.title(file_list[i].name) # use file name as title
+    plt.axis("off")  # axis off
+plt.show()
+
+# %%
+# finding all .npy files - those converted above
+file_list = [f for f in img_dir.glob("*.npy") if np.load(f).shape[-1] == 4]
+
+# read in .npy files
+image_list = [np.load(f) for f in file_list]
+
+# plot the images
+for i, img in enumerate(image_list):
+
+    # create a 4 x 4 grid
+    plt.subplot(4, 4, i + 1)
+
+    # normalise the data to the range of 0 to 1
+    img_normalised = img.astype(np.float32) / np.max(img)
+
+    # show the first 3 channels (RGB)
+    plt.imshow(img_normalised[..., :3])
+
+    # plt.title(file_list[i].name) # use file name as title
+    plt.axis("off")
+plt.show()
+
+# %% [markdown]
+# ## Visual checking - masks <a name="maskvisual"></a>
+
+# %%
+# finding all .npy files - those converted above
+file_list = [f for f in mask_dir.glob("*.npy")]
+
+# read in .npy files
+mask_list = [np.load(f) for f in file_list]
+
+# plot the images
+for i, mask in enumerate(mask_list):
+
+    # create a 4 x 4 grid
+    plt.subplot(4, 4, i + 1)
+
+    # show the first 3 channels (RGB)
+    plt.imshow(mask)
+
+    # plt.title(file_list[i].name) # use file name as title
+    plt.axis("off")
+plt.show()
+
+# %%
