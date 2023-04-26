@@ -104,7 +104,6 @@ img_size = 384
 tif_files = list(img_dir.glob("*.tif"))
 
 for tif_file in tif_files:
-
     # reading in file with rasterio
     img_array = return_array_from_tiff(tif_file)
 
@@ -152,11 +151,19 @@ building_class_list = ["Building", "Tent"]
 
 # %%
 # loop through the GeoJSON files
+num = 0
 for mask_path in mask_dir.glob("*.geojson"):
-
+    
     # load the GeoJSON into a GeoPandas dataframe
     mask_gdf = gpd.read_file(mask_path)
-
+    
+    
+    # !!!!Temporary fix to sort the bad QGIS import!!!! 
+    # Remove after next Ingress with updated file.
+    if mask_path.stem == 'training_data_doolow_1_jo':
+        mask_gdf.crs = 102100
+        
+        
     # add a 'Type' column if it doesn't exist (should be background tiles only)
     if "Type" not in mask_gdf.columns:
         mask_gdf["Type"] = ""
@@ -191,7 +198,7 @@ for mask_path in mask_dir.glob("*.geojson"):
     )
 
     normalised_training_arr = segmented_training_arr[0:img_size, 0:img_size]
-
+    num += 1
     # save the NumPy array
     np.save(mask_dir.joinpath(f"{mask_filename}.npy"), normalised_training_arr)
 
@@ -239,11 +246,12 @@ training_data.groupby("Type").size()
 
 # %% [markdown]
 # ## Visual checking - images <a name="imagevisual"></a>
-
-import matplotlib.pyplot as plt
+#
+# import matplotlib.pyplot as plt
 
 # %%
 import tifffile as tiff
+import matplotlib.pyplot as plt
 
 # identifying .tif files with 4 channels
 file_list = [f for f in img_dir.glob("*.tif") if tiff.imread(f).shape[-1] == 4]
@@ -292,6 +300,7 @@ file_list = [f for f in mask_dir.glob("*.npy")]
 
 # read in .npy files
 mask_list = [np.load(f) for f in file_list]
+print(file_list)
 
 # plot the images
 for i, mask in enumerate(mask_list):
@@ -305,5 +314,9 @@ for i, mask in enumerate(mask_list):
     # plt.title(file_list[i].name) # use file name as title
     plt.axis("off")
 plt.show()
+
+# %%
+
+# %%
 
 # %%
