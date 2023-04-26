@@ -42,7 +42,8 @@
 # 1. ##### [Loss function](#lossfunction)
 # 1. ##### [Metrics](#metrics)
 # 1. ##### [Model](#model)
-# 1. ##### [Outputs for visual checking](#output)
+# 1. ##### [Outputs](#output)
+# 1. ##### [Visual Outputs](#visualoutput)
 
 # %% [markdown]
 # ## Set-up <a name="setup"></a>
@@ -58,24 +59,25 @@
 # %% [markdown]
 # ### Import libraries & custom functions
 
+import random
+from datetime import date
+
 # %%
 from pathlib import Path
 
 # %%
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import segmentation_models as sm
 import tensorflow as tf
+from keras.metrics import MeanIoU
 from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
+from sklearn.utils.class_weight import compute_class_weight
 
 # %%
 from functions_library import setup_sub_dir
 from multi_class_unet_model_build import jacard_coef, multi_unet_model
-
-# from sklearn.utils.class_weight import compute_class_weight
-
 
 # %% [markdown]
 # ### Set-up filepaths
@@ -111,10 +113,11 @@ models_dir = setup_sub_dir(Path.cwd().parent, "models")
 
 # read in all .npy files except those that are just background
 image_files = [
-    file
-    for file in img_dir.glob("*.npy")
-    if not file.name.endswith("background_bgr.npy")
+    file for file in img_dir.glob("*.npy") if not file.name.endswith("background.npy")
 ]
+
+# sort the file names alphabetically
+image_files = sorted(image_files)
 
 # empty list for appending original images
 image_arrays = []
@@ -142,10 +145,32 @@ mirrors = [
 ]
 
 # stack the original arrays, rotated versions and mirror versions
-
 stacked_images = np.concatenate([image_arrays] + rotations + mirrors, axis=0)
 
 stacked_images.shape
+
+# %%
+# create a 2 x 5 grid
+fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(12, 6))
+
+# loop over the first 10 images in the array and plot each
+for i in range(10):
+
+    # compute the row and column index in the grid
+    row = i // 5
+    col = i % 5
+
+    # select the i-th image from the array
+    img = stacked_images[i, :, :, :3]
+
+    # normalise the image data to the range of 0 to 1
+    img_normalised = img.astype(np.float32) / np.max(img)
+
+    # plot the image
+    axs[row, col].imshow(img_normalised)
+
+# show the plot
+plt.show()
 
 # %% [markdown]
 # ### Mask augmentation
@@ -162,6 +187,9 @@ mask_files = [
     for file in mask_dir.glob("*.npy")
     if not file.name.endswith("background_mask.npy")
 ]
+
+# sort the file names alphabetically
+mask_files = sorted(mask_files)
 
 # empty list for appending original images
 mask_arrays = []
@@ -205,6 +233,18 @@ stacked_masks_cat = to_categorical(stacked_masks, num_classes=n_classes)
 
 stacked_masks_cat.shape
 
+# %%
+# create random number to check both image and mask
+image_number = random.randint(0, len(stacked_images))
+
+# plot image and mask
+plt.figure(figsize=(12, 6))
+plt.subplot(121)
+plt.imshow(stacked_images[image_number, :, :, :3])
+plt.subplot(122)
+plt.imshow(stacked_masks_cat[image_number])
+plt.show()
+
 # %% [markdown]
 # ## Training parameters <a name="trainingparameters"></a>
 
@@ -238,17 +278,17 @@ def get_model():
 # Weighted dice loss allows for the class frequencies from the training masks to be calculated (i.e. how often does a building type appear) and sets weights based on this.
 
 # %%
-# calculating weight for dice loss function
-# weights = compute_class_weight(
-#    "balanced",
-#    classes=np.unique(stacked_masks_cat),
-#    y=np.ravel(stacked_masks_cat, order="C"),
-# )
+# calculating weight for dice loss function - only producing 2 weights
+weights = compute_class_weight(
+    "balanced",
+    classes=np.unique(stacked_masks_cat),
+    y=np.ravel(stacked_masks_cat, order="C"),
+)
 
 # Alternatively, could try balanced weights between classes:
-weights = [0.25, 0.25, 0.25]
+# weights = [0.33, 0.33, 0.33]
 
-# only producing 2 weights?
+
 print(weights)
 
 # %% [markdown]
@@ -290,7 +330,7 @@ metrics = ["accuracy", jacard_coef]
 # This is how many times the model runs through the training data. Running too few epochs will under fit the model, running too many will overfit. Use callbacks to find the optimum number of epochs - but this will change depending on other input parameters!
 
 # %%
-num_epochs = 25
+num_epochs = 50
 
 # %% [markdown]
 # #### Callbacks
@@ -316,7 +356,7 @@ callbacks = [
 # [128, 256] - GPU territory
 
 # %%
-batch_size = 32
+batch_size = 45
 
 # %% [markdown]
 # ## Model
@@ -343,12 +383,18 @@ history1 = model.fit(
     callbacks=callbacks,
 )
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 # %load_ext tensorboard
 # %tensorboard --logdir logs/
 
 # %%
-model.save(models_dir.joinpath(f"trail_run_{num_epochs}epochs_pix.hdf5"))
+# today's date for input into model output
+today = date.today().strftime("%Y-%m-%d")
+# create filename for model with date and number of epochs
+model_filename = f"test_run_{num_epochs}epochs_{today}.hdf5"
+
+# save model output into models_dir
+model.save(models_dir.joinpath(model_filename))
 
 # %%
 y_pred = model.predict(X_test)
@@ -356,7 +402,74 @@ y_pred = model.predict(X_test)
 # predicted_img = np.argmax(y_pred, axis=0)[:, :]
 
 # %% [markdown]
-# ## Output visual checking <a name="output"></a>
+# ## Outputs <a name="output"></a>
+
+# %%
+# create plot showing training and validation loss
+history = history1
+loss = history.history["loss"]
+val_loss = history.history["val_loss"]
+epochs = range(1, len(loss) + 1)
+plt.plot(epochs, loss, "y", label="Training loss")
+plt.plot(epochs, val_loss, "r", label="Validation loss")
+plt.title("Training and validation loss")
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.legend()
+plt.show()
+
+# %%
+# create plot showing the IoU over time
+
+acc = history.history["jacard_coef"]
+val_acc = history.history["val_jacard_coef"]
+
+plt.plot(epochs, acc, "y", label="Training IoU")
+plt.plot(epochs, val_acc, "r", label="Validation IoU")
+plt.title("Training and validation IoU")
+plt.xlabel("Epochs")
+plt.ylabel("IoU")
+plt.legend()
+plt.show()
+
+# %%
+# calculating mean IoU
+
+y_pred = model.predict(X_test)
+y_pred_argmax = np.argmax(y_pred, axis=3)
+y_test_argmax = np.argmax(y_test, axis=3)
+
+
+IOU_keras = MeanIoU(num_classes=n_classes)
+IOU_keras.update_state(y_test_argmax, y_pred_argmax)
+print("Mean IoU =", IOU_keras.result().numpy())
+
+# %%
+# predict for a few images
+
+test_img_number = random.randint(0, len(X_test))
+test_img = X_test[test_img_number]
+ground_truth = y_test_argmax[test_img_number]
+# test_img_norm=test_img[:,:,0][:,:,None]
+test_img_input = np.expand_dims(test_img, 0)
+prediction = model.predict(test_img_input)
+predicted_img = np.argmax(prediction, axis=3)[0, :, :]
+
+# %%
+plt.figure(figsize=(12, 8))
+plt.subplot(231)
+plt.title("Testing Image")
+plt.imshow(test_img)
+plt.subplot(232)
+plt.title("Testing Label")
+plt.imshow(ground_truth)
+plt.subplot(233)
+plt.title("Prediction on test image")
+plt.imshow(predicted_img)
+plt.show()
+
+# %% [markdown]
+# ## Visual outputs <a name="visualoutput"></a>
 
 # %%
 # rescale the pixel values to [0,1]
@@ -396,52 +509,6 @@ fig.suptitle("U-Net Model Output")
 fig.tight_layout()
 
 # show the plot
-plt.show()
-
-# %%
-# create colour map for preservation at point of displaying classes
-col_map = mpl.cm.get_cmap("viridis", n_classes)
-
-# %%
-y_pred.shape
-
-# %%
-# "normalised_sat_raster" and "training_mask_raster" only work here because single image used
-# TODO: Update to be generalised from X_test and y_test files
-
-building_class_list = ["Building", "Tent"]
-
-fig, axes = plt.subplots(figsize=(13, 8))
-plt.subplot(231)
-plt.title("Training tile")
-plt.imshow(y_pred[0, :, :, 0])
-plt.subplot(232)
-plt.title("Labelled mask")
-plt.imshow(y_pred[0, :, :, 1])
-plt.subplot(233)
-plt.title("Prediction of class: Non-Building")
-plt.imshow(
-    y_pred[0, :, :, 2],
-    cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0)]),
-)
-plt.subplot(234)
-plt.title(f"Prediction of class: {building_class_list[0]}")
-plt.imshow(
-    y_pred[0, :, :, 3],
-    cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0.40)]),
-)
-plt.subplot(235)
-plt.title(f"Prediction of class: {building_class_list[1]}")
-plt.imshow(
-    y_pred[0, :, :, 4],
-    cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0.60)]),
-)
-plt.subplot(236)
-plt.title(f"Prediction of class: {building_class_list[2]}")
-plt.imshow(
-    y_pred[0, :, :, 5],
-    cmap=mpl.colors.LinearSegmentedColormap.from_list("", ["white", col_map(0.9)]),
-)
 plt.show()
 
 # %%
