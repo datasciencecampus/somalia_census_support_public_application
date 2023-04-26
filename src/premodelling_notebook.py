@@ -53,7 +53,9 @@
 from pathlib import Path
 
 import geopandas as gpd
+import matplotlib.pyplot as plt
 import numpy as np
+import tifffile as tiff
 
 from modelling_preprocessing import rasterize_training_data, reorder_array
 from planet_img_processing_functions import (
@@ -230,13 +232,13 @@ for file in mask_dir.iterdir():
         training_data = gpd.read_file(file)
 
         # add a 'Type' column if it doesn't exist (should be background tiles only)
-    if "Type" not in training_data.columns:
-        training_data["Type"] = ""
+        if "Type" not in training_data.columns:
+            training_data["Type"] = ""
 
-    # replace values in 'Type' column
-    training_data["Type"].replace(
-        {"House": "Building", "Service": "Building"}, inplace=True
-    )
+        # replace values in 'Type' column
+        training_data["Type"].replace(
+            {"House": "Building", "Service": "Building"}, inplace=True
+        )
 
 # %%
 # counts of type column
@@ -245,11 +247,6 @@ training_data.groupby("Type").size()
 # %% [markdown]
 # ## Visual checking - images <a name="imagevisual"></a>
 #
-# import matplotlib.pyplot as plt
-
-# %%
-import tifffile as tiff
-import matplotlib.pyplot as plt
 
 # identifying .tif files with 4 channels
 file_list = [f for f in img_dir.glob("*.tif") if tiff.imread(f).shape[-1] == 4]
