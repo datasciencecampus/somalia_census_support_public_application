@@ -16,17 +16,6 @@
 # %% [markdown]
 # # Feasibility study - U-Net training model
 #
-# This notebook is looking at the feasibility of applying the U-Net architecture to identify formal and in-formal building structures in IDP camps in areas of interest in Somalia.
-#
-# While the overall aim is to apply the model across all IDP camps in Somalia, this feasibility study focuses on 5 areas of interest:
-# * Baidoa
-# * Beledweyne
-# * Doolow
-# * Kismayo
-# * Mogadishu
-#
-# These areas of interest (plus Doolow) were the subject of a recent Somalia National Bureau of Statistics (SNBS) survey, and so, provide a unique opportunity to add some element of ground-truthed data to the model.
-#
 # <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #31708f; background-color: #d9edf7; border-color: #bce8f1;">
 # Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
 # </div>
@@ -75,6 +64,8 @@ from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 
+from data_augmentation_functions import stack_array, stack_background_arrays
+
 # %%
 from functions_library import setup_sub_dir
 from multi_class_unet_model_build import jacard_coef, multi_unet_model
@@ -101,146 +92,70 @@ models_dir = setup_sub_dir(Path.cwd().parent, "models")
 # ## Data augmentation <a name="dataaug"></a>
 
 # %% [markdown]
-# ### Image augmentation
-#
 # U-Net architecture uses max pooling to downsample images across 4 levels, so we need to work with tiles that are divisable by 4 x 2. Training data tiles created in QGIS as ~200m x 200m (which equates to ~400 x 400 pixels as resolution is 0.5m/px). During pre-processing all tiles were resized to 384 x 384.
 #
 # To input more training data (than we actually have) into the model we augment the existing tiles by rotating and mirroring them. This is done to the `.npy` arrays and then all the arrays are stacked together.
 
+# %% [markdown]
+# ### Image augmentation
+
 # %%
-# all .npy files in a directory
-# image_files = list(img_dir.glob('*.npy'))
-
-# read in all .npy files except those that are just background
-image_files = [
-    file for file in img_dir.glob("*.npy") if not file.name.endswith("background.npy")
-]
-
-# sort the file names alphabetically
-image_files = sorted(image_files)
-
-# empty list for appending original images
-image_arrays = []
-
-# load each .npy and append to a list
-for file in image_files:
-    np_array = np.load(file)
-    image_arrays.append(np_array)
-
-
-# create a rotated version of each image and stack along the same axis
-rotations = []
-for i in range(4):
-    rotated = np.rot90(image_arrays, k=1, axes=(1, 2))
-    if i > 0:
-        rotated = np.fliplr(rotated)
-    rotations.append(rotated)
-
-# create horizontal mirror of each image and stack along the same axis
-mirrors = [
-    np.fliplr(image_arrays),
-    np.fliplr(rotations[0]),
-    np.fliplr(rotations[1]),
-    np.fliplr(rotations[2]),
-]
-
-# stack the original arrays, rotated versions and mirror versions
-stacked_images = np.concatenate([image_arrays] + rotations + mirrors, axis=0)
-
+# creating stack of img arrays that are rotated and horizontally flipped
+stacked_images = stack_array(img_dir)
 stacked_images.shape
 
 # %%
-# create a 2 x 5 grid
-fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(12, 6))
+# creating stack of background img arrays with no augmentation
+background_images = stack_background_arrays(img_dir)
 
-# loop over the first 10 images in the array and plot each
-for i in range(10):
+print(len(background_images))
 
-    # compute the row and column index in the grid
-    row = i // 5
-    col = i % 5
+# %%
+# adding augmented arrays and background image arrays together
+all_stacked_images = np.concatenate([stacked_images] + [background_images], axis=0)
 
-    # select the i-th image from the array
-    img = stacked_images[i, :, :, :3]
-
-    # normalise the image data to the range of 0 to 1
-    img_normalised = img.astype(np.float32) / np.max(img)
-
-    # plot the image
-    axs[row, col].imshow(img_normalised)
-
-# show the plot
-plt.show()
+all_stacked_images.shape
 
 # %% [markdown]
 # ### Mask augmentation
-#
-# Performing same augmentation on masks as images.
 
 # %%
-# all .npy files in a directory
-# mask_files = list(mask_dir.glob('*.npy'))
-
-# read in all .npy files except those that are just background
-mask_files = [
-    file
-    for file in mask_dir.glob("*.npy")
-    if not file.name.endswith("background_mask.npy")
-]
-
-# sort the file names alphabetically
-mask_files = sorted(mask_files)
-
-# empty list for appending original images
-mask_arrays = []
-
-# load each .npy and append to a list
-for file in mask_files:
-    np_array = np.load(file)
-    mask_arrays.append(np_array)
-
-# create a rotated version of each image and stack along the same axis
-rotations = []
-for i in range(4):
-    rotated = np.rot90(mask_arrays, k=1, axes=(1, 2))
-    if i > 0:
-        rotated = np.fliplr(rotated)
-    rotations.append(rotated)
-
-# create horizontal mirror of each image and stack along the same axis
-mirrors = [
-    np.fliplr(mask_arrays),
-    np.fliplr(rotations[0]),
-    np.fliplr(rotations[1]),
-    np.fliplr(rotations[2]),
-]
-
-# stack the original arrays, rotated versions and mirror versions
-
-stacked_masks = np.concatenate([mask_arrays] + rotations + mirrors, axis=0)
-
+# creating stack of mask arrays that are rotated and horizontally flipped
+stacked_masks = stack_array(mask_dir)
 stacked_masks.shape
 
 # %%
+# creating stack of background img arrays with no augmentation
+background_masks = stack_background_arrays(mask_dir)
+
+print(len(background_masks))
+
+# %%
+# adding augmented arrays and background image arrays together
+all_stacked_masks = np.concatenate([stacked_masks] + [background_masks], axis=0)
+
+all_stacked_masks.shape
+
+# %%
 # number of classes (i.e. building, tent, background)
-n_classes = len(np.unique(stacked_masks))
+n_classes = len(np.unique(all_stacked_masks))
 
 n_classes
 
 # %%
 # encode building classes into training mask arrays
-stacked_masks_cat = to_categorical(stacked_masks, num_classes=n_classes)
+stacked_masks_cat = to_categorical(all_stacked_masks, num_classes=n_classes)
 
 stacked_masks_cat.shape
 
 # %%
 # create random number to check both image and mask
-image_number = random.randint(0, len(stacked_images))
+image_number = random.randint(0, len(all_stacked_images))
 
 # plot image and mask
 plt.figure(figsize=(12, 6))
 plt.subplot(121)
-plt.imshow(stacked_images[image_number, :, :, :3])
+plt.imshow(all_stacked_images[image_number, :, :, :3])
 plt.subplot(122)
 plt.imshow(stacked_masks_cat[image_number])
 plt.show()
@@ -251,7 +166,7 @@ plt.show()
 # %%
 # setting out number of train and validation tiles
 X_train, X_test, y_train, y_test = train_test_split(
-    stacked_images, stacked_masks_cat, test_size=0.20, random_state=42
+    all_stacked_images, stacked_masks_cat, test_size=0.20, random_state=42
 )
 
 # %%
@@ -278,11 +193,11 @@ def get_model():
 # Weighted dice loss allows for the class frequencies from the training masks to be calculated (i.e. how often does a building type appear) and sets weights based on this.
 
 # %%
-# calculating weight for dice loss function - only producing 2 weights
+# calculating weight for dice loss function
 weights = compute_class_weight(
     "balanced",
-    classes=np.unique(stacked_masks_cat),
-    y=np.ravel(stacked_masks_cat, order="C"),
+    classes=np.unique(all_stacked_masks),
+    y=np.ravel(all_stacked_masks, order="C"),
 )
 
 # Alternatively, could try balanced weights between classes:
@@ -330,7 +245,7 @@ metrics = ["accuracy", jacard_coef]
 # This is how many times the model runs through the training data. Running too few epochs will under fit the model, running too many will overfit. Use callbacks to find the optimum number of epochs - but this will change depending on other input parameters!
 
 # %%
-num_epochs = 50
+num_epochs = 45
 
 # %% [markdown]
 # #### Callbacks
@@ -391,7 +306,7 @@ history1 = model.fit(
 # today's date for input into model output
 today = date.today().strftime("%Y-%m-%d")
 # create filename for model with date and number of epochs
-model_filename = f"test_run_{num_epochs}epochs_{today}.hdf5"
+model_filename = f"test_run_{num_epochs}epochs_{today}_all_1.hdf5"
 
 # save model output into models_dir
 model.save(models_dir.joinpath(model_filename))
@@ -447,7 +362,8 @@ print("Mean IoU =", IOU_keras.result().numpy())
 # %%
 # predict for a few images
 
-test_img_number = random.randint(0, len(X_test))
+# test_img_number = random.randint(0, len(X_test))
+test_img_number = 0
 test_img = X_test[test_img_number]
 ground_truth = y_test_argmax[test_img_number]
 # test_img_norm=test_img[:,:,0][:,:,None]
@@ -459,7 +375,7 @@ predicted_img = np.argmax(prediction, axis=3)[0, :, :]
 plt.figure(figsize=(12, 8))
 plt.subplot(231)
 plt.title("Testing Image")
-plt.imshow(test_img)
+plt.imshow(test_img[:, :, :3])
 plt.subplot(232)
 plt.title("Testing Label")
 plt.imshow(ground_truth)
