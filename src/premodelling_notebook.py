@@ -15,21 +15,13 @@
 # %% [markdown]
 # # Feasibility study - Pre-processing training data
 #
-# This notebook is part of the feasibility study into applying the U-Net architecture to identify formal and in-formal building structures in IDP camps in areas of interest in Somalia.
-#
-# While the overall aim is to apply the model across all IDP camps in Somalia, this feasibility study focuses on 4 areas of interest:
-# * Baidoa
-# * Beledweyne
-# * Kismayo
-# * Mogadishu
-#
-# These areas of interest were the subject of a recent Somalia National Bureau of Statistics (SNBS) survey, and so, provide a unique opportunity to add some element of ground-truthed data to the model.
+# This notebook performs the geospatial processing of training images and masks and outputs as `.npy` arrays for input into the modelling notebook. This notebook only has to be run once, and when new training data is added.
 #
 # <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #31708f; background-color: #d9edf7; border-color: #bce8f1;">
 # Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
 # </div>
 #
-# This notebook performs the geospatial processing of training images and masks and outputs as `.npy` arrays for input into the modelling notebook. This notebook only has to be run once and when new training data is added.
+#
 #
 # ## Contents
 #
@@ -50,28 +42,24 @@
 # %%
 # import libraries
 
-import warnings
 from pathlib import Path
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
 
-from modelling_preprocessing import rasterize_training_data, reorder_array
-from planet_img_processing_functions import (
+from image_processing_functions import (
     change_band_order,
+    check_img_files,
     clip_and_normalize_raster,
+    reorder_array,
     return_array_from_tiff,
 )
-
-# %%
-# import custom functions
-
-# TODO: MOVE reorder_array into planet_img_processing_functions
-# TODO: CLEAN plant_img_processing_functions
-# TODO: RATIONALISE functions into one script?
-# TODO: MOVE column functions out of rasterize_training_data and into function script with mask functions below?
-
+from mask_processing_functions import (
+    check_mask_files,
+    rasterize_training_data,
+    training_data_summary,
+)
 
 # %% [markdown]
 # ### Set-up directories
@@ -128,25 +116,15 @@ for img_file in img_files:
     np.save(img_dir.joinpath(f"{img_filename}.npy"), arr_normalised)
 
 # %%
-# checking all image arrays have the same shape
-
-# list all .npy files in directory
-img_file_list = img_dir.glob("*npy")
-
-# the shape we want all files to have
-ref_shape = (384, 384, 4)
-
-for file in img_file_list:
-    img_array = np.load(file)
-
-    # checking each file compared to reference shape. Will return error if one doesn't match
-    if img_array.shape != ref_shape:
-        warnings.warn(f"{file} has a different shape than the reference shape")
+# checking shape of .npy files matches
+check_img_files(img_dir)
 
 # %% [markdown]
 # ## Mask files <a name="masks"></a>
 #
-# Reading in all `.GeoJSON` files in the `mask_dir`, matching files to corresponding `img`, performing geospatial processing and saving outputted files as `npt` arrays into the same folder
+# Reading in all `.GeoJSON` files in the `mask_dir`, matching files to corresponding `img`, performing geospatial processing and saving outputted files as `npy` arrays into the same folder.
+#
+# Currently only using 'building' and 'tent' as classes - but may incorporate 'service' at a later stage.
 
 # %%
 building_class_list = ["Building", "Tent"]
@@ -191,69 +169,20 @@ for mask_path in mask_dir.glob("*.geojson"):
     np.save(mask_dir.joinpath(f"{mask_filename}.npy"), normalised_training_arr)
 
 # %%
-# checking all mask arrays have the same shape
-
-# list all files in directory
-mask_file_list = mask_dir.glob("*npy")
-
-# the shape we want each file to have
-ref_shape = (384, 384)
-
-for file in mask_file_list:
-    mask_array = np.load(file)
-
-    # returns an error if any of the files don't match reference shape
-    if mask_array.shape != ref_shape:
-        warnings.warn(f"{file} has a different shape than the reference shape")
+# checking shape of .npy files matches
+check_mask_files(mask_dir)
 
 # %% [markdown]
 # ## Training data summary<a name="trainingsummary"></a>
 
 # %%
-# iterate over all the files in the directroy
-for file in mask_dir.iterdir():
-
-    # check for file extension .geojson
-    if file.suffix == ".geojson":
-
-        # open the file and read its contents
-        training_data = gpd.read_file(file)
-
-        # add a 'Type' column if it doesn't exist (should be background tiles only)
-        if "Type" not in training_data.columns:
-            training_data["Type"] = ""
-
-        # replace values in 'Type' column
-        training_data["Type"].replace(
-            {"House": "Building", "Service": "Building"}, inplace=True
-        )
-
-# %%
-# counts of type column
-training_data.groupby("Type").size()
+# counts for number of buildings and tents in training daat
+training_data_summary(mask_dir)
 
 # %% [markdown]
 # ## Visual checking - images <a name="imagevisual"></a>
 #
 #
-
-# %%
-import tifffile as tiff
-
-# identifying .tif files with 4 channels
-file_list = [f for f in img_dir.glob("*.tif") if tiff.imread(f).shape[-1] == 4]
-
-# reading in .tif files
-image_list = [tiff.imread(f) for f in file_list]
-
-# plot the images
-for i, img in enumerate(image_list):
-
-    plt.subplot(4, 4, i + 1)  # create a 4 x 4 grid
-    plt.imshow(img[..., :3])  # show the first 3 channels (RGB)
-    # plt.title(file_list[i].name) # use file name as title
-    plt.axis("off")  # axis off
-plt.show()
 
 # %%
 # finding all .npy files - those converted above
@@ -287,7 +216,6 @@ file_list = [f for f in mask_dir.glob("*.npy")]
 
 # read in .npy files
 mask_list = [np.load(f) for f in file_list]
-print(file_list)
 
 # plot the images
 for i, mask in enumerate(mask_list):
@@ -301,9 +229,3 @@ for i, mask in enumerate(mask_list):
     # plt.title(file_list[i].name) # use file name as title
     plt.axis("off")
 plt.show()
-
-# %%
-
-# %%
-
-# %%
