@@ -151,12 +151,16 @@ def clip_and_normalize_raster(img_arr, clipping_percentile_range):
         would return the 10th and 90th percentile values.
     """
     min_max_scaler = MinMaxScaler()
-    normalised_img = np.array(
+    
+    # Converts banded image into a single column
+    # img_arr.shape[0] used to count number of bands
+    ascolumns = img_arr.reshape(-1, img_arr.shape[0])
+    
+    norm_ascolumns = np.array(
         [
             min_max_scaler.fit_transform(
-                clip_to_soft_min_max(band_array, clipping_percentile_range)
-            )
-            for band_array in img_arr
+                clip_to_soft_min_max(ascolumns, clipping_percentile_range))
         ]
     )
+    normalised_img = norm_ascolumns.reshape(img_arr.shape)
     return normalised_img
