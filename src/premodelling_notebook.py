@@ -50,12 +50,12 @@
 # %%
 # import libraries
 
+import warnings
 from pathlib import Path
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
-import tifffile as tiff
 
 from modelling_preprocessing import rasterize_training_data, reorder_array
 from planet_img_processing_functions import (
@@ -103,11 +103,11 @@ img_size = 384
 
 # %%
 # list all .tif files in directoy
-tif_files = list(img_dir.glob("*.tif"))
+img_files = list(img_dir.glob("*.tif"))
 
-for tif_file in tif_files:
+for img_file in img_files:
     # reading in file with rasterio
-    img_array = return_array_from_tiff(tif_file)
+    img_array = return_array_from_tiff(img_file)
 
     # reorder bands
     arr_reordered = change_band_order(img_array)
@@ -122,15 +122,15 @@ for tif_file in tif_files:
     arr_normalised = arr_normalised[0:img_size, 0:img_size, :]
 
     # create a new filename without bgr
-    tif_filename = Path(tif_file).stem.replace("_bgr", "").replace("_rgb", "")
+    img_filename = Path(img_file).stem.replace("_bgr", "").replace("_rgb", "")
 
     # save the NumPy array
-    np.save(img_dir.joinpath(f"{tif_filename}.npy"), arr_normalised)
+    np.save(img_dir.joinpath(f"{img_filename}.npy"), arr_normalised)
 
 # %%
 # checking all image arrays have the same shape
 
-# list all .tif files in directory
+# list all .npy files in directory
 img_file_list = img_dir.glob("*npy")
 
 # the shape we want all files to have
@@ -141,7 +141,7 @@ for file in img_file_list:
 
     # checking each file compared to reference shape. Will return error if one doesn't match
     if img_array.shape != ref_shape:
-        print(f"{file} has a different shape than the reference shape")
+        warnings.warn(f"{file} has a different shape than the reference shape")
 
 # %% [markdown]
 # ## Mask files <a name="masks"></a>
@@ -154,17 +154,15 @@ building_class_list = ["Building", "Tent"]
 # %%
 # loop through the GeoJSON files
 for mask_path in mask_dir.glob("*.geojson"):
-    
+
     # load the GeoJSON into a GeoPandas dataframe
     mask_gdf = gpd.read_file(mask_path)
-    
-    
-    # !!!!Temporary fix to sort the bad QGIS import!!!! 
+
+    # !!!!Temporary fix to sort the bad QGIS import!!!!
     # Remove after next Ingress with updated file.
-    if mask_path.stem == 'training_data_doolow_1_jo':
+    if mask_path.stem == "training_data_doolow_1_jo":
         mask_gdf.crs = 102100
-        
-        
+
     # add a 'Type' column if it doesn't exist (should be background tiles only)
     if "Type" not in mask_gdf.columns:
         mask_gdf["Type"] = ""
@@ -178,18 +176,6 @@ for mask_path in mask_dir.glob("*.geojson"):
     image_file = img_dir.joinpath(image_filename)
     # print(mask_filename)
 
-    # if the geometry is empty (background tiles)
-    # if mask_gdf.geometry.is_empty.all():
-
-    # create a coresponding NumPy array of zeros
-    # zeros_array = np.zeros((mask_gdf.shape[0],1))
-
-    # create a new filename
-    # npy_mask_file = mask_dir /(mask_filename)
-
-    # np.save(f'{npy_mask_file}_mask.npy', zeros_array)
-    # else:
-
     # create rasterized training image
     segmented_training_arr = rasterize_training_data(
         mask_gdf,
@@ -198,7 +184,9 @@ for mask_path in mask_dir.glob("*.geojson"):
         mask_dir.joinpath(f"{mask_filename}.tif"),
     )
 
+    # re-sizing to img_size (defined above as 384)
     normalised_training_arr = segmented_training_arr[0:img_size, 0:img_size]
+
     # save the NumPy array
     np.save(mask_dir.joinpath(f"{mask_filename}.npy"), normalised_training_arr)
 
@@ -216,7 +204,7 @@ for file in mask_file_list:
 
     # returns an error if any of the files don't match reference shape
     if mask_array.shape != ref_shape:
-        print(f"{file} has a different shape than the reference shape")
+        warnings.warn(f"{file} has a different shape than the reference shape")
 
 # %% [markdown]
 # ## Training data summary<a name="trainingsummary"></a>
@@ -247,6 +235,10 @@ training_data.groupby("Type").size()
 # %% [markdown]
 # ## Visual checking - images <a name="imagevisual"></a>
 #
+#
+
+# %%
+import tifffile as tiff
 
 # identifying .tif files with 4 channels
 file_list = [f for f in img_dir.glob("*.tif") if tiff.imread(f).shape[-1] == 4]
