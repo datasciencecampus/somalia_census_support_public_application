@@ -36,13 +36,20 @@ _note the below will need updated when we decide on final workflow_
 
 ```mermaid
 flowchart LR
+    id1{training<br>data<br>sharepoint}-->|img<br>file|id2{preingress<br>notebook}
+    id1{training<br>data<br>sharepoint}-->|mask<br>file|id2{preingress<br>notebook}
+    id2{preingress<br>notebook}-->|checked<br>img file|id3{GCP<br>ingress<br>bucket}
+    id2{preingress<br>notebook}-->|checked<br>mask file|id3{GCP<br>ingress<br>bucket}
+```
+
+```mermaid
+flowchart LR
     id1{GCP<br>ingress<br>bucket}-->|mask|id2[/training<br>data<br>processing<br>notebook\]
     id1{GCP<br>ingress<br>bucket}-->|raster|id2[/training<br>data<br>processing<br>notebook\]
     id2[/training<br>data<br>processing<br>notebook\]-->|numpy<br>arrays|id3[/model<br>train<br>notebook\]
     id3[/model<br>train<br>notebook\]-->|numpy<br>arrays|id4[/model<br>results<br>exploration<br>notebook\]
 
 ```
-
 ## Getting set-up (GCP):
 
 This project is being developed in Google Cloud Platform (GCP), and so instructions will be specific to this environment. A determined user can hopefully generalise these across other tools.
