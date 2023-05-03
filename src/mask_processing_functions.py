@@ -13,7 +13,6 @@ def rasterize_training_data(
     training_data: gpd.GeoDataFrame,
     reference_satellite_raster: Path,
     building_class_list: list,
-    output_tif_file_path,
     binary_classify=False,
 ):
     """Generate segmented raster of training data from polygons.
@@ -65,32 +64,28 @@ def rasterize_training_data(
     )
     # ensure the CRS for the training data and satellite raster match
     training_data = training_data.to_crs(raster_tif.crs)
-
-    with rio.open(output_tif_file_path, "w+", **raster_meta) as out:
-        out_arr = out.read(1)
-        # create a generator of geom, value pairs to use in rasterizing
-        shapes = (
-            (geom, value)
-            for geom, value in zip(
-                training_data.geometry, training_data.building_class_int
-            )
+    
+    # create a generator of geom, value pairs to use in rasterizing
+    shapes = (
+        (geom, value)
+        for geom, value in zip(
+            training_data.geometry, training_data.building_class_int
         )
-        # check if any polygons present - if not, i.e. background tile, then generate zero array
-        if len(training_data) == 0:
-            arr_to_burn = np.zeros(out_arr.shape)
-        else:
-            # rasterize by the training labelled polygons
-            arr_to_burn = features.rasterize(
-                shapes=shapes,
-                out=out_arr,
-                transform=out.transform,
-                all_touched=True,
-                fill=0,
-            )
-        # save raster as tif
-        out.write_band(1, arr_to_burn)
-        # return the array representation
-        return arr_to_burn
+    )
+    # check if any polygons present - if not, i.e. background tile, then generate zero array
+    if len(training_data) == 0:
+        arr_to_burn = np.zeros(raster_tif.shape)
+    else:
+        # rasterize by the training labelled polygons
+        arr_to_burn = features.rasterize(
+            shapes=shapes,
+            out_shape = raster_tif.shape,
+            transform=raster_tif.transform,
+            all_touched=True,
+            fill=0,
+        )
+     # return the array representation
+    return arr_to_burn
 
 
 def check_mask_files(mask_dir, ref_shape=(384, 384)):
@@ -108,6 +103,7 @@ def check_mask_files(mask_dir, ref_shape=(384, 384)):
     mask_file_list = mask_dir.glob("*npy")
     for file in mask_file_list:
         mask_array = np.load(file)
+        print(mask_array.shape)
         if mask_array.shape != ref_shape:
             warnings.warn(f"{file} has a different shape than the reference shape")
 

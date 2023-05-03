@@ -48,10 +48,9 @@
 # %% [markdown]
 # ### Import libraries & custom functions
 
+# %%
 import random
 from datetime import date
-
-# %%
 from pathlib import Path
 
 # %%
@@ -150,7 +149,7 @@ stacked_masks_cat.shape
 
 # %%
 # create random number to check both image and mask
-image_number = random.randint(0, len(all_stacked_images))
+image_number = random.randint(0, len(all_stacked_images) - 1)
 
 # plot image and mask
 plt.figure(figsize=(12, 6))

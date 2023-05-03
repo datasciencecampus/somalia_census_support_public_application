@@ -159,7 +159,6 @@ for mask_path in mask_dir.glob("*.geojson"):
         mask_gdf,
         image_file,
         building_class_list,
-        mask_dir.joinpath(f"{mask_filename}.tif"),
     )
 
     # re-sizing to img_size (defined above as 384)
@@ -233,3 +232,5 @@ for i, mask in enumerate(mask_list):
     # plt.title(file_list[i].name) # use file name as title
     plt.axis("off")
 plt.show()
+
+# %%
