@@ -122,6 +122,7 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  ┃ ┣ 📜functions_library.py
  ┃ ┣ 📜geospatial_util_functions.py
  ┃ ┣ 📜modelling_preprocessing.py
+ ┃ ┣ 📜preingress_notebook.py
  ┃ ┣ 📜planet_img_processing_functions.py
  ┃ ┗ 📜model_train_notebook.py
  ┣ 📜.gitignore
@@ -135,6 +136,9 @@ The training data only needs to be processed and outputted when first derived, o
 
 `training_data_<area>_<your initials>`
 
+## Before ingesting data onto GCP
+
+Run the src/preingress_notebook.py prior to ingesting any data onto GCP to ensure the training data has been formatted correctly. 
 
 ## Things of note
 The [wiki page attached to this repo](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Somalia-UNFPA-Census-support) contains useful resources and other relevant notes.
