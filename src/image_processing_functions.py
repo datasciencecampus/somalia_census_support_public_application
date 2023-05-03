@@ -1,78 +1,11 @@
-#%%
+""" Script of functions related to image preprocessing. """
 
-from datetime import datetime
-from zipfile import ZipFile
+
+import warnings
 
 import numpy as np
 import rasterio as rio
 from sklearn.preprocessing import MinMaxScaler
-
-from functions_library import generate_file_list, setup_sub_dir
-
-
-def extract_dates_from_image_filenames(file_name):
-    """
-    Extract date information from Planet imagery file names.
-
-    e.g. file named 'Doolow_W_50MB_20221101' would return
-    datetime.datetime(2022, 11, 1, 0, 0)
-
-    Parameters
-    ----------
-    file_name : str
-        The file name for given Planet image.
-
-    Returns
-    -------
-    datetime.datetime
-        Date data type from string.
-    """
-    numerical_string = file_name.split("_")[0]
-    date = datetime.strptime(numerical_string, "%Y%m%d")
-    return date
-
-
-def unzip_image_files(file_to_unzip):
-    """Extract content from zipped folder into dir of same name at same location.
-
-    Parameters
-    ----------
-    file_to_unzip : path
-        Path to zipped folder to extract.
-    """
-    with ZipFile(file_to_unzip, "r") as zip:
-        # extracting all the files
-        zip.extractall(setup_sub_dir(file_to_unzip.parent, file_to_unzip.stem))
-        print(f"Files extracted {file_to_unzip.parent.joinpath(file_to_unzip.stem)}")
-
-
-def check_zipped_dirs_and_unzip(path_to_imgs):
-    """Check image directory and if only zipped files present, extract them.
-
-    Parameters
-    ----------
-    path_to_imgs : path
-        Path to subdirectory in data where satellite rasters stored for given location.
-    """
-    zipped_observation_list = generate_file_list(path_to_imgs, "zip", [])
-
-    for observation in zipped_observation_list:
-        dir_path = observation.parent.joinpath(observation.stem)
-
-        # if directory does not exist, unzip it first
-        if not dir_path.is_dir():
-            print("Unzipping zipped raster folder.\n")
-            unzip_image_files(observation)
-
-
-def get_raster_list_for_given_area(observation_path_list):
-    tiff_img_list = []
-    for directory in observation_path_list:
-        tiff_img = generate_file_list(
-            directory.joinpath("files"), "tif", ["pansharpened_clip"]
-        )
-        tiff_img_list.append(tiff_img[0])
-    return tiff_img_list
 
 
 def return_array_from_tiff(img_path):
@@ -151,12 +84,42 @@ def clip_and_normalize_raster(img_arr, clipping_percentile_range):
         would return the 10th and 90th percentile values.
     """
     min_max_scaler = MinMaxScaler()
-    normalised_img = np.array(
+
+    # Converts banded image into a single column
+    # img_arr.shape[0] used to count number of bands
+    ascolumns = img_arr.reshape(-1, img_arr.shape[0])
+
+    norm_ascolumns = np.array(
         [
             min_max_scaler.fit_transform(
-                clip_to_soft_min_max(band_array, clipping_percentile_range)
+                clip_to_soft_min_max(ascolumns, clipping_percentile_range)
             )
-            for band_array in img_arr
         ]
     )
+    normalised_img = norm_ascolumns.reshape(img_arr.shape)
     return normalised_img
+
+
+def reorder_array(img_arr, height_index, width_index, bands_index):
+    # Re-order the array into height, width, bands order.
+    arr = np.transpose(img_arr, axes=[height_index, width_index, bands_index])
+    return arr
+
+
+def check_img_files(img_dir, ref_shape=(384, 384, 4)):
+    """
+    Check all .npy files in the given directory against a reference shape.
+
+    Args:
+    img_dir(str or pathlib.Path): Path to the directory containing the image files.
+    ref_shape (tuple of int, optional): The reference shape that each image should have.
+        Defaults to (384, 384, 4).
+
+    Raises:
+        Warning: If an image file has a different shape than the reference shape.
+    """
+    img_file_list = img_dir.glob("*npy")
+    for file in img_file_list:
+        img_array = np.load(file)
+        if img_array.shape != ref_shape:
+            warnings.warn(f"{file} has a different shape than the reference shape")
