@@ -87,7 +87,7 @@ img_size = 384
 # %% [markdown]
 # ## Image files <a name="images"></a>
 #
-# Reading in all `.tif` files in the `img_dir` then performing geospatial processing on them using functions from the `planet_processing_functions.py` and saving outputted files as `npy` arrays into the same folder
+# Reading in all `.tif` files in the `img_dir` then performing geospatial processing on them using functions from the `planet_processing_functions.py` and saving outputted files as `.npy` arrays into the same folder.
 
 # %%
 # list all .tif files in directoy
@@ -176,8 +176,12 @@ check_mask_files(mask_dir)
 # ## Training data summary<a name="trainingsummary"></a>
 
 # %%
-# counts for number of buildings and tents in training daat
-training_data_summary(mask_dir)
+# joining masks together to count building types
+training_data, value_counts = training_data_summary(mask_dir)
+
+# %%
+# building types
+value_counts
 
 # %% [markdown]
 # ## Visual checking - images <a name="imagevisual"></a>
