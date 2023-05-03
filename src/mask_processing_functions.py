@@ -129,7 +129,7 @@ def training_data_summary(mask_dir):
         A dataframe containing the count of unqiue values in the 'Type' column
     """
     # empty dataframe
-    training_data = gpd.GeoDataFrame()
+    training_data = None
 
     for file in mask_dir.glob("*.geojson"):
 
@@ -143,7 +143,10 @@ def training_data_summary(mask_dir):
         # replace values in 'Type' column
         df["Type"].replace({"House": "Building", "Service": "Building"}, inplace=True)
 
-        training_data = training_data.append(df)
+        if training_data is None:
+            training_data = df
+        else:
+            training_data = training_data.append(df)
 
     # return value counts
     value_counts = training_data["Type"].value_counts()
