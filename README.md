@@ -36,13 +36,20 @@ _note the below will need updated when we decide on final workflow_
 
 ```mermaid
 flowchart LR
+    id1{training<br>data<br>sharepoint}-->|img<br>file|id2{preingress<br>notebook}
+    id1{training<br>data<br>sharepoint}-->|mask<br>file|id2{preingress<br>notebook}
+    id2{preingress<br>notebook}-->|checked<br>img file|id3{GCP<br>ingress<br>bucket}
+    id2{preingress<br>notebook}-->|checked<br>mask file|id3{GCP<br>ingress<br>bucket}
+```
+
+```mermaid
+flowchart LR
     id1{GCP<br>ingress<br>bucket}-->|mask|id2[/training<br>data<br>processing<br>notebook\]
     id1{GCP<br>ingress<br>bucket}-->|raster|id2[/training<br>data<br>processing<br>notebook\]
     id2[/training<br>data<br>processing<br>notebook\]-->|numpy<br>arrays|id3[/model<br>train<br>notebook\]
     id3[/model<br>train<br>notebook\]-->|numpy<br>arrays|id4[/model<br>results<br>exploration<br>notebook\]
 
 ```
-
 ## Getting set-up (GCP):
 
 This project is being developed in Google Cloud Platform (GCP), and so instructions will be specific to this environment. A determined user can hopefully generalise these across other tools.
@@ -122,6 +129,7 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  ┃ ┣ 📜functions_library.py
  ┃ ┣ 📜geospatial_util_functions.py
  ┃ ┣ 📜modelling_preprocessing.py
+ ┃ ┣ 📜preingress_notebook.py
  ┃ ┣ 📜planet_img_processing_functions.py
  ┃ ┗ 📜model_train_notebook.py
  ┣ 📜.gitignore
@@ -135,6 +143,9 @@ The training data only needs to be processed and outputted when first derived, o
 
 `training_data_<area>_<your initials>`
 
+## Before ingesting data onto GCP
+
+Run the src/preingress_notebook.py prior to ingesting any data onto GCP to ensure the training data has been formatted correctly. 
 
 ## Things of note
 The [wiki page attached to this repo](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Somalia-UNFPA-Census-support) contains useful resources and other relevant notes.
