@@ -31,23 +31,14 @@ flowchart LR
     id4[/planet<br>image<br>processing<br>notebook\]-->|binary<br>mask|id3{QGIS}
     id3{QGIS}-->|polygon<br>mask|id5{GCP<br>ingress<br>bucket}
     id3{QGIS}-->|image<br>raster|id5{GCP<br>ingress<br>bucket}
-```
-_note the below will need updated when we decide on final workflow_
-
-```mermaid
-flowchart LR
-    id1{training<br>data<br>sharepoint}-->|img<br>file|id2{preingress<br>notebook}
-    id1{training<br>data<br>sharepoint}-->|mask<br>file|id2{preingress<br>notebook}
-    id2{preingress<br>notebook}-->|checked<br>img file|id3{GCP<br>ingress<br>bucket}
-    id2{preingress<br>notebook}-->|checked<br>mask file|id3{GCP<br>ingress<br>bucket}
-```
-
-```mermaid
-flowchart LR
-    id1{GCP<br>ingress<br>bucket}-->|mask|id2[/training<br>data<br>processing<br>notebook\]
-    id1{GCP<br>ingress<br>bucket}-->|raster|id2[/training<br>data<br>processing<br>notebook\]
-    id2[/training<br>data<br>processing<br>notebook\]-->|numpy<br>arrays|id3[/model<br>train<br>notebook\]
-    id3[/model<br>train<br>notebook\]-->|numpy<br>arrays|id4[/model<br>results<br>exploration<br>notebook\]
+    id5{GCP<br>ingress<br>bucket}-->|img<br>file|id6{preingress<br>notebook}
+    id5{GCP<br>ingress<br>bucket}-->|mask<br>file|id6{preingress<br>notebook}
+    id6{preingress<br>notebook}-->|checked<br>img file|id7{GCP<br>ingress<br>bucket}
+    id6{preingress<br>notebook}-->|checked<br>mask file|id7{GCP<br>ingress<br>bucket}
+    id7{GCP<br>ingress<br>bucket}-->|mask|id8[/training<br>data<br>processing<br>notebook\]
+    id7{GCP<br>ingress<br>bucket}-->|raster|id8[/training<br>data<br>processing<br>notebook\]
+    id8[/training<br>data<br>processing<br>notebook\]-->|numpy<br>arrays|id9[/model<br>train<br>notebook\]
+    id9[/model<br>train<br>notebook\]-->|numpy<br>arrays|id10[/model<br>results<br>exploration<br>notebook\]
 
 ```
 ## Getting set-up (GCP):
