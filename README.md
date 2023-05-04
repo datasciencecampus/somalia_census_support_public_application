@@ -27,20 +27,19 @@ _in progress_
 flowchart LR
     id1[(planet<br>imagery)]-->id3{QGIS}
     id2[(UNFPA<br>annotations)] -->id3{QGIS}
-    id3{QGIS}-->|planet<br>image|id4[/planet<br>image<br>processing<br>notebook\]
-    id4[/planet<br>image<br>processing<br>notebook\]-->|binary<br>mask|id3{QGIS}
     id3{QGIS}-->|polygon<br>mask|id5{GCP<br>ingress<br>bucket}
     id3{QGIS}-->|image<br>raster|id5{GCP<br>ingress<br>bucket}
     id5{GCP<br>ingress<br>bucket}-->|img<br>file|id6{preingress<br>notebook}
     id5{GCP<br>ingress<br>bucket}-->|mask<br>file|id6{preingress<br>notebook}
-    id6{preingress<br>notebook}-->|checked<br>img file|id7{GCP<br>ingress<br>bucket}
-    id6{preingress<br>notebook}-->|checked<br>mask file|id7{GCP<br>ingress<br>bucket}
-    id7{GCP<br>ingress<br>bucket}-->|mask|id8[/training<br>data<br>processing<br>notebook\]
-    id7{GCP<br>ingress<br>bucket}-->|raster|id8[/training<br>data<br>processing<br>notebook\]
+    id6{preingress<br>notebook}-->|checked<br>img file|id7{SharePoint<br>GCP<br>ingest<br>folder}
+    id6{preingress<br>notebook}-->|checked<br>mask file|id7{SharePoint<br>GCP<br>ingest<br>folder}
+    id7{SharePoint<br>GCP<br>ingest<br>folder}-->|mask|id8[/training<br>data<br>processing<br>notebook\]
+    id7{SharePoint<br>GCP<br>ingest<br>folder}-->|raster|id8[/training<br>data<br>processing<br>notebook\]
     id8[/training<br>data<br>processing<br>notebook\]-->|numpy<br>arrays|id9[/model<br>train<br>notebook\]
     id9[/model<br>train<br>notebook\]-->|numpy<br>arrays|id10[/model<br>results<br>exploration<br>notebook\]
-
 ```
+[Sharepoint GCP Ingest Folder](https://officenationalstatistics.sharepoint.com/:f:/r/sites/dscdsc/Pro/2.%20Squads/International_Development/Data%20Science%20Projects/2.%20Data%20Science%20Research%20Projects/Somalia_UNFPA_census_support/Data/GCP%20ingress%20folder?csf=1&web=1&e=Pv6Icv)
+
 ## Getting set-up (GCP):
 
 This project is being developed in Google Cloud Platform (GCP), and so instructions will be specific to this environment. A determined user can hopefully generalise these across other tools.
