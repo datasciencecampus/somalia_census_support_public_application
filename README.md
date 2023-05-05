@@ -27,7 +27,7 @@ _in progress_
 flowchart LR
     imagery[(planet<br>imagery)]-->qgis{QGIS}
     unfpa[(UNFPA<br>annotations)] -->qgis
-    qgis-->|polygon<br>mask|sharepoint{SharePoint<br>GCP<br>ingest<br>folder}
+    qgis-->|polygon<br>mask|sharepoint{<a href='https://officenationalstatistics.sharepoint.com/:f:/r/sites/dscdsc/Pro/2.%20Squads/International_Development/Data%20Science%20Projects/2.%20Data%20Science%20Research%20Projects/Somalia_UNFPA_census_support/Data/GCP%20ingress%20folder?csf=1&web=1&e=Pv6Icv'>SharePoint<br>GCP<br>ingest<br>folder</a>}
     qgis-->|image<br>raster|sharepoint
     sharepoint-->|img<br>file|preingress{preingress<br>notebook}
     sharepoint-->|mask<br>file|preingress
@@ -40,8 +40,6 @@ flowchart LR
     processing-->|numpy<br>arrays|train[/model<br>train<br>notebook\]
     train-->|numpy<br>arrays|results[/model<br>results<br>exploration<br>notebook\]
 ```
-[Sharepoint GCP Ingest Folder](https://officenationalstatistics.sharepoint.com/:f:/r/sites/dscdsc/Pro/2.%20Squads/International_Development/Data%20Science%20Projects/2.%20Data%20Science%20Research%20Projects/Somalia_UNFPA_census_support/Data/GCP%20ingress%20folder?csf=1&web=1&e=Pv6Icv)
-
 ## Getting set-up (GCP):
 
 This project is being developed in Google Cloud Platform (GCP), and so instructions will be specific to this environment. A determined user can hopefully generalise these across other tools.
