@@ -25,18 +25,20 @@ _in progress_
 
 ```mermaid
 flowchart LR
-    id1[(planet<br>imagery)]-->id3{QGIS}
-    id2[(UNFPA<br>annotations)] -->id3{QGIS}
-    id3{QGIS}-->|polygon<br>mask|id5{GCP<br>ingress<br>bucket}
-    id3{QGIS}-->|image<br>raster|id5{GCP<br>ingress<br>bucket}
-    id5{GCP<br>ingress<br>bucket}-->|img<br>file|id6{preingress<br>notebook}
-    id5{GCP<br>ingress<br>bucket}-->|mask<br>file|id6{preingress<br>notebook}
-    id6{preingress<br>notebook}-->|checked<br>img file|id7{SharePoint<br>GCP<br>ingest<br>folder}
-    id6{preingress<br>notebook}-->|checked<br>mask file|id7{SharePoint<br>GCP<br>ingest<br>folder}
-    id7{SharePoint<br>GCP<br>ingest<br>folder}-->|mask|id8[/training<br>data<br>processing<br>notebook\]
-    id7{SharePoint<br>GCP<br>ingest<br>folder}-->|raster|id8[/training<br>data<br>processing<br>notebook\]
-    id8[/training<br>data<br>processing<br>notebook\]-->|numpy<br>arrays|id9[/model<br>train<br>notebook\]
-    id9[/model<br>train<br>notebook\]-->|numpy<br>arrays|id10[/model<br>results<br>exploration<br>notebook\]
+    imagery[(planet<br>imagery)]-->qgis{QGIS}
+    unfpa[(UNFPA<br>annotations)] -->qgis
+    qgis-->|polygon<br>mask|sharepoint{SharePoint<br>GCP<br>ingest<br>folder}
+    qgis-->|image<br>raster|sharepoint
+    sharepoint-->|img<br>file|preingress{preingress<br>notebook}
+    sharepoint-->|mask<br>file|preingress
+    preingress-->|checked<br>img file|sharepoint
+    preingress-->|checked<br>mask file|sharepoint
+    sharepoint-->|img<br>file|ingress{GCP<br>ingress<br>area}
+    sharepoint-->|mask<br>file|ingress
+    ingress-->|mask|processing[/training<br>data<br>processing<br>notebook\]
+    ingress-->|raster|processing
+    processing-->|numpy<br>arrays|train[/model<br>train<br>notebook\]
+    train-->|numpy<br>arrays|results[/model<br>results<br>exploration<br>notebook\]
 ```
 [Sharepoint GCP Ingest Folder](https://officenationalstatistics.sharepoint.com/:f:/r/sites/dscdsc/Pro/2.%20Squads/International_Development/Data%20Science%20Projects/2.%20Data%20Science%20Research%20Projects/Somalia_UNFPA_census_support/Data/GCP%20ingress%20folder?csf=1&web=1&e=Pv6Icv)
 
