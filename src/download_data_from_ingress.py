@@ -48,7 +48,7 @@ bucket_prefix = "ons-des-prod-net-zero-somalia-ingress/"
 data_dir = Path.cwd().parent.joinpath("data/training_data/")
 
 # %% [markdown]
-# ### Get latest folder using String date (YYYYMMDD) <a name="strdate"></a>
+# ### Get latest folder using String date (YYYYMMDD) - Unsed <a name="strdate"></a>
 #
 # Not currently in use. An alternative method if approach below becomes too slow.
 
