@@ -60,6 +60,7 @@ import segmentation_models as sm
 import tensorflow as tf
 from keras.metrics import MeanIoU
 from keras.utils import to_categorical
+from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 
@@ -137,24 +138,24 @@ all_stacked_masks.shape
 
 # %%
 # number of classes (i.e. building, tent, background)
-n_classes = len(np.unique(all_stacked_masks))
+n_classes = len(np.unique(stacked_masks))
 
 n_classes
 
 # %%
 # encode building classes into training mask arrays
-stacked_masks_cat = to_categorical(all_stacked_masks, num_classes=n_classes)
+stacked_masks_cat = to_categorical(stacked_masks, num_classes=n_classes)
 
 stacked_masks_cat.shape
 
 # %%
 # create random number to check both image and mask
-image_number = random.randint(0, len(all_stacked_images) - 1)
+image_number = random.randint(0, len(stacked_images) - 1)
 
 # plot image and mask
 plt.figure(figsize=(12, 6))
 plt.subplot(121)
-plt.imshow(all_stacked_images[image_number, :, :, :3])
+plt.imshow(stacked_images[image_number, :, :, :3])
 plt.subplot(122)
 plt.imshow(stacked_masks_cat[image_number])
 plt.show()
@@ -165,7 +166,7 @@ plt.show()
 # %%
 # setting out number of train and validation tiles
 X_train, X_test, y_train, y_test = train_test_split(
-    all_stacked_images, stacked_masks_cat, test_size=0.20, random_state=42
+    stacked_images, stacked_masks_cat, test_size=0.20, random_state=42
 )
 
 # %%
@@ -195,8 +196,8 @@ def get_model():
 # calculating weight for dice loss function
 weights = compute_class_weight(
     "balanced",
-    classes=np.unique(all_stacked_masks),
-    y=np.ravel(all_stacked_masks, order="C"),
+    classes=np.unique(stacked_masks),
+    y=np.ravel(stacked_masks, order="C"),
 )
 
 # Alternatively, could try balanced weights between classes:
@@ -270,7 +271,7 @@ callbacks = [
 # [128, 256] - GPU territory
 
 # %%
-batch_size = 45
+batch_size = 36
 
 # %% [markdown]
 # ## Model
@@ -384,46 +385,43 @@ plt.imshow(predicted_img)
 plt.show()
 
 # %% [markdown]
-# ## Visual outputs <a name="visualoutput"></a>
+# ### Confusion Matrix
 
 # %%
-# rescale the pixel values to [0,1]
-output = y_pred / np.max(y_pred)
 
-# define a list of labels to assign to each subplot - don't currently know what each is
-labels = [
-    "Image 1",
-    "Image 2",
-    "Image 3",
-    "Image 4",
-    "Image 5",
-    "Image 6",
-    "Image 7",
-    "Image 8",
-    "Image 9",
-]
 
-# create a figure with 3 rows and 3 columns to display the 9 output images
-fig, ax = plt.subplots(3, 3, figsize=(10, 10))
+y_true = y_test_argmax
+y_pred = model.predict(X_test)
+y_pred = np.argmax(y_pred, axis=-1)
 
-# iterate over the rows and columns of the subplot array
-for i in range(3):
-    for j in range(3):
+# calculate the confusion matrix
+conf_mat = confusion_matrix(y_true.ravel(), y_pred.ravel())
 
-        # select the ith and jth output image
-        ax[i, j].imshow(output[i * 3 + j])
-        # ax[i, j].axis('off')
+# calculate the precision, recall, and F1-score for each class
+num_classes = conf_mat.shape[0]
+precision = np.zeros(num_classes)
+recall = np.zeros(num_classes)
+f1_score = np.zeros(num_classes)
 
-        # add a title to the subplot
-        ax[i, j].set_title(labels[i * 3 + j])
+for i in range(num_classes):
+    true_positives = conf_mat[i, i]
+    false_positives = np.sum(conf_mat[:, i]) - true_positives
+    false_negatives = np.sum(conf_mat[i, :]) - true_positives
 
-# add a main title to the figure
-fig.suptitle("U-Net Model Output")
+    precision[i] = true_positives / (true_positives + false_positives)
+    recall[i] = true_positives / (true_positives + false_negatives)
+    f1_score[i] = 2 * precision[i] * recall[i] / (precision[i] + recall[i])
 
-# adjust the spacing between subplots
-fig.tight_layout()
+# calculate the accuracy for each class
+accuracy = np.zeros(num_classes)
+for i in range(num_classes):
+    accuracy[i] = conf_mat[i, i] / np.sum(conf_mat[i, :])
 
-# show the plot
-plt.show()
+# print the results
+for i in range(num_classes):
+    print(
+        f"Class [i] - Precision: {precision[i]}, Recall: {recall[i]}, F1-score: {f1_score[i]}, Accuracy: {accuracy[i]}"
+    )
+
 
 # %%
