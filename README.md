@@ -10,45 +10,34 @@
 
 Automating building detection in satellite imagery over Somalia, with a focus on Internally displaced people (IDP) camps.
 
-The first steps in this project is looking at the feasibility of applying the U-Net architecture to Planet SkySat Very-High-Resolution (VHR) satellite imagery. The U-Net model aims to detect formal and in-formal building structures to a high accuracy (>0.9). The feasibility study is focused on 5 areas in Somalia, with known IDP camps:
+The first steps in this project are looking at the feasibility of applying the U-Net architecture to Planet SkySat Very-High-Resolution (VHR) satellite imagery. The U-Net model aims to detect formal and in-formal (i.e. tents, lean-tos) building structures to a high accuracy (>0.9). The feasibility study is focused on 5 areas in Somalia, with known IDP camps:
 
 * Baidoa
 * Beledweyne
+* Doolow (not in SNBS report but of key interest to stakeholder)
 * Kismayo
 * Mogadishu
 
-These areas were chosen due to being the focus of a recent Somalia National Bureau of Statistics (SNBS) study that surveyed building numbers and populations across IDP camps in the regions. The hope is that this study will provide some opportunity to ground-truth model outputs.
+These areas were chosen due to being the focus of a recent [Somalia National Bureau of Statistics (SNBS)](https://www.nbs.gov.so/publication-detail/59) study that surveyed building numbers and populations across IDP camps in the regions. The hope is that this study will provide some opportunity to ground-truth model outputs.
 
 ## Workflow
 
-_in progress_
 
 ```mermaid
 flowchart LR
-    id1[(planet<br>imagery)]-->id3{QGIS}
-    id2[(UNFPA<br>annotations)] -->id3{QGIS}
-    id3{QGIS}-->|planet<br>image|id4[/planet<br>image<br>processing<br>notebook\]
-    id4[/planet<br>image<br>processing<br>notebook\]-->|binary<br>mask|id3{QGIS}
-    id3{QGIS}-->|polygon<br>mask|id5{GCP<br>ingress<br>bucket}
-    id3{QGIS}-->|image<br>raster|id5{GCP<br>ingress<br>bucket}
-```
-_note the below will need updated when we decide on final workflow_
-
-```mermaid
-flowchart LR
-    id1{training<br>data<br>sharepoint}-->|img<br>file|id2{preingress<br>notebook}
-    id1{training<br>data<br>sharepoint}-->|mask<br>file|id2{preingress<br>notebook}
-    id2{preingress<br>notebook}-->|checked<br>img file|id3{GCP<br>ingress<br>bucket}
-    id2{preingress<br>notebook}-->|checked<br>mask file|id3{GCP<br>ingress<br>bucket}
-```
-
-```mermaid
-flowchart LR
-    id1{GCP<br>ingress<br>bucket}-->|mask|id2[/training<br>data<br>processing<br>notebook\]
-    id1{GCP<br>ingress<br>bucket}-->|raster|id2[/training<br>data<br>processing<br>notebook\]
-    id2[/training<br>data<br>processing<br>notebook\]-->|numpy<br>arrays|id3[/model<br>train<br>notebook\]
-    id3[/model<br>train<br>notebook\]-->|numpy<br>arrays|id4[/model<br>results<br>exploration<br>notebook\]
-
+    imagery[(planet<br>imagery)]-->qgis{QGIS}
+    unfpa[(UNFPA<br>annotations)] -->qgis
+    qgis-->|polygon<br>mask|sharepoint{<a href='https://officenationalstatistics.sharepoint.com/:f:/r/sites/dscdsc/Pro/2.%20Squads/International_Development/Data%20Science%20Projects/2.%20Data%20Science%20Research%20Projects/Somalia_UNFPA_census_support/Data/GCP%20ingress%20folder?csf=1&web=1&e=Pv6Icv'>SharePoint<br>GCP<br>ingest<br>folder</a>}
+    qgis-->|image<br>raster|sharepoint
+    sharepoint-->|img<br>file|preingress[/preingress<br>notebook\]
+    sharepoint-->|mask<br>file|preingress
+    preingress-->|checked<br>img file|sharepoint
+    preingress-->|checked<br>mask file|sharepoint
+    sharepoint-->|img<br>file|ingress{GCP<br>ingress<br>area}
+    sharepoint-->|mask<br>file|ingress
+    ingress-->|mask file|processing[/pre-modelling<br>notebook\]
+    ingress-->|img file|processing
+    processing-->|numpy<br>arrays|train[/model<br>train<br>notebook\]
 ```
 ## Getting set-up (GCP):
 
@@ -79,7 +68,7 @@ ipython kernel install --name "venv-somalia-gcp" --user
 After some possible delay, the kernel should appear in the list of kernels available in the top right corner of your notebooks.
 
 ### A note on Notebooks and Jupytext
-notebooks in this project are stored as `.py` files with a hookup via Jupytext, to ensure proper version control. The notebooks are distinguishable from modular python scripts via the following comments at their beginning:
+Notebooks in this project are stored as `.py` files with a hookup via Jupytext, to ensure proper version control. The notebooks are distinguishable from modular python scripts via the following comments at their beginning:
 ```
 # ---
 # jupyter:
@@ -93,6 +82,7 @@ jupytext --to notebook <file_name>.py
 ```
  This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs.
 
+Note ensure ` jupytext_version: 1.14.5` for syncing across the project.
 
 ### Pre-commit actions
 This repository makes use of [pre-commit hooks](https://towardsdatascience.com/getting-started-with-python-pre-commit-hooks-28be2b2d09d5). If approaching this project as a developer, you can install and enable `pre-commit` by running the following in your shell:
@@ -122,30 +112,32 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.tif
  ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.npy
  ┃ ┃ ┗ 📂mask
- ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.shp
+ ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.geojson
  ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.npy
  ┣ 📂src
- ┃ ┣ 📜explore_imagery_and_data.py
+ ┃ ┣ 📜data_augmentation_functions.py
+ ┃ ┣ 📜download_data_from_ingress.py
  ┃ ┣ 📜functions_library.py
- ┃ ┣ 📜geospatial_util_functions.py
- ┃ ┣ 📜modelling_preprocessing.py
+ ┃ ┣ 📜image_processing_functions.py
+ ┃ ┣ 📜mask_processing_functions.py
+ ┃ ┣ 📜model_train_notebook.py
  ┃ ┣ 📜preingress_notebook.py
- ┃ ┣ 📜planet_img_processing_functions.py
- ┃ ┗ 📜model_train_notebook.py
+ ┃ ┣ 📜ppremodelling_notebook.py
  ┣ 📜.gitignore
+ ┣ 📜requirements.text
  ┗ 📜README.md
 
 ```
 
 ## Training data
 
-The training data only needs to be processed and outputted when first derived, or if changes are made to the polygons/raster. Follow the wiki guide to create training data and export as `.shp` files - using project naming structure:
+The training data only needs to be processed and outputted when first derived, or if changes are made to the polygons/raster. Follow the wiki guide to create training data and export as `.geojson` files - using project naming structure:
 
-`training_data_<area>_<your initials>`
+`training_data_<area>_<unique int>_<your initials>`
 
 ## Before ingesting data onto GCP
 
-Run the src/preingress_notebook.py prior to ingesting any data onto GCP to ensure the training data has been formatted correctly. 
+Run the src/`preingress_notebook.py` prior to ingesting any data onto GCP to ensure the training data has been formatted correctly.
 
 ## Things of note
 The [wiki page attached to this repo](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Somalia-UNFPA-Census-support) contains useful resources and other relevant notes.
