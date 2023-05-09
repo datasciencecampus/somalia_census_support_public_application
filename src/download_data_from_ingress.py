@@ -27,6 +27,10 @@ client = storage.Client()
 bucket = client.bucket("ons-net-zero-data-prod-net-zero-somalia-des-ingress")
 bucket_prefix = "ons-des-prod-net-zero-somalia-ingress/"
 
+# Note local data folder path - We always want it to end up in training_data, 
+# rather than the specific timestamp.
+data_dir = Path.cwd().parent.joinpath("data/training_data/")
+
 
 # %% [markdown]
 # ### Get latest folder using String date (YYYYMMDD)
@@ -123,10 +127,6 @@ def rm_tree(pth):
 rm_tree(data_dir)
 
 # %%
-# Note local data folder path - We always want it to end up in training_data, 
-# rather than the specific timestamp.
-data_dir = Path.cwd().parent.joinpath("data/training_data/")
-
 # Examine each blob
 for blob in blobs:
     # Get file name
@@ -138,7 +138,7 @@ for blob in blobs:
     # Get parent folders for file and recreate structure
     for folder in reversed(file_path.parents):
         # Create folder
-        if folder.exists() == False: folder.mkdir(parents=True, exist_ok=True)
+        if not folder.exists(): folder.mkdir(parents=True, exist_ok=True)
         # Copy file to local environment
     blob.download_to_filename(file_path)
 
