@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# ## Download data from ingress notebook
+# ## Download data from GCP ingress notebook
 #
 #
 # ### Contents
