@@ -27,10 +27,11 @@
 # 1. ##### [Check files](#checkfile)
 # %% [markdown]
 # ### Set-up <a name="setup"></a>
-
-import datetime  # For finding the most recent folder
+#
+#
 
 # %%
+import datetime  # For finding the most recent folder
 from pathlib import Path  # handling file paths
 
 # %%
