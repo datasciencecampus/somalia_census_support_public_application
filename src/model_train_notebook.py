@@ -425,3 +425,10 @@ for i in range(num_classes):
 
 
 # %%
+from sklearn.metrics import ConfusionMatrixDisplay
+
+display = ConfusionMatrixDisplay(confusion_matrix = conf_mat, display_labels = labels)
+display.plot(cmap="cividis", values_format='')
+plt.show()
+
+# %%
