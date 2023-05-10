@@ -426,9 +426,16 @@ for i in range(num_classes):
 
 # %%
 from sklearn.metrics import ConfusionMatrixDisplay
-
+labels = ['background', 'building', 'tent']
 display = ConfusionMatrixDisplay(confusion_matrix = conf_mat, display_labels = labels)
 display.plot(cmap="cividis", values_format='')
+plt.show()
+
+# %%
+conf_mat_percent = np.transpose( np.transpose(conf_mat) / conf_mat.astype(float).sum(axis=1, keepdims=True))
+display = ConfusionMatrixDisplay(confusion_matrix = conf_mat_percent, display_labels = labels)
+display.plot(cmap="Blues", values_format='.2f')
+
 plt.show()
 
 # %%
