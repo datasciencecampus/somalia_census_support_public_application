@@ -85,8 +85,9 @@ img_dir = training_data_dir.joinpath("img")
 mask_dir = training_data_dir.joinpath("mask")
 
 
-# set-up model directory for model outputs
+# set-up model directory for model and outputs
 models_dir = setup_sub_dir(Path.cwd().parent, "models")
+outputs_dir = setup_sub_dir(Path.cwd().parent, "outputs")
 
 # %% [markdown]
 # ## Data augmentation <a name="dataaug"></a>
@@ -303,6 +304,8 @@ history1 = model.fit(
 # %tensorboard --logdir logs/
 
 # %%
+# CURRENTLY NO POINT IN SAVING AS WE CAN'T OPEN THE FILES WITH THE DICE LOSS WE USE AND NOT SAVING OUTPUT
+
 # today's date for input into model output
 today = date.today().strftime("%Y-%m-%d")
 # create filename for model with date and number of epochs
@@ -311,13 +314,11 @@ model_filename = f"test_run_{num_epochs}epochs_{today}_all_1.hdf5"
 # save model output into models_dir
 model.save(models_dir.joinpath(model_filename))
 
-# %%
-y_pred = model.predict(X_test)
-
-# predicted_img = np.argmax(y_pred, axis=0)[:, :]
-
 # %% [markdown]
 # ## Outputs <a name="output"></a>
+
+# %% [markdown]
+# ### Change across epochs
 
 # %%
 # create plot showing training and validation loss
@@ -347,6 +348,9 @@ plt.ylabel("IoU")
 plt.legend()
 plt.show()
 
+# %% [markdown]
+# ### Mean IoU
+
 # %%
 # calculating mean IoU
 
@@ -358,6 +362,9 @@ y_test_argmax = np.argmax(y_test, axis=3)
 IOU_keras = MeanIoU(num_classes=n_classes)
 IOU_keras.update_state(y_test_argmax, y_pred_argmax)
 print("Mean IoU =", IOU_keras.result().numpy())
+
+# %% [markdown]
+# ### Predications across validation images
 
 # %%
 # predict for a few images
@@ -386,9 +393,11 @@ plt.show()
 
 # %% [markdown]
 # ### Confusion Matrix
+#
+# More information about [confusion matrices](https://www.analyticsvidhya.com/blog/2021/06/confusion-matrix-for-multi-class-classification/).
 
 # %%
-
+class_names = ["Background", "Building", "Tent"]
 
 y_true = y_test_argmax
 y_pred = model.predict(X_test)
@@ -420,7 +429,7 @@ for i in range(num_classes):
 # print the results
 for i in range(num_classes):
     print(
-        f"Class [i] - Precision: {precision[i]}, Recall: {recall[i]}, F1-score: {f1_score[i]}, Accuracy: {accuracy[i]}"
+        f"{class_names[i]} - Precision: {precision[i]}, Recall: {recall[i]}, F1-score: {f1_score[i]}, Accuracy: {accuracy[i]}"
     )
 
 
