@@ -60,7 +60,7 @@ import segmentation_models as sm
 import tensorflow as tf
 from keras.metrics import MeanIoU
 from keras.utils import to_categorical
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 
@@ -139,24 +139,24 @@ all_stacked_masks.shape
 
 # %%
 # number of classes (i.e. building, tent, background)
-n_classes = len(np.unique(stacked_masks))
+n_classes = len(np.unique(all_stacked_masks))
 
 n_classes
 
 # %%
 # encode building classes into training mask arrays
-stacked_masks_cat = to_categorical(stacked_masks, num_classes=n_classes)
+stacked_masks_cat = to_categorical(all_stacked_masks, num_classes=n_classes)
 
 stacked_masks_cat.shape
 
 # %%
 # create random number to check both image and mask
-image_number = random.randint(0, len(stacked_images) - 1)
+image_number = random.randint(0, len(all_stacked_images) - 1)
 
 # plot image and mask
 plt.figure(figsize=(12, 6))
 plt.subplot(121)
-plt.imshow(stacked_images[image_number, :, :, :3])
+plt.imshow(all_stacked_images[image_number, :, :, :3])
 plt.subplot(122)
 plt.imshow(stacked_masks_cat[image_number])
 plt.show()
@@ -167,7 +167,7 @@ plt.show()
 # %%
 # setting out number of train and validation tiles
 X_train, X_test, y_train, y_test = train_test_split(
-    stacked_images, stacked_masks_cat, test_size=0.20, random_state=42
+    all_stacked_images, stacked_masks_cat, test_size=0.20, random_state=42
 )
 
 # %%
@@ -246,7 +246,7 @@ metrics = ["accuracy", jacard_coef]
 # This is how many times the model runs through the training data. Running too few epochs will under fit the model, running too many will overfit. Use callbacks to find the optimum number of epochs - but this will change depending on other input parameters!
 
 # %%
-num_epochs = 45
+num_epochs = 100
 
 # %% [markdown]
 # #### Callbacks
@@ -272,7 +272,7 @@ callbacks = [
 # [128, 256] - GPU territory
 
 # %%
-batch_size = 36
+batch_size = 45
 
 # %% [markdown]
 # ## Model
@@ -370,7 +370,7 @@ print("Mean IoU =", IOU_keras.result().numpy())
 # predict for a few images
 
 # test_img_number = random.randint(0, len(X_test))
-test_img_number = 0
+test_img_number = 6
 test_img = X_test[test_img_number]
 ground_truth = y_test_argmax[test_img_number]
 # test_img_norm=test_img[:,:,0][:,:,None]
@@ -434,22 +434,18 @@ for i in range(num_classes):
 
 
 # %%
-from sklearn.metrics import ConfusionMatrixDisplay
-
 labels = ["background", "building", "tent"]
-display = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=labels)
-display.plot(cmap="cividis", values_format="")
-plt.show()
 
-# %%
-conf_mat_percent = np.transpose(
-    np.transpose(conf_mat) / conf_mat.astype(float).sum(axis=1, keepdims=True)
-)
+# calculate the percentages
+row_sums = conf_mat.sum(axis=1)
+conf_mat_percent = conf_mat / row_sums[:, np.newaxis]
+
 display = ConfusionMatrixDisplay(
     confusion_matrix=conf_mat_percent, display_labels=labels
 )
-display.plot(cmap="Blues", values_format=".2f")
 
+# plot the confusion matrix
+display.plot(cmap="cividis", values_format=".2%")
+
+# show the plot
 plt.show()
-
-# %%
