@@ -130,16 +130,21 @@ check_img_files(img_dir)
 building_class_list = ["Building", "Tent"]
 
 # %%
+# building_class_list = ["Small", "Large", "Tent"]
+
+# %%
+# def determine_type(area):
+#    if area <25:
+#        return 'Small'
+#    else:
+#        return 'Large'
+
+# %%
 # loop through the GeoJSON files
 for mask_path in mask_dir.glob("*.geojson"):
 
     # load the GeoJSON into a GeoPandas dataframe
     mask_gdf = gpd.read_file(mask_path)
-
-    # !!!!Temporary fix to sort the bad QGIS import!!!!
-    # Remove after next Ingress with updated file.
-    if mask_path.stem == "training_data_doolow_1_jo":
-        mask_gdf.crs = 102100
 
     # add a 'Type' column if it doesn't exist (should be background tiles only)
     if "Type" not in mask_gdf.columns:
@@ -148,11 +153,13 @@ for mask_path in mask_dir.glob("*.geojson"):
     # replace values in 'Type' column
     mask_gdf["Type"].replace({"House": "Building", "Service": "Building"}, inplace=True)
 
+    # separate building based on size
+    # mask_gdf.loc[mask_gdf['Type'] == 'Building', 'Type'] = mask_gdf[mask_gdf['Type'] == 'Building'].geometry.area.apply(determine_type)
+
     # define corresponding image filename
     mask_filename = Path(mask_path).stem
     image_filename = f"{mask_filename}_bgr.tif"
     image_file = img_dir.joinpath(image_filename)
-    # print(mask_filename)
 
     # create rasterized training image
     segmented_training_arr = rasterize_training_data(
@@ -195,7 +202,9 @@ file_list = [f for f in img_dir.glob("*.npy") if np.load(f).shape[-1] == 4]
 image_list = [np.load(f) for f in file_list]
 
 # plot the images
-for i, img in enumerate(image_list):
+# display a maximum of 14 images
+for i in range(min(14, len(image_list))):
+    img = image_list[i]
 
     # create a 4 x 4 grid
     plt.subplot(4, 4, i + 1)
@@ -220,13 +229,15 @@ file_list = [f for f in mask_dir.glob("*.npy")]
 # read in .npy files
 mask_list = [np.load(f) for f in file_list]
 
-# plot the images
-for i, mask in enumerate(mask_list):
+# plot the masks
+# display a maximum of 14 images
+for i in range(min(14, len(mask_list))):
+    mask = mask_list[i]
 
     # create a 4 x 4 grid
     plt.subplot(4, 4, i + 1)
 
-    # show the first 3 channels (RGB)
+    # plot the mask
     plt.imshow(mask)
 
     # plt.title(file_list[i].name) # use file name as title
