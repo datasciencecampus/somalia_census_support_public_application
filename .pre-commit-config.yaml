@@ -1,14 +1,6 @@
 repos:
 # exclude: ^vendor/
 
-# ---- isort ---- : Sort imports alphabetically, and automatically separated into sections and by type
-- repo: https://github.com/pycqa/isort
-  rev: 5.11.5
-  hooks:
-    - id: isort
-      name: isort (python)
-      args: ["--profile", "black"]
-
 # ---- Pre-commit hooks ---- : Standard hook library
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v4.1.0

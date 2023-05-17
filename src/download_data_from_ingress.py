@@ -12,8 +12,6 @@
 #     name: python3
 # ---
 
-# %% [markdown]
-# ## Download data from ingress notebook
 #
 #
 # ### Contents
@@ -28,9 +26,6 @@
 # %% [markdown]
 # ### Set-up <a name="setup"></a>
 
-import datetime  # For finding the most recent folder
-
-# %%
 from pathlib import Path  # handling file paths
 
 # %%
