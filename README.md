@@ -44,7 +44,7 @@ flowchart LR
 This project is being developed in Google Cloud Platform (GCP), and so instructions will be specific to this environment. A determined user can hopefully generalise these across other tools.
 
 ### Virtual environment
-Once in the project space (i.e. the base repository level) it is recommended you set-up a virtual environment. In the terminal run:
+Once in the project space (i.e. the base repository level) it is recommended you set-up a virtual environment. To do this you will first have to clone the repo within your personal notebook space (in the GCP "workbench" find and navigate to your personal notebook i.e. the one with your name under "User-managed notebooks"). Once you have the repo set up, navigate to the base repository level, in the terminal run:
 ```
 python3 -m venv venv-somalia-gcp
 ```
@@ -65,7 +65,7 @@ To access your installed packages from your virtual environment you need to set-
 ipython kernel install --name "venv-somalia-gcp" --user
 ```
 
-After some possible delay, the kernel should appear in the list of kernels available in the top right corner of your notebooks.
+After some possible delay, the kernel should appear in the list of kernels available in the top right corner of your notebooks. NOTE: use this kernel to run all notebooks except the ```download_data_from_ingress.py``` which should be run on the base python kernel.
 
 ### A note on Notebooks and Jupytext
 Notebooks in this project are stored as `.py` files with a hookup via Jupytext, to ensure proper version control. The notebooks are distinguishable from modular python scripts via the following comments at their beginning:
