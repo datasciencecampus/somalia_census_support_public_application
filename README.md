@@ -22,22 +22,28 @@ These areas were chosen due to being the focus of a recent [Somalia National Bur
 
 ## Workflow
 
-
+Creation of Training Data
 ```mermaid
 flowchart LR
     imagery[(planet<br>imagery)]-->qgis{QGIS}
     unfpa[(UNFPA<br>annotations)] -->qgis
-    qgis-->|polygon<br>mask|sharepoint{<a href='https://officenationalstatistics.sharepoint.com/:f:/r/sites/dscdsc/Pro/2.%20Squads/International_Development/Data%20Science%20Projects/2.%20Data%20Science%20Research%20Projects/Somalia_UNFPA_census_support/Data/GCP%20ingress%20folder?csf=1&web=1&e=Pv6Icv'>SharePoint<br>GCP<br>ingest<br>folder</a>}
-    qgis-->|image<br>raster|sharepoint
-    sharepoint-->|img<br>file|preingress[/preingress<br>notebook\]
-    sharepoint-->|mask<br>file|preingress
-    preingress-->|checked<br>img file|sharepoint
-    preingress-->|checked<br>mask file|sharepoint
-    sharepoint-->|img<br>file|ingress{GCP<br>ingress<br>area}
-    sharepoint-->|mask<br>file|ingress
-    ingress-->|mask file|processing[/pre-modelling<br>notebook\]
-    ingress-->|img file|processing
+    qgis-->|polygon<br>mask|preingress[/preingress<br>notebook\]
+    qgis-->|image<br>raster|preingress
+    preingress-->|checked<br>mask|sharepoint
+    preingress-->|checked<br>img|sharepoint{<a href='https://officenationalstatistics.sharepoint.com/:f:/r/sites/dscdsc/Pro/2.%20Squads/International_Development/Data%20Science%20Projects/2.%20Data%20Science%20Research%20Projects/Somalia_UNFPA_census_support/Data/GCP%20ingress%20folder?csf=1&web=1&e=Pv6Icv'>SharePoint<br>GCP<br>ingest<br>folder</a>}
+    sharepoint-->|mask<br>file|ingress{GCP<br>ingress<br>area}
+    sharepoint-->|img<br>file|ingress
+```
+Modelling
+```mermaid
+flowchart LR
+    ingress{GCP<br>ingress<br>area}-->download[/download_data_from_ingress<br>notebook\]
+    download-->|mask file|local
+    download-->|img file|local
+    local{Local<br>GCP<br>Env.}-->|mask file|processing[/pre-modelling<br>notebook\]
+    local{Local<br>GCP<br>Env.}-->|img file|processing[/pre-modelling<br>notebook\]
     processing-->|numpy<br>arrays|train[/model<br>train<br>notebook\]
+
 ```
 ## Getting set-up (GCP):
 
@@ -65,7 +71,9 @@ To access your installed packages from your virtual environment you need to set-
 ipython kernel install --name "venv-somalia-gcp" --user
 ```
 
-After some possible delay, the kernel should appear in the list of kernels available in the top right corner of your notebooks. NOTE: use this kernel to run all notebooks except the ```download_data_from_ingress.py``` which should be run on the base python kernel.
+After some possible delay, the kernel should appear in the list of kernels available in the top right corner of your notebooks. 
+
+**NOTE:** use this kernel to run all notebooks except from ```download_data_from_ingress.py``` which should be run on the base python kernel.
 
 ### A note on Notebooks and Jupytext
 Notebooks in this project are stored as `.py` files with a hookup via Jupytext, to ensure proper version control. The notebooks are distinguishable from modular python scripts via the following comments at their beginning:
@@ -80,7 +88,7 @@ After cloning the repository, from your terminal run:
 ```
 jupytext --to notebook <file_name>.py
 ```
- This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs.
+This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs.
 
 Note ensure ` jupytext_version: 1.14.5` for syncing across the project.
 
