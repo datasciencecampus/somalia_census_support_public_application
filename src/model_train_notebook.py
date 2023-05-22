@@ -64,13 +64,11 @@ from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 
+# %%
 from data_augmentation_functions import (
-    hue_shift_with_alpha,
     stack_array,
     stack_background_arrays,
 )
-
-# %%
 from functions_library import setup_sub_dir
 from multi_class_unet_model_build import jacard_coef, multi_unet_model
 
@@ -108,45 +106,6 @@ outputs_dir = setup_sub_dir(Path.cwd().parent, "outputs")
 # creating stack of img arrays that are rotated and horizontally flipped
 stacked_images = stack_array(img_dir)
 stacked_images.shape
-
-# %%
-# define the hue shift value
-shift_value = 0.2
-
-shifted_images = []
-for image in stacked_images:
-    shifted_image = hue_shift_with_alpha(image, shift_value)
-    shifted_images.append(shifted_image)
-
-# convert the list of shifted images back to a np array
-shifted_images = np.array(shifted_images)
-
-# %%
-num_images = min(stacked_images.shape[0], 10)
-stacked_images = stacked_images[:num_images]
-shifted_images = shifted_images[:num_images]
-
-
-num_cols = min(num_images, 5)
-num_rows = int(np.ceil(num_images / num_cols))
-
-fig, axs = plt.subplots(nrows=num_rows, ncols=num_cols, figsize=(12, 8))
-
-for i, ax in enumerate(axs.flatten()):
-    if i < num_images:
-        ax.imshow(shifted_images[i])
-        ax.set_axis_off()
-        ax.set_title("Shifted")
-
-    # ax = ax2 = ax.figure.add_subplot(num_rows, num_cols, i + num_images + 1)
-    # ax.imshow(stacked_images[i])
-    # ax.set_axis_off()
-    # ax.set_title('Original')
-
-plt.tight_layout()
-
-plt.show()
-
 
 # %%
 # creating stack of background img arrays with no augmentation
