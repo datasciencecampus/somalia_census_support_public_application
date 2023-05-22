@@ -7,7 +7,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.14.5
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
+#     display_name: Python 3
 #     language: python
 #     name: python3
 # ---
@@ -20,7 +20,6 @@
 #
 #
 # 1. ##### [Set-up](#setup)
-# 1. ##### [Get latest folder from string - unused](#strdate)
 # 1. ##### [Download from last modified date](#moddate)
 # 1. ##### [Remove existing files](#remove)
 # 1. ##### [Download data](#download)
@@ -47,47 +46,6 @@ bucket_prefix = "ons-des-prod-net-zero-somalia-ingress/"
 # Note local data folder path - We always want it to end up in training_data,
 # rather than the specific timestamp.
 data_dir = Path.cwd().parent.joinpath("data/training_data/")
-
-# %% [markdown]
-# ### Get latest folder using String date (YYYYMMDD) - Unsed <a name="strdate"></a>
-#
-# Not currently in use. An alternative method if approach below becomes too slow.
-
-# %% [markdown]
-# #Used to stop training_data/ and training_data_doolow/ from throwing errors
-# def convert_int(s):
-#     if isinstance(s,str):
-#         try:
-#             return int(s)
-#         except:
-#             return 0
-#     else:
-#         print (s, type(s))
-#         return None
-
-# %% [markdown]
-# #list_blobs() is a lazy loading iterator. It won't populate unless called
-# #next() makes the first API call. Will throw StopIteration error if bucket is empty!
-# #Ellipsis is used to prevent this error
-# blobs = bucket.list_blobs(
-#     prefix=bucket_prefix,
-#     delimiter= '/'
-# )
-# next(blobs, ...)
-#
-# #folders = full folder names
-# #dates = suffix in YYYYMMDD format
-# folders = []
-# dates = []
-# for folder in blobs.prefixes:
-#     path_components = folder.split('/')
-#     folders.append(path_components[1] + '/')
-#     dates.append(folder.split('_')[-1][:-1])
-#
-# dates = list(map(convert_int, dates))
-#
-# latest_date = lambda folders, dates: folders[max(range(len(dates)), key=lambda i: dates[i])]
-# latest_folder = latest_date(folders, dates)
 
 # %% [markdown]
 # ### Download from last modified date <a name="moddate"></a>
