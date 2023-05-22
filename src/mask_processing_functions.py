@@ -107,7 +107,8 @@ def training_data_summary(mask_dir):
     """
     Reads in all .geojson files in directory 'mask_dir', checks for 'Type' column,
     replaces the values 'House' and 'Service' with 'Building', and returns the
-    count of each unique entry in the 'Type' column for all files.
+    count of each unique entry in the 'Type' column for all files. Calculates the
+    size of structures and returns min, max, mean for each type.
 
     Parameters
     ----------
@@ -118,6 +119,7 @@ def training_data_summary(mask_dir):
     -------
     pandas.DataFrame
         A dataframe containing the count of unqiue values in the 'Type' column
+        and the size stats for each structure type.
     """
     # empty dataframe
     training_data = None
@@ -142,4 +144,14 @@ def training_data_summary(mask_dir):
     # return value counts
     value_counts = training_data["Type"].value_counts()
 
-    return training_data, value_counts
+    # calculate structure size
+    training_data["structure_size"] = training_data.geometry.apply(
+        lambda geom: geom.area
+    )
+
+    # calculate statistics for each type
+    structure_stats = training_data.groupby("Type")["structure_size"].agg(
+        ["min", "max", "mean"]
+    )
+
+    return training_data, value_counts, structure_stats
