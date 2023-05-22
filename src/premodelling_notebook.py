@@ -15,7 +15,7 @@
 # %% [markdown]
 # # Feasibility study - Pre-processing training data
 #
-# This notebook performs the geospatial processing of training images and masks and outputs as `.npy` arrays for input into the modelling notebook. This notebook only has to be run once, and when new training data is added.
+# This notebook performs the geospatial processing of training images and masks and outputs as `.npy` arrays for input into the modelling notebook. This notebook only has to be run when new data is ingressed to GCP.
 #
 # <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #31708f; background-color: #d9edf7; border-color: #bce8f1;">
 # Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
@@ -87,7 +87,7 @@ img_size = 384
 # %% [markdown]
 # ## Image files <a name="images"></a>
 #
-# Reading in all `.tif` files in the `img_dir` then performing geospatial processing on them using functions from the `planet_processing_functions.py` and saving outputted files as `.npy` arrays into the same folder.
+# Reading in all `.tif` files in the `img_dir` then performing geospatial processing on them using functions from the `image_processing_functions.py` and saving outputted files as `.npy` arrays into the same folder.
 
 # %%
 # list all .tif files in directoy
@@ -122,12 +122,22 @@ check_img_files(img_dir)
 # %% [markdown]
 # ## Mask files <a name="masks"></a>
 #
-# Reading in all `.GeoJSON` files in the `mask_dir`, matching files to corresponding `img`, performing geospatial processing and saving outputted files as `npy` arrays into the same folder.
+# Reading in all `.GeoJSON` files in the `mask_dir`, matching files to corresponding `img`, performing geospatial processing with `mask_processing_functions.py`, and saving outputted files as `.npy` arrays into the same folder.
 #
-# Currently only using 'building' and 'tent' as classes - but may incorporate 'service' at a later stage.
+# Currently only using 'building' and 'tent' as classes - but may incorporate 'service' at a later stage, which is in the commented out code.
 
 # %%
 building_class_list = ["Building", "Tent"]
+
+# %%
+# building_class_list = ["Small", "Large", "Tent"]
+
+# %%
+# def determine_type(area):
+#    if area <25:
+#        return 'Small'
+#    else:
+#        return 'Large'
 
 # %%
 # loop through the GeoJSON files
@@ -136,11 +146,6 @@ for mask_path in mask_dir.glob("*.geojson"):
     # load the GeoJSON into a GeoPandas dataframe
     mask_gdf = gpd.read_file(mask_path)
 
-    # !!!!Temporary fix to sort the bad QGIS import!!!!
-    # Remove after next Ingress with updated file.
-    if mask_path.stem == "training_data_doolow_1_jo":
-        mask_gdf.crs = 102100
-
     # add a 'Type' column if it doesn't exist (should be background tiles only)
     if "Type" not in mask_gdf.columns:
         mask_gdf["Type"] = ""
@@ -148,11 +153,13 @@ for mask_path in mask_dir.glob("*.geojson"):
     # replace values in 'Type' column
     mask_gdf["Type"].replace({"House": "Building", "Service": "Building"}, inplace=True)
 
+    # separate building based on size
+    # mask_gdf.loc[mask_gdf['Type'] == 'Building', 'Type'] = mask_gdf[mask_gdf['Type'] == 'Building'].geometry.area.apply(determine_type)
+
     # define corresponding image filename
     mask_filename = Path(mask_path).stem
     image_filename = f"{mask_filename}_bgr.tif"
     image_file = img_dir.joinpath(image_filename)
-    # print(mask_filename)
 
     # create rasterized training image
     segmented_training_arr = rasterize_training_data(
@@ -173,14 +180,29 @@ check_mask_files(mask_dir)
 
 # %% [markdown]
 # ## Training data summary<a name="trainingsummary"></a>
+#
+# This section is duplicating work from above but it joins all mask files together into a geopandas data frame to quickly overview data.
 
 # %%
 # joining masks together to count building types
-training_data, value_counts = training_data_summary(mask_dir)
+training_data, value_counts, structure_stats = training_data_summary(mask_dir)
 
 # %%
 # building types
 value_counts
+
+# %%
+# structure stats
+structure_stats
+
+# %%
+# check pre-ingress worked - if type = true then workflow won't work
+
+area_empty = training_data["Area"].isna().any()
+type_empty = training_data["Type"].isna().any()
+
+print("Is area column empty?", area_empty)
+print("Is type column empty?", type_empty)
 
 # %% [markdown]
 # ## Visual checking - images <a name="imagevisual"></a>
@@ -195,7 +217,9 @@ file_list = [f for f in img_dir.glob("*.npy") if np.load(f).shape[-1] == 4]
 image_list = [np.load(f) for f in file_list]
 
 # plot the images
-for i, img in enumerate(image_list):
+# display a maximum of 16 images
+for i in range(min(16, len(image_list))):
+    img = image_list[i]
 
     # create a 4 x 4 grid
     plt.subplot(4, 4, i + 1)
@@ -220,13 +244,15 @@ file_list = [f for f in mask_dir.glob("*.npy")]
 # read in .npy files
 mask_list = [np.load(f) for f in file_list]
 
-# plot the images
-for i, mask in enumerate(mask_list):
+# plot the masks
+# display a maximum of 16 images
+for i in range(min(16, len(mask_list))):
+    mask = mask_list[i]
 
     # create a 4 x 4 grid
     plt.subplot(4, 4, i + 1)
 
-    # show the first 3 channels (RGB)
+    # plot the mask
     plt.imshow(mask)
 
     # plt.title(file_list[i].name) # use file name as title

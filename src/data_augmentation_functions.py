@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import numpy as np
+from skimage.color import hsv2rgb, rgb2hsv, rgba2rgb
 
 
 def stack_array(directory):
@@ -45,7 +46,7 @@ def stack_array(directory):
             rotated = np.fliplr(rotated)
         rotations.append(rotated)
 
-    # create a horizonatl mirror of each image and stack along the same axis
+    # create a horizontal mirror of each image and stack along the same axis
     mirrors = [
         np.fliplr(array_list),
         np.fliplr(rotations[0]),
@@ -85,3 +86,41 @@ def stack_background_arrays(directory):
         np_array = np.load(file)
         background_arrays.append(np_array)
     return background_arrays
+
+
+def hue_shift_with_alpha(image, shift_value):
+    """
+    Perform hue shift on an RGBA image while preserving the alpha channel.
+
+    Parameters:
+    image (np.ndarray0: Input RGBA image with shape (height, width, 4).
+    shift_value (float): Hue shift value to be added to the hue channel (range: [0,1])
+
+    Returns:
+    np.adarray: Hue-shifted image with preserved alpha channel, shape (height, width, 4).
+    """
+
+    # convert the image from RGBA to RGB color space
+    rgb_image = rgba2rgb(image)
+
+    # convert the image from RGB to HSV color space
+    hsv_image = rgb2hsv(rgb_image)
+
+    # extract the hue channel from the HSV image
+    hue_channel = hsv_image[:, :, 0]
+
+    # perform the hue shift (add a constant value to the hue channel)
+    hue_shifted = (hue_channel + shift_value) % 1.0
+
+    # update the hue channel in the HSV image with the shifted values
+    hsv_image[:, :, 0] = hue_shifted
+
+    # convert the image back to RGB color space
+    rgb_shifted_image = hsv2rgb(hsv_image)
+
+    # create a new array by combining the RGB shifted image and the alpha channel
+    shifted_image = np.concatenate(
+        (rgb_shifted_image, image[:, :, 3][:, :, np.newaxis]), axis=2
+    )
+
+    return shifted_image

@@ -60,12 +60,15 @@ import segmentation_models as sm
 import tensorflow as tf
 from keras.metrics import MeanIoU
 from keras.utils import to_categorical
+from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 
-from data_augmentation_functions import stack_array, stack_background_arrays
-
 # %%
+from data_augmentation_functions import (
+    stack_array,
+    stack_background_arrays,
+)
 from functions_library import setup_sub_dir
 from multi_class_unet_model_build import jacard_coef, multi_unet_model
 
@@ -84,8 +87,9 @@ img_dir = training_data_dir.joinpath("img")
 mask_dir = training_data_dir.joinpath("mask")
 
 
-# set-up model directory for model outputs
+# set-up model directory for model and outputs
 models_dir = setup_sub_dir(Path.cwd().parent, "models")
+outputs_dir = setup_sub_dir(Path.cwd().parent, "outputs")
 
 # %% [markdown]
 # ## Data augmentation <a name="dataaug"></a>
@@ -244,7 +248,7 @@ metrics = ["accuracy", jacard_coef]
 # This is how many times the model runs through the training data. Running too few epochs will under fit the model, running too many will overfit. Use callbacks to find the optimum number of epochs - but this will change depending on other input parameters!
 
 # %%
-num_epochs = 45
+num_epochs = 100
 
 # %% [markdown]
 # #### Callbacks
@@ -302,6 +306,8 @@ history1 = model.fit(
 # %tensorboard --logdir logs/
 
 # %%
+# CURRENTLY NO POINT IN SAVING AS WE CAN'T OPEN THE FILES WITH THE DICE LOSS WE USE AND NOT SAVING OUTPUT
+
 # today's date for input into model output
 today = date.today().strftime("%Y-%m-%d")
 # create filename for model with date and number of epochs
@@ -310,13 +316,11 @@ model_filename = f"test_run_{num_epochs}epochs_{today}_all_1.hdf5"
 # save model output into models_dir
 model.save(models_dir.joinpath(model_filename))
 
-# %%
-y_pred = model.predict(X_test)
-
-# predicted_img = np.argmax(y_pred, axis=0)[:, :]
-
 # %% [markdown]
 # ## Outputs <a name="output"></a>
+
+# %% [markdown]
+# ### Change across epochs
 
 # %%
 # create plot showing training and validation loss
@@ -346,6 +350,9 @@ plt.ylabel("IoU")
 plt.legend()
 plt.show()
 
+# %% [markdown]
+# ### Mean IoU
+
 # %%
 # calculating mean IoU
 
@@ -358,11 +365,14 @@ IOU_keras = MeanIoU(num_classes=n_classes)
 IOU_keras.update_state(y_test_argmax, y_pred_argmax)
 print("Mean IoU =", IOU_keras.result().numpy())
 
+# %% [markdown]
+# ### Predications across validation images
+
 # %%
 # predict for a few images
 
 # test_img_number = random.randint(0, len(X_test))
-test_img_number = 0
+test_img_number = 2
 test_img = X_test[test_img_number]
 ground_truth = y_test_argmax[test_img_number]
 # test_img_norm=test_img[:,:,0][:,:,None]
@@ -384,44 +394,60 @@ plt.imshow(predicted_img)
 plt.show()
 
 # %% [markdown]
-# ## Visual outputs <a name="visualoutput"></a>
+# ### Confusion Matrix
+#
+# More information about [confusion matrices](https://www.analyticsvidhya.com/blog/2021/06/confusion-matrix-for-multi-class-classification/).
 
 # %%
-# rescale the pixel values to [0,1]
-output = y_pred / np.max(y_pred)
+class_names = ["Background", "Building", "Tent"]
 
-# define a list of labels to assign to each subplot - don't currently know what each is
-labels = [
-    "Image 1",
-    "Image 2",
-    "Image 3",
-    "Image 4",
-    "Image 5",
-    "Image 6",
-    "Image 7",
-    "Image 8",
-    "Image 9",
-]
+y_true = y_test_argmax
+y_pred = model.predict(X_test)
+y_pred = np.argmax(y_pred, axis=-1)
 
-# create a figure with 3 rows and 3 columns to display the 9 output images
-fig, ax = plt.subplots(3, 3, figsize=(10, 10))
+# calculate the confusion matrix
+conf_mat = confusion_matrix(y_true.ravel(), y_pred.ravel())
 
-# iterate over the rows and columns of the subplot array
-for i in range(3):
-    for j in range(3):
+# calculate the precision, recall, and F1-score for each class
+num_classes = conf_mat.shape[0]
+precision = np.zeros(num_classes)
+recall = np.zeros(num_classes)
+f1_score = np.zeros(num_classes)
 
-        # select the ith and jth output image
-        ax[i, j].imshow(output[i * 3 + j])
-        # ax[i, j].axis('off')
+for i in range(num_classes):
+    true_positives = conf_mat[i, i]
+    false_positives = np.sum(conf_mat[:, i]) - true_positives
+    false_negatives = np.sum(conf_mat[i, :]) - true_positives
 
-        # add a title to the subplot
-        ax[i, j].set_title(labels[i * 3 + j])
+    precision[i] = true_positives / (true_positives + false_positives)
+    recall[i] = true_positives / (true_positives + false_negatives)
+    f1_score[i] = 2 * precision[i] * recall[i] / (precision[i] + recall[i])
 
-# add a main title to the figure
-fig.suptitle("U-Net Model Output")
+# calculate the accuracy for each class
+accuracy = np.zeros(num_classes)
+for i in range(num_classes):
+    accuracy[i] = conf_mat[i, i] / np.sum(conf_mat[i, :])
 
-# adjust the spacing between subplots
-fig.tight_layout()
+# print the results
+for i in range(num_classes):
+    print(
+        f"{class_names[i]} - Precision: {precision[i]}, Recall: {recall[i]}, F1-score: {f1_score[i]}, Accuracy: {accuracy[i]}"
+    )
+
+
+# %%
+labels = ["background", "building", "tent"]
+
+# calculate the percentages
+row_sums = conf_mat.sum(axis=1)
+conf_mat_percent = conf_mat / row_sums[:, np.newaxis]
+
+display = ConfusionMatrixDisplay(
+    confusion_matrix=conf_mat_percent, display_labels=labels
+)
+
+# plot the confusion matrix
+display.plot(cmap="cividis", values_format=".2%")
 
 # show the plot
 plt.show()

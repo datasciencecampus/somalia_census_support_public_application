@@ -55,8 +55,6 @@ def rasterize_training_data(
         )
     # open corresponding satellite raster
     raster_tif = rio.open(reference_satellite_raster)
-    # retrieve geospatial meta data from corresponding raster
-    raster_meta = raster_tif.meta.copy()
 
     # create column of integer representations of the categorical building classes
     training_data["building_class_int"] = training_data["Type"].replace(
@@ -64,13 +62,11 @@ def rasterize_training_data(
     )
     # ensure the CRS for the training data and satellite raster match
     training_data = training_data.to_crs(raster_tif.crs)
-    
+
     # create a generator of geom, value pairs to use in rasterizing
     shapes = (
         (geom, value)
-        for geom, value in zip(
-            training_data.geometry, training_data.building_class_int
-        )
+        for geom, value in zip(training_data.geometry, training_data.building_class_int)
     )
     # check if any polygons present - if not, i.e. background tile, then generate zero array
     if len(training_data) == 0:
@@ -79,12 +75,12 @@ def rasterize_training_data(
         # rasterize by the training labelled polygons
         arr_to_burn = features.rasterize(
             shapes=shapes,
-            out_shape = raster_tif.shape,
+            out_shape=raster_tif.shape,
             transform=raster_tif.transform,
             all_touched=True,
             fill=0,
         )
-     # return the array representation
+    # return the array representation
     return arr_to_burn
 
 
@@ -103,7 +99,6 @@ def check_mask_files(mask_dir, ref_shape=(384, 384)):
     mask_file_list = mask_dir.glob("*npy")
     for file in mask_file_list:
         mask_array = np.load(file)
-        print(mask_array.shape)
         if mask_array.shape != ref_shape:
             warnings.warn(f"{file} has a different shape than the reference shape")
 
@@ -112,7 +107,8 @@ def training_data_summary(mask_dir):
     """
     Reads in all .geojson files in directory 'mask_dir', checks for 'Type' column,
     replaces the values 'House' and 'Service' with 'Building', and returns the
-    count of each unique entry in the 'Type' column for all files.
+    count of each unique entry in the 'Type' column for all files. Calculates the
+    size of structures and returns min, max, mean for each type.
 
     Parameters
     ----------
@@ -123,6 +119,7 @@ def training_data_summary(mask_dir):
     -------
     pandas.DataFrame
         A dataframe containing the count of unqiue values in the 'Type' column
+        and the size stats for each structure type.
     """
     # empty dataframe
     training_data = None
@@ -147,4 +144,14 @@ def training_data_summary(mask_dir):
     # return value counts
     value_counts = training_data["Type"].value_counts()
 
-    return training_data, value_counts
+    # calculate structure size
+    training_data["structure_size"] = training_data.geometry.apply(
+        lambda geom: geom.area
+    )
+
+    # calculate statistics for each type
+    structure_stats = training_data.groupby("Type")["structure_size"].agg(
+        ["min", "max", "mean"]
+    )
+
+    return training_data, value_counts, structure_stats
