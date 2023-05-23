@@ -292,13 +292,18 @@ def cleaning_of_mask_files(mask_files_lower):
         elif "fid" in column_names:
             mask_gdf = mask_gdf.drop(columns=["fid"])
 
-        # check for type and geomtry columns not present and send warning
+        # check if type and/or geometry columns not present and send warning
         if "Type" not in column_names and "geometry" not in column_names:
             mask_gdf["Type"] = 0
             warnings.warn(
                 f"The Type and geometry columns not found {(mask_file.name)} setting to background"
             )
-
+        
+        elif "Type" not in column_names and "geometry" in column_names:
+            warnings.warn(
+                f"The Type column has not been found, but a geometry column has for {(mask_file.name)} please check"
+            ) 
+        
         # check any null values in type column - send error
         if mask_gdf["Type"].isnull().values.any():
             warnings.warn(f"Type column for ({mask_file.name}) has null values")
