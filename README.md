@@ -138,7 +138,9 @@ The below tree demonstrates where each file/folder needs to be for successful ex
 ```
 ## Uploading data to GCP
 
-Training data (polygon masks and image rasters) can only be uploaded to GCP by someone assigned to the project as a 'Data Ingestor'. All data should be run through the `pre-ingress notebook`, and any issues resolved, before uploading to the project's GCP SharePoint folder.
+Training data (polygon masks and image rasters) can only be uploaded to GCP by someone assigned to the project as a 'Data Ingestor'. All data should be run through the `pre-ingress notebook`, and any issues resolved, before uploading to the project's GCP SharePoint folder. 
+
+Ensure [this excel document has been updated](https://officenationalstatistics.sharepoint.com/:x:/r/sites/dscdsc/Pro/2.%20Squads/International_Development/Data%20Science%20Projects/2.%20Data%20Science%20Research%20Projects/Somalia_UNFPA_census_support/Data/GCP%20checklist.xlsx?d=w5547e56fcf0643b39cbee47411c8e886&csf=1&web=1&e=H5gNfg) after corresponding mask and img files have been run through the `pre-ingress notebook`.
 
 When data is ready to be ingested to GCP, the Data Ingestor will encrypt the files and upload to the egress folder. Once past security checks data is moved to the ingress folder (automatic). Data can be downloaded from the ingress folder by running the `download data from ingress` notebook. Note that this notebook will delete all files, including `.npy`,  in the `training data` subfolders as we currently have no ability to overwrite/delete files.
 
@@ -148,6 +150,7 @@ When data is ready to be ingested to GCP, the Data Ingestor will encrypt the fil
 The training data needs to be processed and outputted as `.npy` files when first uploaded to GCP. Follow the wiki guide to create training data and export as `.geojson` files - using project naming structure:
 
 `training_data_<area>_<unique int>_<your initials>`
+
 
 ## Things of note
 The [wiki page attached to this repo](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Somalia-UNFPA-Census-support) contains useful resources and other relevant notes.
