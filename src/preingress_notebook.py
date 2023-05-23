@@ -22,14 +22,15 @@
 
 # %% [markdown]
 # ## Set-up
-
-import re  # pattern matching
-import warnings  # used for sending warnings
+#
+# import re  # pattern matching
+# import warnings  # used for sending warnings
 
 # %%
 # Load required libraries
 from pathlib import Path  # working with file paths
-
+import re  # pattern matching
+import warnings  # used for sending warnings
 import geopandas as gpd  # working with geospatial files and data
 
 # Local imports
@@ -291,11 +292,11 @@ def cleaning_of_mask_files(mask_files_lower):
         elif "fid" in column_names:
             mask_gdf = mask_gdf.drop(columns=["fid"])
 
-        # check for type column not present and send warning
-        if "Type" not in column_names:
+        # check for type and geomtry columns not present and send warning
+        if "Type" not in column_names and "geometry" not in column_names:
             mask_gdf["Type"] = 0
             warnings.warn(
-                f"The Type column not found {(mask_file.name)} setting to background"
+                f"The Type and geometry columns not found {(mask_file.name)} setting to background"
             )
 
         # check any null values in type column - send error
