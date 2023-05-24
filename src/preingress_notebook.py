@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.14.4
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -32,6 +32,7 @@ from pathlib import Path  # working with file paths
 import re  # pattern matching
 import warnings  # used for sending warnings
 import geopandas as gpd  # working with geospatial files and data
+import numpy as np  # Used to ensure a training tile has more than one type
 
 # Local imports
 from functions_library import setup_sub_dir
@@ -288,25 +289,36 @@ def cleaning_of_mask_files(mask_files_lower):
         # drop fid and id columns
         if "id" in column_names:
             mask_gdf = mask_gdf.drop(columns=["id"])
-
         elif "fid" in column_names:
             mask_gdf = mask_gdf.drop(columns=["fid"])
 
         # check if type and/or geometry columns not present and send warning
-        if "Type" not in column_names and "geometry" not in column_names:
-            mask_gdf["Type"] = 0
+        if "Type" not in column_names and len(mask_gdf.geometry) == 0:
             warnings.warn(
-                f"The Type and geometry columns not found {(mask_file.name)} setting to background"
+                f"""{(mask_file.name)} contains no Type or geometry.
+                Ensure this mask is for a background tile. File has not been saved!"""
             )
-        
+            continue
+
         elif "Type" not in column_names and "geometry" in column_names:
             warnings.warn(
-                f"The Type column has not been found, but a geometry column has for {(mask_file.name)} please check"
-            ) 
-        
+                f"""{(mask_file.name)} contains no type but has geometry.
+                Add types in QGIS to the drawn polygons. File has not been saved!"""
+            )
+            continue
+
+        if len(np.unique(mask_gdf["Type"])) == 1:
+            warnings.warn(
+                f"""{(mask_file.name)} contains only 1 type of building!
+                Ensure this is correct before uploading to the ingress folder."""
+            )
+
         # check any null values in type column - send error
         if mask_gdf["Type"].isnull().values.any():
-            warnings.warn(f"Type column for ({mask_file.name}) has null values")
+            warnings.warn(
+                f"Type column for ({mask_file.name}) has null values. File has not been saved!"
+            )
+            continue
 
         # write back to geojson
         mask_gdf.to_file(mask_dir.joinpath(f"{(mask_file)}"), driver="GeoJSON")
@@ -317,3 +329,5 @@ cleaning_of_mask_files(mask_files_lower)
 
 # %% [markdown]
 # # Checking complete remember to copy data files back into Sharepoint data ingest area once happy
+
+# %%
