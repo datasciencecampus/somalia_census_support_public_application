@@ -307,7 +307,7 @@ def cleaning_of_mask_files(mask_files_lower):
             )
             continue
 
-        if len(np.unique(mask_gdf["Type"])) == 1:
+        if len(mask_gdf.Type.unique()) == 1:
             warnings.warn(
                 f"""{(mask_file.name)} contains only 1 type of building!
                 Ensure this is correct before uploading to the ingress folder."""
