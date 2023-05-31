@@ -112,14 +112,14 @@ def hue_shift(images, shift):
                 nir_pixel = rgbn_pixel[3]
 
                 hsv_pixel = colorsys.rgb_to_hsv(
-                    rgb_pixel[0] / 255.0, rgb_pixel[1] / 255.0, rgb_pixel[2] / 255.0
+                    rgb_pixel[0], rgb_pixel[1], rgb_pixel[2]
                 )
                 hsv_pixel = (hsv_pixel[0], (hsv_pixel[1] + shift) % 1, hsv_pixel[2])
                 rgb_pixel = colorsys.hsv_to_rgb(
                     hsv_pixel[0], hsv_pixel[1], hsv_pixel[2]
                 )
 
-                hue_shifted[i, j, k, :3] = np.round(np.array(rgb_pixel) * 255)
+                hue_shifted[i, j, k, :3] = np.round(np.array(rgb_pixel))
                 hue_shifted[i, j, k, 3] = nir_pixel
 
     return hue_shifted
