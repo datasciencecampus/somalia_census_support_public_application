@@ -119,7 +119,7 @@ def hue_shift(images, shift):
                     hsv_pixel[0], hsv_pixel[1], hsv_pixel[2]
                 )
 
-                hue_shifted[i, j, k, :3] = np.round(np.array(rgb_pixel))
+                hue_shifted[i, j, k, :3] = np.array(rgb_pixel)
                 hue_shifted[i, j, k, 3] = nir_pixel
 
     return hue_shifted
