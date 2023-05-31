@@ -6,11 +6,17 @@
 
 # %%
 from pathlib import Path 
-from functions_library import setup_sub_dir
+from functions_library import setup_sub_dir 
 import re 
 import warnings 
 import geopandas as gpd 
 import numpy as np 
+
+# %%
+# Note directories of interest
+data_dir = Path.cwd().parent.joinpath("data")
+training_data_dir = data_dir.joinpath("training_data")
+mask_dir = setup_sub_dir(training_data_dir, "mask")
 
 
 # %%
@@ -208,3 +214,5 @@ def cleaning_of_mask_files(mask_files_lower):
 
         # write back to geojson
         mask_gdf.to_file(mask_dir.joinpath(f"{(mask_file)}"), driver="GeoJSON")
+
+# %%
