@@ -119,7 +119,6 @@ stacked_images.shape
 shift = 0.1
 adjusted_hue = hue_shift(stacked_images, shift)
 
-# should be double the number of arrays comapred to original with same h, w, c
 adjusted_hue.shape
 
 # %%
@@ -141,11 +140,11 @@ adjusted_contrast = adjust_contrast(stacked_images, brightness_factor)
 adjusted_contrast.shape
 
 # %% [markdown]
-# #### Sense checking brightness/contrast
+# #### Sense checking hue/brightness/contrast
 
 # %%
 # for sense checking brightness/contrast values
-random_indices = np.random.choice(len(adjusted_contrast), size=5, replace=False)
+random_indices = np.random.choice(len(adjusted_hue), size=5, replace=False)
 
 fig, axes = plt.subplots(nrows=5, ncols=2, figsize=(10, 15))
 
@@ -154,7 +153,7 @@ for i, idx in enumerate(random_indices):
     axes[i, 0].set_title("original")
     axes[i, 0].axis("off")
 
-    axes[i, 1].imshow(adjusted_contrast[idx][:, :, :3])
+    axes[i, 1].imshow(adjusted_hue[idx][:, :, :3])
     axes[i, 1].set_title("stacked")
     axes[i, 1].axis("off")
 
@@ -205,7 +204,7 @@ stacked_masks.shape
 
 # %%
 # if any of the above image augmentations have been performed then you need corresponding masks
-# note the below does the same thing but has been written out to save time
+# note the below lines do the same thing but has been written out to save time
 
 mask_hue = np.copy(stacked_masks)
 mask_brightness = np.copy(stacked_masks)
@@ -387,8 +386,6 @@ batch_size = 50
 
 # %% [markdown]
 # ## Model
-#
-# > Everything from here down needs some love
 
 # %%
 # defined under training parameters
