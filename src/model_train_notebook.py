@@ -116,7 +116,7 @@ stacked_images.shape
 # hue shifting
 
 # shift value (between 0 and 1)
-shift = 0.1
+shift = 0.2
 adjusted_hue = hue_shift(stacked_images, shift)
 
 adjusted_hue.shape
@@ -356,7 +356,7 @@ metrics = ["accuracy", jacard_coef]
 # This is how many times the model runs through the training data. Running too few epochs will under fit the model, running too many will overfit. Use callbacks to find the optimum number of epochs - but this will change depending on other input parameters!
 
 # %%
-num_epochs = 100
+num_epochs = 150
 
 # %% [markdown]
 # #### Callbacks
@@ -416,7 +416,7 @@ history1 = model.fit(
 
 # %%
 # take the run ID from the excel spreadsheet
-runid = "phase_1_1_np_31_05_23"
+runid = "phase_1_3_np_31_05_23"
 
 model_filename = f"{runid}.hdf5"
 
@@ -478,7 +478,7 @@ print("Mean IoU =", IOU_keras.result().numpy())
 # predict for a few images
 
 # test_img_number = random.randint(0, len(X_test))
-test_img_number = 9
+test_img_number = 3
 test_img = X_test[test_img_number]
 ground_truth = y_test_argmax[test_img_number]
 # test_img_norm=test_img[:,:,0][:,:,None]
