@@ -55,6 +55,7 @@ from pathlib import Path
 # %%
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import segmentation_models as sm
 import tensorflow as tf
 from keras.metrics import MeanIoU
@@ -415,13 +416,24 @@ history1 = model.fit(
 # #### Saving output
 
 # %%
-# take the run ID from the excel spreadsheet
-runid = "phase_1_3_np_31_05_23"
+history = history1
 
+# %%
+# take the run ID from the excel spreadsheet
+runid = "phase_1_4_np_06_06_23"
+
+
+# %%
 model_filename = f"{runid}.hdf5"
 
 # save model output into models_dir
 model.save(models_dir.joinpath(model_filename))
+
+# %%
+history_filename = outputs_dir / f"{runid}.csv"
+
+history_df = pd.DataFrame(history.history)
+history_df.to_csv(history_filename, index=False)
 
 # %% [markdown]
 # ## Outputs <a name="output"></a>
@@ -431,7 +443,6 @@ model.save(models_dir.joinpath(model_filename))
 
 # %%
 # create plot showing training and validation loss
-history = history1
 loss = history.history["loss"]
 val_loss = history.history["val_loss"]
 epochs = range(1, len(loss) + 1)
@@ -478,7 +489,7 @@ print("Mean IoU =", IOU_keras.result().numpy())
 # predict for a few images
 
 # test_img_number = random.randint(0, len(X_test))
-test_img_number = 3
+test_img_number = 1
 test_img = X_test[test_img_number]
 ground_truth = y_test_argmax[test_img_number]
 # test_img_norm=test_img[:,:,0][:,:,None]
@@ -557,5 +568,3 @@ display.plot(cmap="cividis", values_format=".2%")
 
 # show the plot
 plt.show()
-
-# %%
