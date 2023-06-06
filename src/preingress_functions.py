@@ -184,7 +184,7 @@ def cleaning_of_mask_files(mask_files_lower):
         elif "fid" in column_names:
             mask_gdf = mask_gdf.drop(columns=["fid"])
 
-        # check if type and/or geometry columns not present and send warning
+        # check if type column not present and send warning
         if "Type" not in column_names and len(mask_gdf.geometry) == 0:
             warnings.warn(
                 f"""{(mask_file.name)} contains no Type or geometry.
@@ -192,13 +192,15 @@ def cleaning_of_mask_files(mask_files_lower):
             )
             continue
 
+        # check if type column not present and geometry column is - send error
         elif "Type" not in column_names and "geometry" in column_names:
             warnings.warn(
                 f"""{(mask_file.name)} contains no type but has geometry.
                 Add types in QGIS to the drawn polygons. File has not been saved!"""
             )
             continue
-
+        
+        # check building types in type column
         if len(mask_gdf.Type.unique()) == 1:
             warnings.warn(
                 f"""{(mask_file.name)} contains only 1 type of building!
@@ -215,7 +217,7 @@ def cleaning_of_mask_files(mask_files_lower):
         # check any null values in geometry column - send error
         if mask_gdf["geometry"].isnull().values.any():
             warnings.warn(
-                f"Geometry column for ({mask_file.name}) has null values. File has not been saved!"
+                f"Geometry column for ({mask_file.name}) has null values. File has not been saved! Check QGIS"
             )
             continue
 
