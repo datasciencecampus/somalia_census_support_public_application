@@ -211,8 +211,13 @@ def cleaning_of_mask_files(mask_files_lower):
                 f"Type column for ({mask_file.name}) has null values. File has not been saved!"
             )
             continue
+            
+        # check any null values in geometry column - send error
+        if mask_gdf["geometry"].isnull().values.any():
+            warnings.warn(
+                f"Geometry column for ({mask_file.name}) has null values. File has not been saved!"
+            )
+            continue
 
         # write back to geojson
         mask_gdf.to_file(mask_dir.joinpath(f"{(mask_file)}"), driver="GeoJSON")
-
-# %%
