@@ -50,7 +50,6 @@
 
 # %%
 import random
-from datetime import date
 from pathlib import Path
 
 # %%
@@ -68,6 +67,9 @@ from sklearn.utils.class_weight import compute_class_weight
 from data_augmentation_functions import (
     stack_array,
     stack_background_arrays,
+    hue_shift,
+    adjust_brightness,
+    adjust_contrast,
 )
 from functions_library import setup_sub_dir
 from multi_class_unet_model_build import jacard_coef, multi_unet_model
@@ -107,15 +109,85 @@ outputs_dir = setup_sub_dir(Path.cwd().parent, "outputs")
 stacked_images = stack_array(img_dir)
 stacked_images.shape
 
+# %% [markdown]
+# #### Additional augmentations
+
+# %%
+# hue shifting
+
+# shift value (between 0 and 1)
+shift = 0.2
+adjusted_hue = hue_shift(stacked_images, shift)
+
+adjusted_hue.shape
+
+# %%
+# adjust brightness
+
+# values <1 will decrease brightness while values >1 will increase brightness
+brightness_factor = 1.5
+adjusted_brightness = adjust_brightness(stacked_images, brightness_factor)
+
+adjusted_brightness.shape
+
+# %%
+# adjust contrast
+
+# values <1 will decrease contrast while values >1 will increase contrast
+contrast_factor = 2
+adjusted_contrast = adjust_contrast(stacked_images, brightness_factor)
+
+adjusted_contrast.shape
+
+# %% [markdown]
+# #### Sense checking hue/brightness/contrast
+
+# %%
+# for sense checking brightness/contrast values
+random_indices = np.random.choice(len(adjusted_hue), size=5, replace=False)
+
+fig, axes = plt.subplots(nrows=5, ncols=2, figsize=(10, 15))
+
+for i, idx in enumerate(random_indices):
+    axes[i, 0].imshow(stacked_images[idx][:, :, :3])
+    axes[i, 0].set_title("original")
+    axes[i, 0].axis("off")
+
+    axes[i, 1].imshow(adjusted_hue[idx][:, :, :3])
+    axes[i, 1].set_title("stacked")
+    axes[i, 1].axis("off")
+
+plt.tight_layout()
+plt.show()
+
+# %% [markdown]
+# #### Background images
+
 # %%
 # creating stack of background img arrays with no augmentation
 background_images = stack_background_arrays(img_dir)
 
 print(len(background_images))
 
+# %% [markdown]
+# #### Final image array
+
 # %%
-# adding augmented arrays and background image arrays together
-all_stacked_images = np.concatenate([stacked_images] + [background_images], axis=0)
+# options include:
+# background_images
+# adjusted_hue
+# adjusted_brightness
+# adjusted_contrast
+
+# building images array
+all_stacked_images = np.concatenate(
+    [stacked_images]
+    + [background_images]
+    + [adjusted_hue]
+    + [adjusted_brightness]
+    + [adjusted_contrast],
+    axis=0,
+)
 
 all_stacked_images.shape
 
@@ -127,17 +199,50 @@ all_stacked_images.shape
 stacked_masks = stack_array(mask_dir)
 stacked_masks.shape
 
+# %% [markdown]
+# #### Additional augmentations
+
+# %%
+# if any of the above image augmentations have been performed then you need corresponding masks
+# note the below lines do the same thing but has been written out to save time
+
+mask_hue = np.copy(stacked_masks)
+mask_brightness = np.copy(stacked_masks)
+mask_contrast = np.copy(stacked_masks)
+
+# %% [markdown]
+# #### Background masks
+
 # %%
 # creating stack of background img arrays with no augmentation
 background_masks = stack_background_arrays(mask_dir)
 
 print(len(background_masks))
 
+# %% [markdown]
+# #### Final mask array
+
 # %%
+# options include:
+# background_masks
+# mask_hue
+# mask_brightness
+# mask_contrast
+
 # adding augmented arrays and background image arrays together
-all_stacked_masks = np.concatenate([stacked_masks] + [background_masks], axis=0)
+all_stacked_masks = np.concatenate(
+    [stacked_masks]
+    + [background_masks]
+    + [mask_hue]
+    + [mask_brightness]
+    + [mask_contrast],
+    axis=0,
+)
 
 all_stacked_masks.shape
+
+# %% [markdown]
+# #### Number of classes
 
 # %%
 # number of classes (i.e. building, tent, background)
@@ -150,6 +255,9 @@ n_classes
 stacked_masks_cat = to_categorical(all_stacked_masks, num_classes=n_classes)
 
 stacked_masks_cat.shape
+
+# %% [markdown]
+# ### Sense checking images and masks correspond
 
 # %%
 # create random number to check both image and mask
@@ -199,8 +307,8 @@ def get_model():
 # calculating weight for dice loss function
 weights = compute_class_weight(
     "balanced",
-    classes=np.unique(all_stacked_masks),
-    y=np.ravel(all_stacked_masks, order="C"),
+    classes=np.unique(stacked_masks),
+    y=np.ravel(stacked_masks, order="C"),
 )
 
 # Alternatively, could try balanced weights between classes:
@@ -248,7 +356,7 @@ metrics = ["accuracy", jacard_coef]
 # This is how many times the model runs through the training data. Running too few epochs will under fit the model, running too many will overfit. Use callbacks to find the optimum number of epochs - but this will change depending on other input parameters!
 
 # %%
-num_epochs = 100
+num_epochs = 150
 
 # %% [markdown]
 # #### Callbacks
@@ -274,12 +382,10 @@ callbacks = [
 # [128, 256] - GPU territory
 
 # %%
-batch_size = 45
+batch_size = 50
 
 # %% [markdown]
 # ## Model
-#
-# > Everything from here down needs some love
 
 # %%
 # defined under training parameters
@@ -305,13 +411,14 @@ history1 = model.fit(
 # %load_ext tensorboard
 # %tensorboard --logdir logs/
 
-# %%
-# CURRENTLY NO POINT IN SAVING AS WE CAN'T OPEN THE FILES WITH THE DICE LOSS WE USE AND NOT SAVING OUTPUT
+# %% [markdown]
+# #### Saving output
 
-# today's date for input into model output
-today = date.today().strftime("%Y-%m-%d")
-# create filename for model with date and number of epochs
-model_filename = f"test_run_{num_epochs}epochs_{today}_all_1.hdf5"
+# %%
+# take the run ID from the excel spreadsheet
+runid = "phase_1_3_np_31_05_23"
+
+model_filename = f"{runid}.hdf5"
 
 # save model output into models_dir
 model.save(models_dir.joinpath(model_filename))
@@ -338,7 +445,6 @@ plt.show()
 
 # %%
 # create plot showing the IoU over time
-
 acc = history.history["jacard_coef"]
 val_acc = history.history["val_jacard_coef"]
 
@@ -372,7 +478,7 @@ print("Mean IoU =", IOU_keras.result().numpy())
 # predict for a few images
 
 # test_img_number = random.randint(0, len(X_test))
-test_img_number = 2
+test_img_number = 3
 test_img = X_test[test_img_number]
 ground_truth = y_test_argmax[test_img_number]
 # test_img_norm=test_img[:,:,0][:,:,None]

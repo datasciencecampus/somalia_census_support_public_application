@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import numpy as np
-from skimage.color import hsv2rgb, rgb2hsv, rgba2rgb
+import colorsys
 
 
 def stack_array(directory):
@@ -88,39 +88,53 @@ def stack_background_arrays(directory):
     return background_arrays
 
 
-def hue_shift_with_alpha(image, shift_value):
+def hue_shift(images, shift):
     """
-    Perform hue shift on an RGBA image while preserving the alpha channel.
+    Apply hue shift to an array of stacked images with RGBN channels
 
-    Parameters:
-    image (np.ndarray0: Input RGBA image with shape (height, width, 4).
-    shift_value (float): Hue shift value to be added to the hue channel (range: [0,1])
+    Args:
+        images (np.ndarray): Array of stacked images with shape (n, h, w, 4),
+                                     where n is the number of images, h is the height,
+                                     w is the weidth, and 4 represents RGBN channels.
+        hue_shift (float): The amount of hue shift to apply in the range [0, 1].
 
     Returns:
-    np.adarray: Hue-shifted image with preserved alpha channel, shape (height, width, 4).
+    np.adarray: Array of hue_shifted images with the same shape as the input array.
     """
+    # perform the hue shift on the stacked_images
+    hue_shifted = np.zeros_like(images)
 
-    # convert the image from RGBA to RGB color space
-    rgb_image = rgba2rgb(image)
+    for i in range(images.shape[0]):
+        for j in range(images.shape[1]):
+            for k in range(images.shape[2]):
+                rgbn_pixel = images[i, j, k, :]
+                rgb_pixel = rgbn_pixel[:3]
+                nir_pixel = rgbn_pixel[3]
 
-    # convert the image from RGB to HSV color space
-    hsv_image = rgb2hsv(rgb_image)
+                hsv_pixel = colorsys.rgb_to_hsv(
+                    rgb_pixel[0], rgb_pixel[1], rgb_pixel[2]
+                )
+                hsv_pixel = (hsv_pixel[0], (hsv_pixel[1] + shift) % 1, hsv_pixel[2])
+                rgb_pixel = colorsys.hsv_to_rgb(
+                    hsv_pixel[0], hsv_pixel[1], hsv_pixel[2]
+                )
 
-    # extract the hue channel from the HSV image
-    hue_channel = hsv_image[:, :, 0]
+                hue_shifted[i, j, k, :3] = np.array(rgb_pixel)
+                hue_shifted[i, j, k, 3] = nir_pixel
 
-    # perform the hue shift (add a constant value to the hue channel)
-    hue_shifted = (hue_channel + shift_value) % 1.0
+    return hue_shifted
 
-    # update the hue channel in the HSV image with the shifted values
-    hsv_image[:, :, 0] = hue_shifted
 
-    # convert the image back to RGB color space
-    rgb_shifted_image = hsv2rgb(hsv_image)
+def adjust_brightness(images, factor):
+    adjusted_images = np.copy(images)
+    adjusted_images[..., :3] *= factor
 
-    # create a new array by combining the RGB shifted image and the alpha channel
-    shifted_image = np.concatenate(
-        (rgb_shifted_image, image[:, :, 3][:, :, np.newaxis]), axis=2
-    )
+    return adjusted_images
 
-    return shifted_image
+
+def adjust_contrast(images, factor):
+    adjusted_images = np.copy(images)
+    # scales the pixel values around a neutral point of 0.5 to effectively preserve the overall brightness while adjusting contrast
+    adjusted_images[..., :3] *= (adjusted_images[..., :3] - 0.5) * factor + 0.5
+
+    return adjusted_images
