@@ -182,11 +182,9 @@ print(len(background_images))
 
 # building images array
 all_stacked_images = np.concatenate(
-    [stacked_images]
-    + [background_images]
-    + [adjusted_hue]
-    + [adjusted_brightness]
-    + [adjusted_contrast],
+    [stacked_images] + [background_images]
+    # + [adjusted_hue]
+    + [adjusted_brightness] + [adjusted_contrast],
     axis=0,
 )
 
@@ -232,11 +230,9 @@ print(len(background_masks))
 
 # adding augmented arrays and background image arrays together
 all_stacked_masks = np.concatenate(
-    [stacked_masks]
-    + [background_masks]
-    + [mask_hue]
-    + [mask_brightness]
-    + [mask_contrast],
+    [stacked_masks] + [background_masks]
+    # + [mask_hue]
+    + [mask_brightness] + [mask_contrast],
     axis=0,
 )
 
@@ -309,7 +305,7 @@ def get_model():
 weights = compute_class_weight(
     "balanced",
     classes=np.unique(stacked_masks),
-    y=np.ravel(stacked_masks, order="C"),
+    y=np.ravel(all_stacked_masks, order="C"),
 )
 
 # Alternatively, could try balanced weights between classes:
