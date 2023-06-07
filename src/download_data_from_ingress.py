@@ -12,8 +12,7 @@
 #     name: python3
 # ---
 
-#
-#
+# %% [markdown]
 # ### Contents
 #
 #
@@ -22,6 +21,7 @@
 # 1. ##### [Remove existing files](#remove)
 # 1. ##### [Download data](#download)
 # 1. ##### [Check files](#checkfile)
+
 # %% [markdown]
 # ### Set-up <a name="setup"></a>
 
