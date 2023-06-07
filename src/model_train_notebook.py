@@ -26,8 +26,8 @@
 #
 #
 # 1. ##### [Set-up](#setup)
-# 1. ##### [Validation file](#validation)
-# 1. ##### [Data Augmentation](#dataaug)
+# 1. ##### [Model parameters](#modelparameter)
+# 1. ##### [Data augmentation](#dataaug)
 # 1. ##### [Loss function](#lossfunction)
 # 1. ##### [Metrics](#metrics)
 # 1. ##### [Model](#model)
@@ -71,6 +71,7 @@ from data_augmentation_functions import (
     hue_shift,
     adjust_brightness,
     adjust_contrast,
+    stack_images,
 )
 from functions_library import setup_sub_dir
 from multi_class_unet_model_build import jacard_coef, multi_unet_model
@@ -95,7 +96,7 @@ models_dir = setup_sub_dir(Path.cwd().parent, "models")
 outputs_dir = setup_sub_dir(Path.cwd().parent, "outputs")
 
 # %% [markdown]
-# # Set model parameters
+# ## Set model parameters <a name="modelparameter"></a>
 
 # %%
 include_hue_adjustment = True
@@ -152,7 +153,7 @@ adjusted_brightness.shape
 # %%
 # adjust contrast
 
-adjusted_contrast = adjust_contrast(stacked_images, brightness_factor)
+adjusted_contrast = adjust_contrast(stacked_images, contrast_factor)
 
 adjusted_contrast.shape
 
@@ -186,42 +187,8 @@ background_images = stack_background_arrays(img_dir)
 
 print(len(background_images))
 
-
 # %% [markdown]
 # #### Final image array
-
-# %%
-def stack_images(
-    stacked_images,
-    background_images,
-    adjusted_hue,
-    adjusted_brightness,
-    adjusted_contrast,
-    include_hue_adjustment,
-    include_backgrounds,
-    include_brightness_adjustments,
-    include_contrast_adjustments,
-):
-    """Combine the different augementation stacks based on conditionals"""
-    all_stacked_images = stacked_images
-    if include_backgrounds:
-        all_stacked_images = np.concatenate(
-            [all_stacked_images] + [background_images], axis=0
-        )
-    if include_hue_adjustment:
-        all_stacked_images = np.concatenate(
-            [all_stacked_images] + [adjusted_hue], axis=0
-        )
-    if include_brightness_adjustments:
-        all_stacked_images = np.concatenate(
-            [all_stacked_images] + [adjusted_brightness], axis=0
-        )
-    if include_contrast_adjustments:
-        all_stacked_images = np.concatenate(
-            [all_stacked_images] + [adjusted_contrast], axis=0
-        )
-    return all_stacked_images
-
 
 # %%
 # building images array
