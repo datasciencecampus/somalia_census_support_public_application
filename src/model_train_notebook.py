@@ -95,6 +95,28 @@ models_dir = setup_sub_dir(Path.cwd().parent, "models")
 outputs_dir = setup_sub_dir(Path.cwd().parent, "outputs")
 
 # %% [markdown]
+# # Set model parameters
+
+# %%
+include_hue_adjustment = True
+include_backgrounds = True
+include_brightness_adjustments = True
+include_contrast_adjustments = True
+
+# shift value (between 0 and 1)
+hue_shift_value = 0.1
+
+# values <1 will decrease contrast while values >1 will increase contrast
+contrast_factor = 2
+
+# values <1 will decrease brightness while values >1 will increase brightness
+brightness_factor = 1.5
+
+batch_size = 50
+
+epochs = 150
+
+# %% [markdown]
 # ## Data augmentation <a name="dataaug"></a>
 
 # %% [markdown]
@@ -116,17 +138,13 @@ stacked_images.shape
 # %%
 # hue shifting
 
-# shift value (between 0 and 1)
-shift = 0.2
-adjusted_hue = hue_shift(stacked_images, shift)
+adjusted_hue = hue_shift(stacked_images, hue_shift_value)
 
 adjusted_hue.shape
 
 # %%
 # adjust brightness
 
-# values <1 will decrease brightness while values >1 will increase brightness
-brightness_factor = 1.5
 adjusted_brightness = adjust_brightness(stacked_images, brightness_factor)
 
 adjusted_brightness.shape
@@ -134,8 +152,6 @@ adjusted_brightness.shape
 # %%
 # adjust contrast
 
-# values <1 will decrease contrast while values >1 will increase contrast
-contrast_factor = 2
 adjusted_contrast = adjust_contrast(stacked_images, brightness_factor)
 
 adjusted_contrast.shape
@@ -170,22 +186,56 @@ background_images = stack_background_arrays(img_dir)
 
 print(len(background_images))
 
+
 # %% [markdown]
 # #### Final image array
 
 # %%
-# options include:
-# background_images
-# adjusted_hue
-# adjusted_brightness
-# adjusted_contrast
+def stack_images(
+    stacked_images,
+    background_images,
+    adjusted_hue,
+    adjusted_brightness,
+    adjusted_contrast,
+    include_hue_adjustment,
+    include_backgrounds,
+    include_brightness_adjustments,
+    include_contrast_adjustments,
+):
+    """Combine the different augementation stacks based on conditionals"""
+    all_stacked_images = stacked_images
+    if include_backgrounds:
+        all_stacked_images = np.concatenate(
+            [all_stacked_images] + [background_images], axis=0
+        )
+    if include_hue_adjustment:
+        all_stacked_images = np.concatenate(
+            [all_stacked_images] + [adjusted_hue], axis=0
+        )
+    if include_brightness_adjustments:
+        all_stacked_images = np.concatenate(
+            [all_stacked_images] + [adjusted_brightness], axis=0
+        )
+    if include_contrast_adjustments:
+        all_stacked_images = np.concatenate(
+            [all_stacked_images] + [adjusted_contrast], axis=0
+        )
+    return all_stacked_images
 
+
+# %%
 # building images array
-all_stacked_images = np.concatenate(
-    [stacked_images] + [background_images]
-    # + [adjusted_hue]
-    + [adjusted_brightness] + [adjusted_contrast],
-    axis=0,
+
+all_stacked_images = stack_images(
+    stacked_images,
+    background_images,
+    adjusted_hue,
+    adjusted_brightness,
+    adjusted_contrast,
+    include_hue_adjustment,
+    include_backgrounds,
+    include_brightness_adjustments,
+    include_contrast_adjustments,
 )
 
 all_stacked_images.shape
@@ -228,12 +278,16 @@ print(len(background_masks))
 # mask_brightness
 # mask_contrast
 
-# adding augmented arrays and background image arrays together
-all_stacked_masks = np.concatenate(
-    [stacked_masks] + [background_masks]
-    # + [mask_hue]
-    + [mask_brightness] + [mask_contrast],
-    axis=0,
+all_stacked_masks = stack_images(
+    stacked_masks,
+    background_masks,
+    mask_hue,
+    mask_brightness,
+    mask_contrast,
+    include_hue_adjustment,
+    include_backgrounds,
+    include_brightness_adjustments,
+    include_contrast_adjustments,
 )
 
 all_stacked_masks.shape
@@ -353,7 +407,9 @@ metrics = ["accuracy", jacard_coef]
 # This is how many times the model runs through the training data. Running too few epochs will under fit the model, running too many will overfit. Use callbacks to find the optimum number of epochs - but this will change depending on other input parameters!
 
 # %%
-num_epochs = 150
+# define number of epochs, if not already defined above
+if "num_epochs" not in locals():
+    num_epochs = 150
 
 # %% [markdown]
 # #### Callbacks
@@ -379,12 +435,27 @@ callbacks = [
 # [128, 256] - GPU territory
 
 # %%
-batch_size = 50
+# define batch size, if not already defined above
+if "batch_size" not in locals():
+    batch_size = 50
+
+# %% [markdown]
+# # Check model parameters before starting training:
+#
+
+# %%
+print(
+    f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nhue_shift = {hue_shift_value},\nbrightness = {brightness_factor},\ncontrast = {contrast_factor},"
+)
+print(
+    f"include_hue_adjustment = {include_hue_adjustment}\ninclude_backgrounds = {include_backgrounds}\ninclude_brightness_adjustments = {include_brightness_adjustments}\ninclude_contrast_adjustments = {include_contrast_adjustments}"
+)
+print(f"stacked_img_num = {all_stacked_masks.shape[0]}")
 
 # %% [markdown]
 # ## Model
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 # defined under training parameters
 model = get_model()
 
@@ -416,7 +487,7 @@ history = history1
 
 # %%
 # take the run ID from the excel spreadsheet
-runid = "phase_1_4_np_06_06_23"
+runid = "phase_1_6_tg_07_06_23"
 
 
 # %%
@@ -579,3 +650,5 @@ display.plot(cmap="cividis", values_format=".2%")
 
 # show the plot
 plt.show()
+
+# %%
