@@ -388,7 +388,7 @@ batch_size = 50
 # %% [markdown]
 # ## Model
 
-# %%
+# %% jupyter={"outputs_hidden": true}
 # defined under training parameters
 model = get_model()
 
@@ -424,22 +424,37 @@ runid = "phase_1_4_np_06_06_23"
 
 
 # %%
+# saving model run conditions
 model_filename = f"{runid}.hdf5"
 
 # save model output into models_dir
 model.save(models_dir.joinpath(model_filename))
 
 # %%
+# saving epochs
 history_filename = outputs_dir / f"{runid}.csv"
 
 history_df = pd.DataFrame(history.history)
 history_df.to_csv(history_filename, index=False)
 
+# %%
+# saving output arrays
+# defining y_pred first
+y_pred = model.predict(X_test)
+
+X_test_filename = f"{runid}_xtest.npy"
+y_pred_filename = f"{runid}_ypred.npy"
+y_test_filename = f"{runid}_ytest.npy"
+
+np.save(outputs_dir.joinpath(X_test_filename), X_test)
+np.save(outputs_dir.joinpath(y_pred_filename), y_pred)
+np.save(outputs_dir.joinpath(y_test_filename), y_test)
+
 # %% [markdown]
 # ## Outputs <a name="output"></a>
 
 # %% [markdown]
-# ### Change across epochs
+# ### Training and validation changes
 
 # %%
 # create plot showing training and validation loss
@@ -473,7 +488,7 @@ plt.show()
 # %%
 # calculating mean IoU
 
-y_pred = model.predict(X_test)
+
 y_pred_argmax = np.argmax(y_pred, axis=3)
 y_test_argmax = np.argmax(y_test, axis=3)
 
