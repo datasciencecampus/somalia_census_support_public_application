@@ -25,12 +25,12 @@
 # %% [markdown]
 # ### Set-up <a name="setup"></a>
 
-from pathlib import Path  # handling file paths
-
 # %%
 # Load packages
 from google.cloud import storage  # interact with data buckets
+from pathlib import Path  # handling file paths
 from pytz import timezone
+import datetime
 
 # Initialise client and note bucket location
 client = storage.Client()
