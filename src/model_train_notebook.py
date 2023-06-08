@@ -115,7 +115,7 @@ brightness_factor = 1.5
 
 batch_size = 50
 
-epochs = 150
+num_epochs = 150
 
 # %% [markdown]
 # ## Data augmentation <a name="dataaug"></a>
