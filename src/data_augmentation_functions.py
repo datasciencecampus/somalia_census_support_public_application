@@ -138,3 +138,35 @@ def adjust_contrast(images, factor):
     adjusted_images[..., :3] *= (adjusted_images[..., :3] - 0.5) * factor + 0.5
 
     return adjusted_images
+
+
+def stack_images(
+    stacked_images,
+    background_images,
+    adjusted_hue,
+    adjusted_brightness,
+    adjusted_contrast,
+    include_hue_adjustment,
+    include_backgrounds,
+    include_brightness_adjustments,
+    include_contrast_adjustments,
+):
+    """Combine the different augementation stacks based on conditionals"""
+    all_stacked_images = stacked_images
+    if include_backgrounds:
+        all_stacked_images = np.concatenate(
+            [all_stacked_images] + [background_images], axis=0
+        )
+    if include_hue_adjustment:
+        all_stacked_images = np.concatenate(
+            [all_stacked_images] + [adjusted_hue], axis=0
+        )
+    if include_brightness_adjustments:
+        all_stacked_images = np.concatenate(
+            [all_stacked_images] + [adjusted_brightness], axis=0
+        )
+    if include_contrast_adjustments:
+        all_stacked_images = np.concatenate(
+            [all_stacked_images] + [adjusted_contrast], axis=0
+        )
+    return all_stacked_images
