@@ -419,6 +419,15 @@ print(
 )
 print(f"stacked_img_num = {all_stacked_masks.shape[0]}")
 
+# Save running conditions
+conditions_filename = outputs_dir / f"{runid}_conditions.txt"
+
+with open(conditions_filename, 'w') as f:
+    f.write(f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nhue_shift = {hue_shift_value},\nbrightness = {brightness_factor},\ncontrast = {contrast_factor},")
+    f.write(f"include_hue_adjustment = {include_hue_adjustment}\ninclude_backgrounds = {include_backgrounds}\ninclude_brightness_adjustments = {include_brightness_adjustments}\ninclude_contrast_adjustments = {include_contrast_adjustments}")
+    f.write(f"stacked_img_num = {all_stacked_masks.shape[0]}")
+    f.close
+
 # %% [markdown]
 # ## Model
 
