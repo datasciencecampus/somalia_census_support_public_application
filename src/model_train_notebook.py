@@ -117,6 +117,9 @@ batch_size = 50
 
 num_epochs = 150
 
+# take the run ID from the excel spreadsheet
+runid = "phase_1_6_tg_07_06_23"
+
 # %% [markdown]
 # ## Data augmentation <a name="dataaug"></a>
 
@@ -460,10 +463,6 @@ history1 = model.fit(
 
 # %%
 history = history1
-
-# %%
-# take the run ID from the excel spreadsheet
-runid = "phase_1_6_tg_07_06_23"
 
 
 # %%
