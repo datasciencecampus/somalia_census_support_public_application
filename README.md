@@ -49,8 +49,11 @@ flowchart LR
 
 This project is being developed in Google Cloud Platform (GCP), and so instructions will be specific to this environment. A determined user can hopefully generalise these across other tools.
 
+Users should clone the repo within their personal notebooks, which are accessed via the Vertex AI Workbench.
+
+
 ### Virtual environment
-Once in the project space (i.e. the base repository level) it is recommended you set-up a virtual environment. To do this you will first have to clone the repo within your personal notebook space (in the GCP "workbench" find and navigate to your personal notebook i.e. the one with your name under "User-Managed Notebooks"). Once you have the repo set up, navigate to the base repository level, in the terminal run:
+Once in the project space (i.e. the base repository level) it is recommended you set-up a virtual environment. In the terminal run:
 ```
 python3 -m venv venv-somalia-gcp
 ```
@@ -72,8 +75,6 @@ ipython kernel install --name "venv-somalia-gcp" --user
 ```
 
 After some possible delay, the kernel should appear in the list of kernels available in the top right corner of your notebooks.
-
-**NOTE:** use this kernel to run all notebooks except for ```download_data_from_ingress.py``` which should be run on the base python kernel.
 
 ### A note on Notebooks and Jupytext
 Notebooks in this project are stored as `.py` files with a hookup via Jupytext, to ensure proper version control. The notebooks are distinguishable from modular python scripts via the following comments at their beginning:
@@ -138,7 +139,7 @@ The below tree demonstrates where each file/folder needs to be for successful ex
 ```
 ## Uploading data to GCP
 
-Training data (polygon masks and image rasters) can only be uploaded to GCP by someone assigned to the project as a 'Data Ingestor'. All data should be run through the `pre-ingress notebook`, and any issues resolved, before uploading to the project's GCP SharePoint folder. 
+Training data (polygon masks and image rasters) can only be uploaded to GCP by someone assigned to the project as a 'Data Ingestor'. All data should be run through the `pre-ingress notebook`, and any issues resolved, before uploading to the project's GCP SharePoint folder.
 
 Ensure [this excel document has been updated](https://officenationalstatistics.sharepoint.com/:x:/r/sites/dscdsc/Pro/2.%20Squads/International_Development/Data%20Science%20Projects/2.%20Data%20Science%20Research%20Projects/Somalia_UNFPA_census_support/Data/GCP%20checklist.xlsx?d=w5547e56fcf0643b39cbee47411c8e886&csf=1&web=1&e=H5gNfg) after corresponding mask and img files have been run through the `pre-ingress notebook`.
 
