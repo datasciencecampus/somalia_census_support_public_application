@@ -6,7 +6,7 @@ import numpy as np
 import colorsys
 
 
-def stack_array(directory):
+def stack_array(directory, excluded_word=None):
     """
 
     Stack all .npy files in the specified directory (excluding files ending with "background.npy"),
@@ -14,6 +14,7 @@ def stack_array(directory):
 
     Args:
         directory (str or Path): The directroy containing the .npy files to stack.
+        excluded_word (str, optional): The word to exclude from file names. Defaults to None.
 
     Returns:
         np.ndarray: The stacked array of images/masks.
@@ -25,6 +26,7 @@ def stack_array(directory):
         file
         for file in Path(directory).glob("*npy")
         if not file.name.endswith("background.npy")
+        and (excluded_word is None or excluded_word not in file.name)
     ]
 
     # sort the file names alphabetically
