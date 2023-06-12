@@ -290,6 +290,12 @@ stacked_masks_cat = to_categorical(all_stacked_masks, num_classes=n_classes)
 
 stacked_masks_cat.shape
 
+# %%
+# encode building classes into validation masks
+validation_masks_cat = to_categorical(validation_masks, num_classes=n_classes)
+
+validation_masks_cat.shape
+
 # %% [markdown]
 # ### Sense checking images and masks correspond
 
@@ -313,7 +319,7 @@ X_train = all_stacked_images
 y_train = stacked_masks_cat
 
 X_test = validation_images
-y_test = validation_masks
+y_test = validation_masks_cat
 
 # %%
 # setting out number of train and validation tiles
