@@ -10,3 +10,6 @@ jupyter
 tensorflow
 keras
 Path
+datetime
+google.cloud
+pytz

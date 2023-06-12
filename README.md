@@ -22,26 +22,35 @@ These areas were chosen due to being the focus of a recent [Somalia National Bur
 
 ## Workflow
 
-
+Creation of Training Data
 ```mermaid
 flowchart LR
     imagery[(planet<br>imagery)]-->qgis{QGIS}
     unfpa[(UNFPA<br>annotations)] -->qgis
-    qgis-->|polygon<br>mask|sharepoint{<a href='https://officenationalstatistics.sharepoint.com/:f:/r/sites/dscdsc/Pro/2.%20Squads/International_Development/Data%20Science%20Projects/2.%20Data%20Science%20Research%20Projects/Somalia_UNFPA_census_support/Data/GCP%20ingress%20folder?csf=1&web=1&e=Pv6Icv'>SharePoint<br>GCP<br>ingest<br>folder</a>}
-    qgis-->|image<br>raster|sharepoint
-    sharepoint-->|img<br>file|preingress[/preingress<br>notebook\]
-    sharepoint-->|mask<br>file|preingress
-    preingress-->|checked<br>img file|sharepoint
-    preingress-->|checked<br>mask file|sharepoint
-    sharepoint-->|img<br>file|ingress{GCP<br>ingress<br>area}
-    sharepoint-->|mask<br>file|ingress
-    ingress-->|mask file|processing[/pre-modelling<br>notebook\]
-    ingress-->|img file|processing
+    qgis-->|polygon<br>mask|preingress[/preingress<br>notebook\]
+    qgis-->|image<br>raster|preingress
+    preingress-->|checked<br>mask|sharepoint
+    preingress-->|checked<br>img|sharepoint{<a href='https://officenationalstatistics.sharepoint.com/:f:/r/sites/dscdsc/Pro/2.%20Squads/International_Development/Data%20Science%20Projects/2.%20Data%20Science%20Research%20Projects/Somalia_UNFPA_census_support/Data/GCP%20ingress%20folder?csf=1&web=1&e=Pv6Icv'>SharePoint<br>GCP<br>ingest<br>folder</a>}
+    sharepoint-->|mask<br>file|ingress{GCP<br>ingress<br>area}
+    sharepoint-->|img<br>file|ingress
+```
+Modelling
+```mermaid
+flowchart LR
+    ingress{GCP<br>ingress<br>area}-->download[/download data<br>from ingress<br>notebook\]
+    download-->|mask file|local
+    download-->|img file|local
+    local{Local<br>GCP<br>Env.}-->|mask file|processing[/pre-modelling<br>notebook\]
+    local{Local<br>GCP<br>Env.}-->|img file|processing[/pre-modelling<br>notebook\]
     processing-->|numpy<br>arrays|train[/model<br>train<br>notebook\]
+
 ```
 ## Getting set-up (GCP):
 
 This project is being developed in Google Cloud Platform (GCP), and so instructions will be specific to this environment. A determined user can hopefully generalise these across other tools.
+
+Users should clone the repo within their personal notebooks, which are accessed via the Vertex AI Workbench.
+
 
 ### Virtual environment
 Once in the project space (i.e. the base repository level) it is recommended you set-up a virtual environment. In the terminal run:
@@ -80,7 +89,7 @@ After cloning the repository, from your terminal run:
 ```
 jupytext --to notebook <file_name>.py
 ```
- This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs.
+This will render a `.ipynb` file from the `.py` file. These two files are then synched together, such that any changes made to one will automatically update the other. This allows you to work and develop in a notebook, while avoiding the challenges and security threats that notebooks introduce in version control in terms of tracking changes and commiting outputs.
 
 Note ensure ` jupytext_version: 1.14.5` for syncing across the project.
 
@@ -122,22 +131,27 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  ┃ ┣ 📜mask_processing_functions.py
  ┃ ┣ 📜model_train_notebook.py
  ┃ ┣ 📜preingress_notebook.py
- ┃ ┣ 📜ppremodelling_notebook.py
+ ┃ ┣ 📜premodelling_notebook.py
  ┣ 📜.gitignore
  ┣ 📜requirements.text
  ┗ 📜README.md
 
 ```
+## Uploading data to GCP
+
+Training data (polygon masks and image rasters) can only be uploaded to GCP by someone assigned to the project as a 'Data Ingestor'. All data should be run through the `pre-ingress notebook`, and any issues resolved, before uploading to the project's GCP SharePoint folder.
+
+Ensure [this excel document has been updated](https://officenationalstatistics.sharepoint.com/:x:/r/sites/dscdsc/Pro/2.%20Squads/International_Development/Data%20Science%20Projects/2.%20Data%20Science%20Research%20Projects/Somalia_UNFPA_census_support/Data/GCP%20checklist.xlsx?d=w5547e56fcf0643b39cbee47411c8e886&csf=1&web=1&e=H5gNfg) after corresponding mask and img files have been run through the `pre-ingress notebook`.
+
+When data is ready to be ingested to GCP, the Data Ingestor will encrypt the files and upload to the egress folder. Once past security checks data is moved to the ingress folder (automatic). Data can be downloaded from the ingress folder by running the `download data from ingress` notebook. Note that this notebook will delete all files, including `.npy`,  in the `training data` subfolders as we currently have no ability to overwrite/delete files.
+
 
 ## Training data
 
-The training data only needs to be processed and outputted when first derived, or if changes are made to the polygons/raster. Follow the wiki guide to create training data and export as `.geojson` files - using project naming structure:
+The training data needs to be processed and outputted as `.npy` files when first uploaded to GCP. Follow the wiki guide to create training data and export as `.geojson` files - using project naming structure:
 
 `training_data_<area>_<unique int>_<your initials>`
 
-## Before ingesting data onto GCP
-
-Run the src/`preingress_notebook.py` prior to ingesting any data onto GCP to ensure the training data has been formatted correctly.
 
 ## Things of note
 The [wiki page attached to this repo](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Somalia-UNFPA-Census-support) contains useful resources and other relevant notes.
