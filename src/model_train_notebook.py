@@ -61,7 +61,6 @@ import tensorflow as tf
 from keras.metrics import MeanIoU
 from keras.utils import to_categorical
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
-from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 
 # %%
@@ -75,7 +74,7 @@ from data_augmentation_functions import (
     stack_images,
 )
 from functions_library import setup_sub_dir
-from multi_class_unet_model_build import jacard_coef, multi_unet_model
+from multi_class_unet_model_build import jacard_coef, multi_unet_model, split_data
 
 # %% [markdown]
 # ### Set-up filepaths
@@ -119,7 +118,7 @@ batch_size = 50
 num_epochs = 150
 
 # take the run ID from the excel spreadsheet
-runid = "phase_2_dooloo_np_13_06_23"
+runid = ""
 
 # %% [markdown]
 # ## Set validation area
@@ -127,7 +126,17 @@ runid = "phase_2_dooloo_np_13_06_23"
 # An area of Somalia can we set as validation tiles by excluding the area name, as defined below.
 
 # %%
-validation_area = "doolow"
+validation_area = None
+
+# %% jupyter={"outputs_hidden": true}
+# stacking validation images based on an area
+validation_images = stack_array_with_validation(img_dir, validation_area)
+validation_images.shape
+
+# %%
+# stacking validation masks based on an area
+validation_masks = stack_array_with_validation(mask_dir, validation_area)
+validation_masks.shape
 
 # %% [markdown]
 # ## Data augmentation <a name="dataaug"></a>
@@ -144,11 +153,6 @@ validation_area = "doolow"
 # creating stack of img arrays that are rotated and horizontally flipped
 stacked_images = stack_array(img_dir, validation_area)
 stacked_images.shape
-
-# %%
-# stacking validation images based on an area i.e. excluded word
-validation_images = stack_array_with_validation(img_dir, validation_area)
-validation_images.shape
 
 # %% [markdown]
 # #### Additional augmentations
@@ -225,11 +229,6 @@ all_stacked_images.shape
 # creating stack of mask arrays that are rotated and horizontally flipped
 stacked_masks = stack_array(mask_dir, validation_area)
 stacked_masks.shape
-
-# %%
-# stacking validation masks based on an area i.e. excluded word
-validation_masks = stack_array_with_validation(mask_dir, validation_area)
-validation_masks.shape
 
 # %% [markdown]
 # #### Additional augmentations
@@ -311,35 +310,11 @@ plt.subplot(122)
 plt.imshow(stacked_masks_cat[image_number])
 plt.show()
 
-
 # %% [markdown]
 # ## Training parameters <a name="trainingparameters"></a>
 
 # %%
-def split_data(
-    all_stacked_images,
-    stacked_masks_cat,
-    validation_images=None,
-    validation_masks_cat=None,
-):
-    if validation_images is not None:
-
-        X_train = all_stacked_images
-        y_train = stacked_masks_cat
-
-        X_test = validation_images
-        y_test = validation_masks_cat
-    else:
-        X_train, X_test, y_train, y_test = train_test_split(
-            all_stacked_images, stacked_masks_cat, test_size=0.20, random_state=42
-        )
-    return X_train, X_test, y_train, y_test
-
-
-# %%
-X_train, X_test, y_train, y_test = split_data(
-    all_stacked_images, stacked_masks_cat, validation_images, validation_masks_cat
-)
+X_train, X_test, y_train, y_test = split_data(all_stacked_images, stacked_masks_cat)
 
 # %%
 img_height, img_width, num_channels = (384, 384, 4)
@@ -445,7 +420,7 @@ if "batch_size" not in locals():
 
 # %%
 callbacks = [
-    tf.keras.callbacks.EarlyStopping(patience=4, monitor="val_loss"),
+    tf.keras.callbacks.EarlyStopping(patience=4, monitor="loss"),
     tf.keras.callbacks.TensorBoard(log_dir="logs"),
 ]
 
@@ -561,7 +536,7 @@ plt.show()
 # %%
 # calculating mean IoU
 
-
+y_pred = model.predict(X_test)
 y_pred_argmax = np.argmax(y_pred, axis=3)
 y_test_argmax = np.argmax(y_test, axis=3)
 
@@ -577,7 +552,7 @@ print("Mean IoU =", IOU_keras.result().numpy())
 # predict for a few images
 
 # test_img_number = random.randint(0, len(X_test))
-test_img_number = 0
+test_img_number = 1
 test_img = X_test[test_img_number]
 ground_truth = y_test_argmax[test_img_number]
 # test_img_norm=test_img[:,:,0][:,:,None]
