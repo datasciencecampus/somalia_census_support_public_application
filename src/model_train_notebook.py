@@ -61,12 +61,12 @@ import tensorflow as tf
 from keras.metrics import MeanIoU
 from keras.utils import to_categorical
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
-from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 
 # %%
 from data_augmentation_functions import (
     stack_array,
+    stack_array_with_validation,
     stack_background_arrays,
     hue_shift,
     adjust_brightness,
@@ -74,7 +74,7 @@ from data_augmentation_functions import (
     stack_images,
 )
 from functions_library import setup_sub_dir
-from multi_class_unet_model_build import jacard_coef, multi_unet_model
+from multi_class_unet_model_build import jacard_coef, multi_unet_model, split_data
 
 # %% [markdown]
 # ### Set-up filepaths
@@ -105,7 +105,7 @@ include_brightness_adjustments = True
 include_contrast_adjustments = True
 
 # shift value (between 0 and 1)
-hue_shift_value = 0.1
+hue_shift_value = 0.2
 
 # values <1 will decrease contrast while values >1 will increase contrast
 contrast_factor = 2
@@ -118,7 +118,25 @@ batch_size = 50
 num_epochs = 150
 
 # take the run ID from the excel spreadsheet
-runid = "phase_1_6_tg_07_06_23"
+runid = ""
+
+# %% [markdown]
+# ## Set validation area
+#
+# An area of Somalia can we set as validation tiles by excluding the area name, as defined below.
+
+# %%
+validation_area = None
+
+# %% jupyter={"outputs_hidden": true}
+# stacking validation images based on an area
+validation_images = stack_array_with_validation(img_dir, validation_area)
+validation_images.shape
+
+# %%
+# stacking validation masks based on an area
+validation_masks = stack_array_with_validation(mask_dir, validation_area)
+validation_masks.shape
 
 # %% [markdown]
 # ## Data augmentation <a name="dataaug"></a>
@@ -133,7 +151,7 @@ runid = "phase_1_6_tg_07_06_23"
 
 # %%
 # creating stack of img arrays that are rotated and horizontally flipped
-stacked_images = stack_array(img_dir)
+stacked_images = stack_array(img_dir, validation_area)
 stacked_images.shape
 
 # %% [markdown]
@@ -141,24 +159,27 @@ stacked_images.shape
 
 # %%
 # hue shifting
-
 adjusted_hue = hue_shift(stacked_images, hue_shift_value)
-
 adjusted_hue.shape
 
 # %%
 # adjust brightness
-
 adjusted_brightness = adjust_brightness(stacked_images, brightness_factor)
-
 adjusted_brightness.shape
 
 # %%
 # adjust contrast
-
 adjusted_contrast = adjust_contrast(stacked_images, contrast_factor)
-
 adjusted_contrast.shape
+
+# %% [markdown]
+# #### Background images
+
+# %%
+# creating stack of background img arrays with no augmentation
+background_images = stack_background_arrays(img_dir)
+
+print(len(background_images))
 
 # %% [markdown]
 # #### Sense checking hue/brightness/contrast
@@ -180,15 +201,6 @@ for i, idx in enumerate(random_indices):
 
 plt.tight_layout()
 plt.show()
-
-# %% [markdown]
-# #### Background images
-
-# %%
-# creating stack of background img arrays with no augmentation
-background_images = stack_background_arrays(img_dir)
-
-print(len(background_images))
 
 # %% [markdown]
 # #### Final image array
@@ -215,7 +227,7 @@ all_stacked_images.shape
 
 # %%
 # creating stack of mask arrays that are rotated and horizontally flipped
-stacked_masks = stack_array(mask_dir)
+stacked_masks = stack_array(mask_dir, validation_area)
 stacked_masks.shape
 
 # %% [markdown]
@@ -277,6 +289,12 @@ stacked_masks_cat = to_categorical(all_stacked_masks, num_classes=n_classes)
 
 stacked_masks_cat.shape
 
+# %%
+# encode building classes into validation masks
+validation_masks_cat = to_categorical(validation_masks, num_classes=n_classes)
+
+validation_masks_cat.shape
+
 # %% [markdown]
 # ### Sense checking images and masks correspond
 
@@ -296,10 +314,7 @@ plt.show()
 # ## Training parameters <a name="trainingparameters"></a>
 
 # %%
-# setting out number of train and validation tiles
-X_train, X_test, y_train, y_test = train_test_split(
-    all_stacked_images, stacked_masks_cat, test_size=0.20, random_state=42
-)
+X_train, X_test, y_train, y_test = split_data(all_stacked_images, stacked_masks_cat)
 
 # %%
 img_height, img_width, num_channels = (384, 384, 4)
@@ -328,7 +343,7 @@ def get_model():
 # calculating weight for dice loss function
 weights = compute_class_weight(
     "balanced",
-    classes=np.unique(stacked_masks),
+    classes=np.unique(all_stacked_masks),
     y=np.ravel(all_stacked_masks, order="C"),
 )
 
@@ -382,16 +397,6 @@ if "num_epochs" not in locals():
     num_epochs = 150
 
 # %% [markdown]
-# #### Callbacks
-# Performs actions at the beginning or end of an epoch or batch. The ones used here are early stopping to monitor how the model is performing, if fit isn't improving over epochs then the model will stop (to prevent overfitting, although note will run for 4 more epochs to check it was correct - this is the patience parameter and can be adjusted). The parameter used to monitor if the model has reached it's best is validation loss. Also saving data to tensorboard logs.
-
-# %%
-callbacks = [
-    tf.keras.callbacks.EarlyStopping(patience=4, monitor="val_loss"),
-    tf.keras.callbacks.TensorBoard(log_dir="logs"),
-]
-
-# %% [markdown]
 # #### Batch size
 #
 # The batch size is the number of samples propagated through each epoch. For example, if you have `batch_size = 100` then the model is trained using the first 100 training tiles, then it takes the next 100 samples and trains the model again etc. Using batch sizes smaller than the sample size requires less memory and trains the model quicker in its mini-batches, as weights are updated after each batch.
@@ -410,26 +415,27 @@ if "batch_size" not in locals():
     batch_size = 50
 
 # %% [markdown]
-# # Check model parameters before starting training:
+# #### Callbacks
+# Performs actions at the beginning or end of an epoch or batch. The ones used here are early stopping to monitor how the model is performing, if fit isn't improving over epochs then the model will stop (to prevent overfitting, although note will run for 4 more epochs to check it was correct - this is the patience parameter and can be adjusted). The parameter used to monitor if the model has reached it's best is validation loss. Also saving data to tensorboard logs.
+
+# %%
+callbacks = [
+    tf.keras.callbacks.EarlyStopping(patience=4, monitor="loss"),
+    tf.keras.callbacks.TensorBoard(log_dir="logs"),
+]
+
+# %% [markdown]
+# ### Check model parameters
 #
 
 # %%
-print(
-    f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nhue_shift = {hue_shift_value},\nbrightness = {brightness_factor},\ncontrast = {contrast_factor},"
-)
-print(
-    f"include_hue_adjustment = {include_hue_adjustment}\ninclude_backgrounds = {include_backgrounds}\ninclude_brightness_adjustments = {include_brightness_adjustments}\ninclude_contrast_adjustments = {include_contrast_adjustments}"
-)
-print(f"stacked_img_num = {all_stacked_masks.shape[0]}")
+conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nhue_shift = {hue_shift_value},\nbrightness = {brightness_factor},\ncontrast = {contrast_factor}, \ninclude_hue_adjustment = {include_hue_adjustment}\ninclude_backgrounds = {include_backgrounds}\ninclude_brightness_adjustments = {include_brightness_adjustments}\ninclude_contrast_adjustments = {include_contrast_adjustments}\nstacked_img_num = {all_stacked_masks.shape[0]}"
 
-# Save running conditions
+print(conditions)
+
 conditions_filename = outputs_dir / f"{runid}_conditions.txt"
-
-with open(conditions_filename, 'w') as f:
-    f.write(f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nhue_shift = {hue_shift_value},\nbrightness = {brightness_factor},\ncontrast = {contrast_factor},")
-    f.write(f"\ninclude_hue_adjustment = {include_hue_adjustment}\ninclude_backgrounds = {include_backgrounds}\ninclude_brightness_adjustments = {include_brightness_adjustments}\ninclude_contrast_adjustments = {include_contrast_adjustments}")
-    f.write(f"\nstacked_img_num = {all_stacked_masks.shape[0]}")
-    f.close
+with open(conditions_filename, "w") as f:
+    f.write(conditions)
 
 # %% [markdown]
 # ## Model
@@ -493,7 +499,7 @@ np.save(outputs_dir.joinpath(y_pred_filename), y_pred)
 np.save(outputs_dir.joinpath(y_test_filename), y_test)
 
 # %% [markdown]
-# ## Outputs <a name="output"></a>
+# ###### Outputs <a name="output"></a>
 
 # %% [markdown]
 # ### Training and validation changes
@@ -530,7 +536,7 @@ plt.show()
 # %%
 # calculating mean IoU
 
-
+y_pred = model.predict(X_test)
 y_pred_argmax = np.argmax(y_pred, axis=3)
 y_test_argmax = np.argmax(y_test, axis=3)
 

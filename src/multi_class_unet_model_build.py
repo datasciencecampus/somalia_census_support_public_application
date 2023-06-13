@@ -21,6 +21,7 @@ from keras.layers import (  # BatchNormalization,; Lambda,; UpSampling2D,
     concatenate,
 )
 from keras.models import Model
+from sklearn.model_selection import train_test_split
 
 
 def jacard_coef(y_true, y_pred):
@@ -134,3 +135,23 @@ def multi_unet_model(n_classes=4, IMG_HEIGHT=256, IMG_WIDTH=256, IMG_CHANNELS=1)
     # model.summary()
 
     return model
+
+
+def split_data(
+    all_stacked_images,
+    stacked_masks_cat,
+    validation_images=None,
+    validation_masks_cat=None,
+):
+    if validation_images is not None:
+
+        X_train = all_stacked_images
+        y_train = stacked_masks_cat
+
+        X_test = validation_images
+        y_test = validation_masks_cat
+    else:
+        X_train, X_test, y_train, y_test = train_test_split(
+            all_stacked_images, stacked_masks_cat, test_size=0.20, random_state=42
+        )
+    return X_train, X_test, y_train, y_test

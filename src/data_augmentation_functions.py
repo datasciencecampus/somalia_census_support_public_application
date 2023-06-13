@@ -6,7 +6,7 @@ import numpy as np
 import colorsys
 
 
-def stack_array(directory):
+def stack_array(directory, validation_area=None):
     """
 
     Stack all .npy files in the specified directory (excluding files ending with "background.npy"),
@@ -14,6 +14,7 @@ def stack_array(directory):
 
     Args:
         directory (str or Path): The directroy containing the .npy files to stack.
+        validation_area (str, optional): The word to exclude from file names. Defaults to None.
 
     Returns:
         np.ndarray: The stacked array of images/masks.
@@ -25,6 +26,7 @@ def stack_array(directory):
         file
         for file in Path(directory).glob("*npy")
         if not file.name.endswith("background.npy")
+        and (validation_area is None or validation_area not in file.name)
     ]
 
     # sort the file names alphabetically
@@ -85,7 +87,45 @@ def stack_background_arrays(directory):
     for file in background_files:
         np_array = np.load(file)
         background_arrays.append(np_array)
+
     return background_arrays
+
+
+def stack_array_with_validation(directory, validation_area):
+    """
+    Stack all .npy files in the specified directory that contain the validation area.
+
+    Args:
+        directory (str or Path): The directroy containing the .npy files to stack.
+        excluded_word (str, optional): The word to include from file names.
+
+    Returns:
+        np.ndarray: The stacked array of images/masks.
+
+    """
+
+    # get all .npy files in the directory exlcuding background
+    array_files = [
+        file
+        for file in Path(directory).glob("*npy")
+        if validation_area in file.name and not file.name.endswith("background.npy")
+    ]
+
+    # sort the file names alphabetically
+    array_files = sorted(array_files)
+
+    # empty list for appending originals
+    array_list = []
+
+    # load each .npy and appent to list
+    for file in array_files:
+        np_array = np.load(file)
+        array_list.append(np_array)
+
+    # stack the arrays
+    stacked_images = np.stack(array_list, axis=0)
+
+    return stacked_images
 
 
 def hue_shift(images, shift):
