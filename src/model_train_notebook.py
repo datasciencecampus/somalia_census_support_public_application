@@ -577,7 +577,7 @@ print("Mean IoU =", IOU_keras.result().numpy())
 # predict for a few images
 
 # test_img_number = random.randint(0, len(X_test))
-test_img_number = 1
+test_img_number = 0
 test_img = X_test[test_img_number]
 ground_truth = y_test_argmax[test_img_number]
 # test_img_norm=test_img[:,:,0][:,:,None]
