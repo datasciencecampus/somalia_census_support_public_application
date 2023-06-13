@@ -106,7 +106,7 @@ include_brightness_adjustments = True
 include_contrast_adjustments = True
 
 # shift value (between 0 and 1)
-hue_shift_value = 0.1
+hue_shift_value = 0.2
 
 # values <1 will decrease contrast while values >1 will increase contrast
 contrast_factor = 2
@@ -119,7 +119,7 @@ batch_size = 50
 num_epochs = 150
 
 # take the run ID from the excel spreadsheet
-runid = "phase_1_18_np_12_06_23"
+runid = "phase_2_dooloo_np_13_06_23"
 
 # %% [markdown]
 # ## Set validation area
@@ -127,7 +127,7 @@ runid = "phase_1_18_np_12_06_23"
 # An area of Somalia can we set as validation tiles by excluding the area name, as defined below.
 
 # %%
-validation_area = "baidoa"
+validation_area = "doolow"
 
 # %% [markdown]
 # ## Data augmentation <a name="dataaug"></a>
@@ -311,20 +311,34 @@ plt.subplot(122)
 plt.imshow(stacked_masks_cat[image_number])
 plt.show()
 
+
 # %% [markdown]
 # ## Training parameters <a name="trainingparameters"></a>
 
 # %%
-X_train = all_stacked_images
-y_train = stacked_masks_cat
+def split_data(
+    all_stacked_images,
+    stacked_masks_cat,
+    validation_images=None,
+    validation_masks_cat=None,
+):
+    if validation_images is not None:
 
-X_test = validation_images
-y_test = validation_masks_cat
+        X_train = all_stacked_images
+        y_train = stacked_masks_cat
+
+        X_test = validation_images
+        y_test = validation_masks_cat
+    else:
+        X_train, X_test, y_train, y_test = train_test_split(
+            all_stacked_images, stacked_masks_cat, test_size=0.20, random_state=42
+        )
+    return X_train, X_test, y_train, y_test
+
 
 # %%
-# setting out number of train and validation tiles
-X_train, X_test, y_train, y_test = train_test_split(
-    all_stacked_images, stacked_masks_cat, test_size=0.20, random_state=42
+X_train, X_test, y_train, y_test = split_data(
+    all_stacked_images, stacked_masks_cat, validation_images, validation_masks_cat
 )
 
 # %%
