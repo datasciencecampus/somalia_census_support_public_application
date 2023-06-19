@@ -73,7 +73,7 @@ from data_augmentation_functions import (
     adjust_contrast,
     stack_images,
 )
-from functions_library import setup_sub_dir
+from weight_functions import calculate_distance_weights, calculate_size_weights
 from multi_class_unet_model_build import jacard_coef, multi_unet_model, split_data
 
 # %% [markdown]
@@ -90,10 +90,9 @@ training_data_dir = data_dir.joinpath("training_data")
 img_dir = training_data_dir.joinpath("img")
 mask_dir = training_data_dir.joinpath("mask")
 
-
-# set-up model directory for model and outputs
-models_dir = setup_sub_dir(Path.cwd().parent, "models")
-outputs_dir = setup_sub_dir(Path.cwd().parent, "outputs")
+# set model and output directories
+models_dir = Path.cwd().parent.joinpath("models")
+outputs_dir = Path.cwd().parent.joinpath("outputs")
 
 # %% [markdown]
 # ## Set model parameters <a name="modelparameter"></a>
@@ -115,7 +114,7 @@ brightness_factor = 1.5
 
 batch_size = 50
 
-num_epochs = 150
+num_epochs = 10
 
 # take the run ID from the excel spreadsheet
 runid = ""
@@ -128,15 +127,17 @@ runid = ""
 # %%
 validation_area = None
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 # stacking validation images based on an area
-validation_images = stack_array_with_validation(img_dir, validation_area)
-validation_images.shape
+if validation_area is not None:
+    validation_images = stack_array_with_validation(img_dir, validation_area)
+    validation_images.shape
 
 # %%
 # stacking validation masks based on an area
-validation_masks = stack_array_with_validation(mask_dir, validation_area)
-validation_masks.shape
+if validation_area is not None:
+    validation_masks = stack_array_with_validation(mask_dir, validation_area)
+    validation_masks.shape
 
 # %% [markdown]
 # ## Data augmentation <a name="dataaug"></a>
@@ -290,10 +291,10 @@ stacked_masks_cat = to_categorical(all_stacked_masks, num_classes=n_classes)
 stacked_masks_cat.shape
 
 # %%
-# encode building classes into validation masks
-validation_masks_cat = to_categorical(validation_masks, num_classes=n_classes)
-
-validation_masks_cat.shape
+if validation_area is not None:
+    # encode building classes into validation masks
+    validation_masks_cat = to_categorical(validation_masks, num_classes=n_classes)
+    validation_masks_cat.shape
 
 # %% [markdown]
 # ### Sense checking images and masks correspond
@@ -331,39 +332,61 @@ def get_model():
 
 
 # %% [markdown]
-# ## Loss function <a name="lossfunction"></a>
-# There are different types of loss functions that we can use in semantic segmentation either separately or combined together. Here, we combine dice and focal loss.
+# ## Weights <a name="weights"></a>
 
 # %% [markdown]
-# ### Dice loss
+# ### Distance based weighting
 #
-# Weighted dice loss allows for the class frequencies from the training masks to be calculated (i.e. how often does a building type appear) and sets weights based on this.
+# Adapted from Google Open Building data paper - https://arxiv.org/pdf/2107.12283.pdf
+#
+# Weights of classes calculated by taking into account the boundaries of each class and calculates weights based on distances between pixels and scaled by a constant (c). The Gaussian filter smooths the weight values, potentially reducing extreme values and bringing them closer to the mean.
+#
+# The relative differences and, therefore, ratios are more relevant than the individual magnitudes. Large values = large distances or complex boundaries between classes (and vice versa).
 
 # %%
-# calculating weight for dice loss function
-weights = compute_class_weight(
+distance_weights = calculate_distance_weights(stacked_masks_cat, sigma=3, c=100)
+print(distance_weights)
+
+# %% [markdown]
+# ### Frequency based weighting
+#
+# Calculates class weights based on the frequency of each class in the input data. Assigns higher weights to less frequenct classes and lower weights to more frequenct classes, aiming to handle class imbalance.
+
+# %%
+frequency_weights = compute_class_weight(
     "balanced",
     classes=np.unique(all_stacked_masks),
     y=np.ravel(all_stacked_masks, order="C"),
 )
-
-# Alternatively, could try balanced weights between classes:
-# weights = [0.33, 0.33, 0.33]
-
-
-print(weights)
+print(frequency_weights)
 
 # %% [markdown]
-# ### Focal loss
+# ### Size based weighting
 #
-# Here we are using focal loss, an extension of cross-entropy loss. By default, focal loss reduces the weights of well-classified objects, those that have a probability >0.5, and increases the weights of objects with a probability of <0.5. In practice what this means is it reduces the weight (i.e. spends less time focusing on) easily classifable objects (i.e. service buildings) and instead focuses on hard to classify objects (i.e. tents).
+# Adapted from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7944145/
 #
-# <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #8a6d3b;; background-color: #fcf8e3; border-color: #faebcc;">
-# TODO: create custom loss function that prioritises objects with a small number of pixels and that are close of other objects
-# </div>
+# Calculated the class weights based on average pixel size of objects in each class. Weights are normalised and scaled to 1.
+#
 
 # %%
-dice_loss = sm.losses.DiceLoss(class_weights=weights)  # corrects for class imbalance
+size_weights = calculate_size_weights(stacked_masks_cat, alpha=1.0)
+print(size_weights)
+
+# %% [markdown]
+# ## Loss function <a name="lossfunction"></a>
+# There are different types of loss functions that we can use in semantic segmentation either separately or combined together. Here, we combine dice and focal loss.
+#
+# #### Dice loss
+# Weighted dice loss allows for the class frequencies from the training masks to be calculated (i.e. how often does a building type appear) and sets weights based on this.
+#
+# #### Focal loss
+#
+# Here we are using focal loss, an extension of cross-entropy loss. By default, focal loss reduces the weights of well-classified objects, those that have a probability >0.5, and increases the weights of objects with a probability of <0.5. In practice what this means is it reduces the weight (i.e. spends less time focusing on) easily classifable objects (i.e. service buildings) and instead focuses on hard to classify objects (i.e. tents).
+
+# %%
+dice_loss = sm.losses.DiceLoss(
+    class_weights=size_weights
+)  # corrects for class imbalance
 focal_loss = sm.losses.CategoricalFocalLoss()
 # combined loss function
 total_loss = dice_loss + (1 * focal_loss)
