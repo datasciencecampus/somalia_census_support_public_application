@@ -73,7 +73,11 @@ from data_augmentation_functions import (
     adjust_contrast,
     stack_images,
 )
-from weight_functions import calculate_distance_weights, calculate_size_weights
+from weight_functions import (
+    calculate_distance_weights,
+    calculate_size_weights,
+    calculate_building_distance_weights,
+)
 from multi_class_unet_model_build import jacard_coef, multi_unet_model, split_data
 
 # %% [markdown]
@@ -371,6 +375,15 @@ print(frequency_weights)
 # %%
 size_weights = calculate_size_weights(stacked_masks_cat, alpha=1.0)
 print(size_weights)
+
+# %% [markdown]
+# ### Building distance weighting
+
+# %%
+building_weights = calculate_building_distance_weights(
+    stacked_masks_cat, sigma=3, c=200, alpha=1.0
+)
+print(building_weights)
 
 # %% [markdown]
 # ## Loss function <a name="lossfunction"></a>

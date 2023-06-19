@@ -3,6 +3,7 @@
 import numpy as np
 from scipy.ndimage import gaussian_filter
 from scipy.ndimage import label
+from scipy.ndimage import distance_transform_edt
 
 
 def calculate_distance_weights(stacked_masks, sigma=3, c=200):
@@ -91,6 +92,47 @@ def calculate_size_weights(stacked_masks, alpha=1.0):
     class_weights /= np.sum(class_weights)  # normalize the weights
 
     return class_weights
+
+
+def calculate_building_distance_weights(stacked_masks, sigma=3, c=200, alpha=1.0):
+    """
+    Calculate custom class weights that prioritises pixels close to other buildings.
+
+    Args:
+        stacked_masks (np.ndarray): Stacked polyon masks with shape (N, H, W, C),
+                                    where N is the number of masks, H is the height,
+                                    W is the width, and C is the number of classes.
+        sigma (float): Length scale of the Gaussian kernel for distance weighting. Default is 3.
+        c (float): Scaling constant for the weights. Default is 200.
+        alpha (float): Weighting factor to control the strength of the distance weighting. Default is 1.0.
+
+    Returns:
+        np.ndarray: Computed class weights with shape (C,).
+    """
+
+    num_masks = stacked_masks.shape[0]  # numer of masks
+    weights_sum = np.zeros(stacked_masks.shape[-1])  # accumate weights per class
+
+    for i in range(num_masks):
+        mask = stacked_masks[i, :, :, :]  # get current mask
+
+        for class_index in range(mask.shape[-1]):  # iterate over classes
+            class_mask = mask[:, :, class_index]  # get class mask
+            distances = distance_transform_edt(
+                class_mask
+            )  # calculate Euclidean distance transform
+            weights = np.exp(
+                -alpha * (distances**2) / (2 * sigma**2)
+            )  # calculate distance weights
+            weight_sum = np.sum(weights)  # calculate weight sum
+            weights_sum[class_index] += weight_sum  # accumulate weight per class
+
+        avg_weights = (
+            gaussian_filter(weights_sum, sigma) * c / num_masks
+        )  # apply Gaussian filter and scale by constant
+        class_weights = avg_weights / np.sum(avg_weights)  # normalise weights to 1
+
+        return class_weights
 
 
 def calculate_weight_stats(class_weights):
