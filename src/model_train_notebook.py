@@ -54,6 +54,7 @@ import random
 from pathlib import Path
 
 # %%
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -94,6 +95,7 @@ training_data_dir = data_dir.joinpath("training_data")
 # set img and mask directories within training_data directory
 img_dir = training_data_dir.joinpath("img")
 mask_dir = training_data_dir.joinpath("mask")
+
 
 # set model and output directories
 models_dir = Path.cwd().parent.joinpath("models")
@@ -600,7 +602,7 @@ np.save(outputs_dir.joinpath(y_pred_filename), y_pred)
 np.save(outputs_dir.joinpath(y_test_filename), y_test)
 
 # %% [markdown]
-# ###### Outputs <a name="output"></a>
+# ## Outputs <a name="output"></a>
 
 # %% [markdown]
 # ### Training and validation changes
@@ -673,6 +675,97 @@ plt.subplot(233)
 plt.title("Prediction on test image")
 plt.imshow(predicted_img)
 plt.show()
+
+# %% [markdown]
+# ### Compute class outputs
+
+# %%
+import pandas as pd
+
+
+def compute_class_counts(y_pred, y_actual):
+    """
+    Compute the counts of each class in each tile for predicted and test arrays.
+
+    Args:
+        y_pred (ndarray): Predicted array with shape (batch_size, height, width, num_classes).
+        y_test (ndarray): Predicted array with shape (batch_size, height, width, num_classes).
+
+    Returns:
+        DataFrame: Pandas DataFrame containing the counts of each class in each sample.
+
+    """
+
+    class_counts_pred = []
+    class_counts_actual = []
+
+    class_labels = {0: "background", 1: "tent", 2: "building"}
+
+    for tile_index in range(y_pred.shape[0]):
+        tile_counts_pred = {}
+        tile_counts_actual = {}
+
+        for class_index, class_label in class_labels.items():
+            if class_label == "background":
+                continue
+
+            # Extract the predicted mask for the current class
+            class_mask_pred = np.argmax(y_pred[tile_index], axis=-1) == class_index
+            class_mask_actual = np.argmax(y_test[tile_index], axis=-1) == class_index
+
+            # Perform connected component analysis for predicted counts
+            num_labels_pred, labeled_mask_pred = cv2.connectedComponents(
+                class_mask_pred.astype(np.uint8)
+            )
+
+            # Perform connected component analysis for actual counts
+            num_labels_actual, labeled_mask_actual = cv2.connectedComponents(
+                class_mask_actual.astype(np.uint8)
+            )
+
+            # Count the number of objects for the current class in the current tile (excluding background label)
+            num_objects_pred = num_labels_pred - 1
+            num_objects_actual = num_labels_actual - 1
+
+            tile_counts_pred[class_label] = num_objects_pred
+            tile_counts_actual[class_label] = num_objects_actual
+
+        class_counts_pred.append(tile_counts_pred)
+        class_counts_actual.append(tile_counts_actual)
+
+    # Create a pandas DF
+    df = pd.DataFrame(columns=["Tile"] + list(class_labels.values()))
+
+    # Populate the DF with the counts for each class in each tile
+    for tile_index in range(y_pred.shape[0]):
+        tile_counts_pred = class_counts_pred[tile_index]
+        tile_counts_actual = class_counts_actual[tile_index]
+        row_data = {"Tile": tile_index}
+
+        for class_label in class_labels.values():
+            if class_label != "background":
+                pred_count = tile_counts_pred.get(class_label, 0)
+                actual_count = tile_counts_actual.get(class_label, 0)
+                row_data[class_label] = pred_count
+                row_data[class_label + "_actual"] = actual_count
+
+        df = df.append(row_data, ignore_index=True)
+
+    # probably want to change this when file name added
+    df.set_index("Tile", inplace=True)
+
+    return df
+
+
+# %%
+# for testing ease only to be removed
+y_pred_test = np.random.randint(0, 2, size=(100, 384, 284, 3))
+y_actual_test = np.random.randint(0, 2, size=(100, 384, 284, 3))
+
+# %%
+class_counts_df = compute_class_counts(y_pred_test, y_actual_test)
+class_counts_df = class_counts_df.drop(columns="background")
+class_counts_df
 
 # %% [markdown]
 # ### Confusion Matrix
