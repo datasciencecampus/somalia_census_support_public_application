@@ -45,6 +45,7 @@
 from pathlib import Path
 
 import geopandas as gpd
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -129,8 +130,22 @@ check_img_files(img_dir)
 # %%
 building_class_list = ["Building", "Tent"]
 
+
 # %%
 # building_class_list = ["Small", "Large", "Tent"]
+
+# %%
+# Takes in an open geoJSON file, assigns counts to each feature
+def count_unique_features(geojson_file):
+    feature_counts = {}
+    for feature in geojson_file["Type"]:
+        if feature in feature_counts:
+            feature_counts[feature] += 1
+        else:
+            feature_counts[feature] = 1
+    return feature_counts      
+
+
 
 # %%
 # def determine_type(area):
@@ -141,6 +156,7 @@ building_class_list = ["Building", "Tent"]
 
 # %%
 # loop through the GeoJSON files
+features_dict = {}
 for mask_path in mask_dir.glob("*.geojson"):
 
     # load the GeoJSON into a GeoPandas dataframe
@@ -173,6 +189,18 @@ for mask_path in mask_dir.glob("*.geojson"):
 
     # save the NumPy array
     np.save(mask_dir.joinpath(f"{mask_filename}.npy"), normalised_training_arr)
+    
+    # Add Feature counts for this tiles into features dictionary
+    if not mask_path.name.endswith("background.geojson"):
+        unique_features = count_unique_features(mask_gdf)
+        features_dict[mask_filename] = unique_features
+    elif mask_path.name.endswith("background.geojson"):
+        unique_features = {'Building': 0, 'Tent': 0}
+        features_dict[mask_filename] = unique_features 
+# Output the completed features dictionary to a JSON for use in outputs notebook        
+output_file = mask_dir.joinpath("feature_dict.json")
+with open(output_file, 'w') as f:
+    json.dump(features_dict, f, indent=4)
 
 # %%
 # checking shape of .npy files matches
