@@ -26,8 +26,9 @@
 #
 #
 # 1. ##### [Set-up](#setup)
-# 1. ##### [Model parameters](#modelparameter)
+# 1. ##### [Validation setting](#validation)
 # 1. ##### [Data augmentation](#dataaug)
+# 1. ##### [Weights](#weights)
 # 1. ##### [Loss function](#lossfunction)
 # 1. ##### [Metrics](#metrics)
 # 1. ##### [Model](#model)
@@ -99,34 +100,9 @@ models_dir = Path.cwd().parent.joinpath("models")
 outputs_dir = Path.cwd().parent.joinpath("outputs")
 
 # %% [markdown]
-# ## Set model parameters <a name="modelparameter"></a>
-
-# %%
-include_hue_adjustment = True
-include_backgrounds = True
-include_brightness_adjustments = True
-include_contrast_adjustments = True
-
-# shift value (between 0 and 1)
-hue_shift_value = 0.2
-
-# values <1 will decrease contrast while values >1 will increase contrast
-contrast_factor = 2
-
-# values <1 will decrease brightness while values >1 will increase brightness
-brightness_factor = 1.5
-
-batch_size = 50
-
-num_epochs = 10
-
-# take the run ID from the excel spreadsheet
-runid = ""
-
-# %% [markdown]
-# ## Set validation area
+# ## Set validation area <a name="validation"></a>
 #
-# An area of Somalia can we set as validation tiles by excluding the area name, as defined below.
+# Option to set specific tiles as validation for model. Currently works by using an area name (i.e. Baidoa). Should be set to 'none' if want to randomly generate training/validation split.
 
 # %%
 validation_area = None
@@ -160,31 +136,48 @@ stacked_images = stack_array(img_dir, validation_area)
 stacked_images.shape
 
 # %% [markdown]
-# #### Additional augmentations
+# #### Set augmentation
 
 # %%
-# hue shifting
-adjusted_hue = hue_shift(stacked_images, hue_shift_value)
-adjusted_hue.shape
+include_hue_adjustment = True
+include_brightness_adjustments = True
+include_contrast_adjustments = True
+include_backgrounds = True
+
+# %% [markdown]
+# #### Hue shift
 
 # %%
-# adjust brightness
-adjusted_brightness = adjust_brightness(stacked_images, brightness_factor)
-adjusted_brightness.shape
+if include_hue_adjustment:
+    # shift value (between 0 and 1)
+    hue_shift_value = 0.2
+    adjusted_hue = hue_shift(stacked_images, hue_shift_value)
+
+# %% [markdown]
+# #### Brightness
 
 # %%
-# adjust contrast
-adjusted_contrast = adjust_contrast(stacked_images, contrast_factor)
-adjusted_contrast.shape
+if include_brightness_adjustments:
+    # values <1 will decrease brightness while values >1 will increase brightness
+    brightness_factor = 1.5
+    adjusted_brightness = adjust_brightness(stacked_images, brightness_factor)
+
+# %% [markdown]
+# #### Contrast
+
+# %%
+if include_contrast_adjustments:
+    # values <1 will decrease contrast while values >1 will increase contrast
+    contrast_factor = 2
+    adjusted_contrast = adjust_contrast(stacked_images, contrast_factor)
 
 # %% [markdown]
 # #### Background images
 
 # %%
-# creating stack of background img arrays with no augmentation
-background_images = stack_background_arrays(img_dir)
-
-print(len(background_images))
+if include_backgrounds:
+    # creating stack of background img arrays with no augmentation
+    background_images = stack_background_arrays(img_dir)
 
 # %% [markdown]
 # #### Sense checking hue/brightness/contrast
@@ -252,8 +245,6 @@ mask_contrast = np.copy(stacked_masks)
 # %%
 # creating stack of background img arrays with no augmentation
 background_masks = stack_background_arrays(mask_dir)
-
-print(len(background_masks))
 
 # %% [markdown]
 # #### Final mask array
@@ -345,7 +336,15 @@ def get_model():
 #
 # Weights of classes calculated by taking into account the boundaries of each class and calculates weights based on distances between pixels and scaled by a constant (c). The Gaussian filter smooths the weight values, potentially reducing extreme values and bringing them closer to the mean.
 #
-# The relative differences and, therefore, ratios are more relevant than the individual magnitudes. Large values = large distances or complex boundaries between classes (and vice versa).
+# **sigma**
+# * big buildings = larger sigma
+# * dense buildings = smaller sigma
+# * larger sigma = more balance weights across classes
+# * smaller sigma = higher weights to specific classes/regions
+#
+# **scaling factor**
+# * distances between buildings are small = smaller c
+# * complex boundaries between buildings = increase c
 
 # %%
 distance_weights = calculate_distance_weights(stacked_masks_cat, sigma=3, c=100)
@@ -369,7 +368,12 @@ print(frequency_weights)
 #
 # Adapted from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7944145/
 #
-# Calculated the class weights based on average pixel size of objects in each class. Weights are normalised and scaled to 1.
+# Calculated the class weights based on average pixel size of objects in each class.
+#
+# **alpha**
+# * higher alpha = more weight to pixels close to other buildings
+# * very high alpha can impact class balance negatively
+# * spread out buildings = higher alpha
 #
 
 # %%
@@ -378,6 +382,8 @@ print(size_weights)
 
 # %% [markdown]
 # ### Building distance weighting
+#
+# Euclidean distances from nearest neighbour pixel. A variation of distance weights above.
 
 # %%
 building_weights = calculate_building_distance_weights(
@@ -397,12 +403,68 @@ print(building_weights)
 # Here we are using focal loss, an extension of cross-entropy loss. By default, focal loss reduces the weights of well-classified objects, those that have a probability >0.5, and increases the weights of objects with a probability of <0.5. In practice what this means is it reduces the weight (i.e. spends less time focusing on) easily classifable objects (i.e. service buildings) and instead focuses on hard to classify objects (i.e. tents).
 
 # %%
-dice_loss = sm.losses.DiceLoss(
+from tensorflow.keras import backend as K
+
+
+def dice_loss(y_true, y_pred):
+    """Dice loss function."""
+    smooth = 1e-5
+    intersection = K.sum(y_true * y_pred)
+    union = K.sum(y_true) + K.sum(y_pred)
+    dice_coef = (2.0 * intersection + smooth) / (union + smooth)
+    return 1 - dice_coef
+
+
+# %%
+def focal_loss(y_true, y_pred, gamma=2.0, alpha=0.25):
+    """Focal loss function"""
+    y_pred = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
+    cross_entropy = -y_true * K.log(y_pred)
+    weight = alpha * y_true * K.pow(1 - y_pred, gamma)
+    loss = weight * cross_entropy
+
+    return K.mean(loss)
+
+
+# %%
+def weighted_multil_class_loss(
+    y_true,
+    y_pred,
+    weights_distance,
+    weights_size,
+    weights_ce,
+    weights_dice,
+    weights_focal,
+):
+    """weighted multi-class loss function"""
+
+    # cross entropy loss
+    loss_ce = K.sparse_categorical_crossentropy(y_true, y_pred)
+
+    # dice loss
+    loss_dice = dice_loss(y_true, y_pred)
+
+    # focal loss
+    loss_focal = focal_loss(y_true, y_pred)
+
+    # calculate pixel weights
+    weights = weights_distance * weights_size
+
+    # combine losses with weights
+    loss = weights * (
+        weights_ce * loss_ce + weights_dice * loss_dice + weights_focal * loss_focal
+    )
+
+    return loss
+
+
+# %%
+dice_loss_sm = sm.losses.DiceLoss(
     class_weights=size_weights
 )  # corrects for class imbalance
-focal_loss = sm.losses.CategoricalFocalLoss()
+focal_loss_sm = sm.losses.CategoricalFocalLoss()
 # combined loss function
-total_loss = dice_loss + (1 * focal_loss)
+total_loss = dice_loss_sm + (1 * focal_loss_sm)
 
 # %% [markdown]
 # ## Metrics <a name="metrics"></a>
@@ -463,6 +525,9 @@ callbacks = [
 # %% [markdown]
 # ### Check model parameters
 #
+
+# %%
+runid = ""
 
 # %%
 conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nhue_shift = {hue_shift_value},\nbrightness = {brightness_factor},\ncontrast = {contrast_factor}, \ninclude_hue_adjustment = {include_hue_adjustment}\ninclude_backgrounds = {include_backgrounds}\ninclude_brightness_adjustments = {include_brightness_adjustments}\ninclude_contrast_adjustments = {include_contrast_adjustments}\nstacked_img_num = {all_stacked_masks.shape[0]}"
