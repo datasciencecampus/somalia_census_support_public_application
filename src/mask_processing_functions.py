@@ -155,3 +155,14 @@ def training_data_summary(mask_dir):
     )
 
     return training_data, value_counts, structure_stats
+
+
+# Takes in an open geoJSON file, assigns counts to each feature
+def count_unique_features(geojson_file):
+    feature_counts = {}
+    for feature in geojson_file["Type"]:
+        if feature in feature_counts:
+            feature_counts[feature] += 1
+        else:
+            feature_counts[feature] = 1
+    return feature_counts
