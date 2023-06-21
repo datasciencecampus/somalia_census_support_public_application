@@ -114,8 +114,7 @@ def get_sm_loss(class_weights):
 
 def get_combined_loss():
     loss = [focal_loss, dice_loss]
-    loss_weights = [0.5, 0.5]
-    return (loss, loss_weights)
+    return loss
 
 
 def get_focal_tversky_loss():

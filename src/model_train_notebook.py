@@ -400,13 +400,15 @@ model = get_model()
 
 # %%
 # choose loss function
-loss_function = "focal_tversky"  # specify the loss function you want to use: "custom", "combined", "segmentation_models, focal_tversky"
+loss_function = "combined"  # specify the loss function you want to use: "custom", "combined", "segmentation_models, focal_tversky"
 
 optimizer = "adam"  # specific the optimizer you want to use
 
 metrics = ["accuracy", jacard_coef]  # specific the metrics
 
 # %%
+loss_weights = None
+
 if loss_function == "custom":
     loss = get_custom_loss(distance_weights, size_weights)
 
@@ -415,12 +417,15 @@ elif loss_function == "segmentation_models":
 
 elif loss_function == "combined":
     loss = get_combined_loss()
+    loss_weights = [0.5, 0.5]
 
 elif loss_function == "focal_tversky":
     loss = get_focal_tversky_loss()
 
 # %%
-model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+model.compile(
+    optimizer=optimizer, loss=loss, loss_weights=loss_weights, metrics=metrics
+)
 
 # %% [markdown]
 # ### Saving model parameters
