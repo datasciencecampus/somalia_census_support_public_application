@@ -123,11 +123,6 @@ if validation_area is not None:
 # ## Data augmentation <a name="dataaug"></a>
 
 # %% [markdown]
-# U-Net architecture uses max pooling to downsample images across 4 levels, so we need to work with tiles that are divisable by 4 x 2. Training data tiles created in QGIS as ~200m x 200m (which equates to ~400 x 400 pixels as resolution is 0.5m/px). During pre-processing all tiles were resized to 384 x 384.
-#
-# To input more training data (than we actually have) into the model we augment the existing tiles by rotating and mirroring them. This is done to the `.npy` arrays and then all the arrays are stacked together.
-
-# %% [markdown]
 # ### Image augmentation
 
 # %%
@@ -150,7 +145,7 @@ include_backgrounds = True
 # %%
 if include_hue_adjustment:
     # shift value (between 0 and 1)
-    hue_shift_value = 0.2
+    hue_shift_value = 0.5
     adjusted_hue = hue_shift(stacked_images, hue_shift_value)
 
 # %% [markdown]
@@ -184,7 +179,7 @@ if include_backgrounds:
 
 # %%
 # for sense checking brightness/contrast values
-random_indices = np.random.choice(len(adjusted_hue), size=5, replace=False)
+random_indices = np.random.choice(len(adjusted_contrast), size=5, replace=False)
 
 fig, axes = plt.subplots(nrows=5, ncols=2, figsize=(10, 15))
 
@@ -193,7 +188,7 @@ for i, idx in enumerate(random_indices):
     axes[i, 0].set_title("original")
     axes[i, 0].axis("off")
 
-    axes[i, 1].imshow(adjusted_hue[idx][:, :, :3])
+    axes[i, 1].imshow(adjusted_contrast[idx][:, :, :3])
     axes[i, 1].set_title("stacked")
     axes[i, 1].axis("off")
 
@@ -233,11 +228,8 @@ stacked_masks.shape
 
 # %%
 # if any of the above image augmentations have been performed then you need corresponding masks
-# note the below lines do the same thing but has been written out to save time
 
-mask_hue = np.copy(stacked_masks)
-mask_brightness = np.copy(stacked_masks)
-mask_contrast = np.copy(stacked_masks)
+mask_hue, mask_brightness, mask_contrast = [np.copy(stacked_masks) for _ in range(3)]
 
 # %% [markdown]
 # #### Background masks
@@ -271,7 +263,7 @@ all_stacked_masks = stack_images(
 all_stacked_masks.shape
 
 # %% [markdown]
-# #### Number of classes
+# ### Number of classes
 
 # %%
 # number of classes (i.e. building, tent, background)
@@ -280,7 +272,7 @@ n_classes = len(np.unique(all_stacked_masks))
 n_classes
 
 # %% [markdown]
-# #### Encoding masks
+# ### Encoding masks
 
 # %%
 # encode building classes into training mask arrays
@@ -327,6 +319,46 @@ X_train, X_test, y_train, y_test = split_data(
 # %%
 img_height, img_width, num_channels = (384, 384, 4)
 
+# %% [markdown]
+# ## Weights <a name="weights"></a>
+
+# %% [markdown]
+# ### Distance based weighting - adapted from Google
+
+# %%
+distance_weights = calculate_distance_weights(stacked_masks_cat, sigma=3, c=100)
+print(distance_weights)
+
+# %% [markdown]
+# ### Frequency based weighting
+
+# %%
+frequency_weights = compute_class_weight(
+    "balanced",
+    classes=np.unique(all_stacked_masks),
+    y=np.ravel(all_stacked_masks, order="C"),
+)
+print(frequency_weights)
+
+# %% [markdown]
+# ### Size based weighting
+
+# %%
+size_weights = calculate_size_weights(stacked_masks_cat, alpha=1.0)
+print(size_weights)
+
+# %% [markdown]
+# ### Building distance weighting
+
+# %%
+building_weights = calculate_building_distance_weights(
+    stacked_masks_cat, sigma=3, c=200, alpha=1.0
+)
+print(building_weights)
+
+
+# %% [markdown]
+# ## Model parameters <a name="modelparameters"></a>
 
 # %%
 def get_model():
@@ -339,93 +371,14 @@ def get_model():
 
 
 # %% [markdown]
-# ## Weights <a name="weights"></a>
-
-# %% [markdown]
-# ### Distance based weighting
-#
-# Adapted from Google Open Building data paper - https://arxiv.org/pdf/2107.12283.pdf
-#
-# Weights of classes calculated by taking into account the boundaries of each class and calculates weights based on distances between pixels and scaled by a constant (c). The Gaussian filter smooths the weight values, potentially reducing extreme values and bringing them closer to the mean.
-#
-# **sigma**
-# * big buildings = larger sigma
-# * dense buildings = smaller sigma
-# * larger sigma = more balance weights across classes
-# * smaller sigma = higher weights to specific classes/regions
-#
-# **scaling factor**
-# * distances between buildings are small = smaller c
-# * complex boundaries between buildings = increase c
-
-# %%
-distance_weights = calculate_distance_weights(stacked_masks_cat, sigma=3, c=100)
-print(distance_weights)
-
-# %% [markdown]
-# ### Frequency based weighting
-#
-# Calculates class weights based on the frequency of each class in the input data. Assigns higher weights to less frequenct classes and lower weights to more frequenct classes, aiming to handle class imbalance.
-
-# %%
-frequency_weights = compute_class_weight(
-    "balanced",
-    classes=np.unique(all_stacked_masks),
-    y=np.ravel(all_stacked_masks, order="C"),
-)
-print(frequency_weights)
-
-# %% [markdown]
-# ### Size based weighting
-#
-# Adapted from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7944145/
-#
-# Calculated the class weights based on average pixel size of objects in each class.
-#
-# **alpha**
-# * higher alpha = more weight to pixels close to other buildings
-# * very high alpha can impact class balance negatively
-# * spread out buildings = higher alpha
-#
-
-# %%
-size_weights = calculate_size_weights(stacked_masks_cat, alpha=1.0)
-print(size_weights)
-
-# %% [markdown]
-# ### Building distance weighting
-#
-# Euclidean distances from nearest neighbour pixel. A variation of distance weights above.
-
-# %%
-building_weights = calculate_building_distance_weights(
-    stacked_masks_cat, sigma=3, c=200, alpha=1.0
-)
-print(building_weights)
-
-# %% [markdown]
-# ## Model parameters <a name="modelparameters"></a>
-
-# %% [markdown]
 # ### Epochs
-# This is how many times the model runs through the training data. Running too few epochs will under fit the model, running too many will overfit. Use callbacks to find the optimum number of epochs - but this will change depending on other input parameters!
 
 # %%
 # define number of epochs
-num_epochs = 10
+num_epochs = 200
 
 # %% [markdown]
 # ### Batch size
-#
-# The batch size is the number of samples propagated through each epoch. For example, if you have `batch_size = 100` then the model is trained using the first 100 training tiles, then it takes the next 100 samples and trains the model again etc. Using batch sizes smaller than the sample size requires less memory and trains the model quicker in its mini-batches, as weights are updated after each batch.
-#
-# The larger the batch size the better but the more memory it will use.
-#
-# [32, 64]- Good starters
-#
-# [32, 64] - CPU
-#
-# [128, 256] - GPU territory
 
 # %%
 # define batch size
@@ -433,29 +386,12 @@ batch_size = 50
 
 # %% [markdown]
 # ### Callbacks
-# Performs actions at the beginning or end of an epoch or batch. The ones used here are early stopping to monitor how the model is performing, if fit isn't improving over epochs then the model will stop (to prevent overfitting, although note will run for 4 more epochs to check it was correct - this is the patience parameter and can be adjusted). The parameter used to monitor if the model has reached it's best is validation loss. Also saving data to tensorboard logs.
 
 # %%
 callbacks = [
     tf.keras.callbacks.EarlyStopping(patience=4, monitor="val_loss"),
     tf.keras.callbacks.TensorBoard(log_dir="logs"),
 ]
-
-# %% [markdown]
-# ### Saving model parameters
-#
-
-# %%
-runid = ""
-
-# %%
-conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nhue_shift = {hue_shift_value},\nbrightness = {brightness_factor},\ncontrast = {contrast_factor}, \ninclude_hue_adjustment = {include_hue_adjustment}\ninclude_backgrounds = {include_backgrounds}\ninclude_brightness_adjustments = {include_brightness_adjustments}\ninclude_contrast_adjustments = {include_contrast_adjustments}\nstacked_img_num = {all_stacked_masks.shape[0]}"
-
-print(conditions)
-
-conditions_filename = outputs_dir / f"{runid}_conditions.txt"
-with open(conditions_filename, "w") as f:
-    f.write(conditions)
 
 # %% [markdown]
 # ### Metrics
@@ -471,22 +407,21 @@ metrics = ["accuracy", jacard_coef]
 model = get_model()
 
 # %%
-# custom loss
-# setting parameters for custom loss
-weights_distance = distance_weights
-weights_size = size_weights
+# choose loss function
+loss_function = "custom"  # specify the loss function you want to use: "custom", "combined", "segmentation_models"
 
+optimizer = "adam"  # specific the optimizer you want to use
 
-# setting weights for emphasis on loss
-weights_ce = 1
-weights_dice = (
-    1  # if accuracy low trying increasing to place more emphasis on Dice loss
-)
-weights_focal = 1  # helps deal with imbalanced data. Range from 0.5 to 5
-
-model.compile(
-    optimizer="adam",
-    loss=lambda y_true, y_pred: weighted_multi_class_loss(
+# %%
+if loss_function == "custom":
+    weights_distance = distance_weights
+    weights_size = size_weights
+    weights_ce = 1
+    weights_dice = (
+        1  # if accuracy low trying increasing to place more emphasis on Dice loss
+    )
+    weights_focal = 1  # helps deal with imbalanced data. Range from 0.5 to 5
+    loss = lambda y_true, y_pred: weighted_multi_class_loss(
         y_true,
         y_pred,
         weights_distance,
@@ -494,36 +429,41 @@ model.compile(
         weights_ce,
         weights_dice,
         weights_focal,
-    ),
-    metrics=metrics,
-)
+    )
+
+elif loss_function == "segmentation_models":
+    loss = sm.losses.DiceLoss(class_weights=size_weights) + (
+        1 * sm.losses.CategoricalFocalLoss()
+    )
+
+elif loss_function == "combined":
+    loss = ([focal_loss, dice_loss],)
+    loss_weights = ([0.5, 0.5],)
+
 
 # %%
-# combined focal and dice
-model.compile(
-    optimizer="adam",
-    loss=[focal_loss, dice_loss],
-    loss_weights=[0.5, 0.5],
-    metrics=metrics,
-)
+model.compile(optimizer=optimizer, loss=loss, metrics=metrics)
+
+# %% [markdown]
+# ### Saving model parameters
+#
 
 # %%
-# segmentation models loss functions
-dice_loss = sm.losses.DiceLoss(
-    weights=frequency_weights
-)  # corrects for class imbalance
-focal_loss = sm.losses.CategoricalFocalLoss()
-# combined loss function
-total_loss = dice_loss + (1 * focal_loss)
+runid = "phase_1_w_1_np_21_06_23"
 
+# %%
+conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_img_num = {all_stacked_masks.shape[0]},\nhue_shift = {hue_shift_value},\nbrightness = {brightness_factor},\ncontrast = {contrast_factor},\nloss_function = {loss_function}"
+print(conditions)
+
+# %%
+conditions_filename = outputs_dir / f"{runid}_conditions.txt"
+with open(conditions_filename, "w") as f:
+    f.write(conditions)
 
 # %% [markdown]
 # ## Model <a name="model"></a>
 
 # %%
-# model.compile(optimizer="adam", loss=total_loss, metrics=metrics)
-# model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=metrics)
-
 model.summary()
 
 history1 = model.fit(
@@ -542,7 +482,7 @@ history1 = model.fit(
 # %tensorboard --logdir logs/
 
 # %% [markdown]
-# #### Saving output
+# ### Saving output
 
 # %%
 history = history1
