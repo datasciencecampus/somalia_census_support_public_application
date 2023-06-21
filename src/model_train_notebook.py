@@ -597,6 +597,7 @@ plt.show()
 import pandas as pd
 import json
 
+
 def compute_class_counts(y_pred, y_actual):
     """
     Compute the counts of each class in each tile for predicted and test arrays.
@@ -604,6 +605,7 @@ def compute_class_counts(y_pred, y_actual):
     Args:
         y_pred (ndarray): Predicted array with shape (batch_size, height, width, num_classes).
         y_test (ndarray): Actual array with shape (batch_size, height, width, num_classes).
+
 
     Returns:
         DataFrame: Pandas DataFrame containing the counts of each class in each sample.
@@ -621,6 +623,7 @@ def compute_class_counts(y_pred, y_actual):
         feature_data = json.load(f)
     
     # Counts predicted arrays using connected Connected Components
+
     for tile_index in range(y_pred.shape[0]):
         tile_counts_pred = {}
         tile_counts_actual = {}
@@ -655,6 +658,7 @@ def compute_class_counts(y_pred, y_actual):
     df = pd.DataFrame(columns=["Tile"] + list(class_labels.values()))
   
     # Populate the DataFrame with the actual counts for each class in each tile
+
     for tile_index in range(y_pred.shape[0]):
         tile_counts_pred = class_counts_pred[tile_index]
         tile_counts_actual = class_counts_actual[tile_index]
