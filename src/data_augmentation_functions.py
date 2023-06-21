@@ -6,7 +6,7 @@ import numpy as np
 import colorsys
 
 
-def stack_array(directory, validation_area=None):
+def stack_array(directory, validation_area=None, expanded_outputs=False):
     """
 
     Stack all .npy files in the specified directory (excluding files ending with "background.npy"),
@@ -34,12 +34,14 @@ def stack_array(directory, validation_area=None):
 
     # empty list for appending originals
     array_list = []
+    # File names for arrays being stacked
+    filenames = []
 
     # load each .npy and append to list
     for file in array_files:
         np_array = np.load(file)
         array_list.append(np_array)
-
+        filenames.append(file.stem)
     # create a rotated version of each array and stack along the same axis
     rotations = []
     for i in range(4):
@@ -58,11 +60,16 @@ def stack_array(directory, validation_area=None):
 
     # stack the original arrays, rotated versions and mirror versions
     stacked_images = np.concatenate([array_list] + rotations + mirrors, axis=0)
+    # Tile repeats the pattern, repeat would order them incorrectly.
+    stacked_filenames = np.tile(filenames, 9)
+    
+    if expanded_outputs:
+        return stacked_images, stacked_filenames
+    else:
+        return stacked_images
 
-    return stacked_images
 
-
-def stack_background_arrays(directory):
+def stack_background_arrays(directory, expanded_outputs=False):
     """
     Load all .npy files ending with 'background.npy' in the specified directory,
     then sort alphabetically, and return a list of the loaded arrays.
@@ -82,13 +89,20 @@ def stack_background_arrays(directory):
 
     # empty list for appending loaded arrays
     background_arrays = []
+    
+    # empty list or appending file names
+    background_filenames = []
 
     # load each .npy and append to list
     for file in background_files:
         np_array = np.load(file)
         background_arrays.append(np_array)
-
-    return background_arrays
+        background_filenames.append(file.stem)
+    
+    if expanded_outputs:
+        return background_arrays, background_filenames
+    else:
+        return background_arrays
 
 
 def stack_array_with_validation(directory, validation_area):

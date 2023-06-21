@@ -155,3 +155,75 @@ def training_data_summary(mask_dir):
     )
 
     return training_data, value_counts, structure_stats
+
+
+# Takes in an open geoJSON file, assigns counts to each feature
+def count_unique_features(geojson_file):
+    feature_counts = {}
+    for feature in geojson_file["Type"]:
+        if feature in feature_counts:
+            feature_counts[feature] += 1
+        else:
+            feature_counts[feature] = 1
+    return feature_counts
+
+
+def process_geojson_files(mask_dir, img_dir, building_class_list, img_size):
+    """
+    Process GeoJSON files in the given directory.
+
+    Args:
+        mask_dir (str): Directory containing GeoJSON files.
+        img_dir (str): Directory containing image files.
+        building_class_list (list): List of building classes.
+        img_size (int): Size of the images.
+
+    Returns:
+        dict: Dictionary containing features information for each tile.
+
+    """
+
+    # create features dictionary
+    features_dict = {}
+
+    # loop through the GeoJSON files
+    for mask_path in mask_dir.glob("*.geojson"):
+        mask_filename = Path(mask_path).stem
+
+        # load the GeoJSON into a GeoPandas dataframe
+        mask_gdf = gpd.read_file(mask_path)
+
+        # add a 'Type' column if it doesn't exist (should be background tiles only)
+        mask_gdf["Type"] = mask_gdf.get("Type", "")
+
+        # replace values in 'Type' column
+        mask_gdf["Type"].replace(
+            {"House": "Building", "Service": "Building"}, inplace=True
+        )
+
+        # define corresponding image filename
+        image_filename = f"{mask_filename}_bgr.tif"
+        image_file = img_dir.joinpath(image_filename)
+
+        # create rasterized training image
+        segmented_training_arr = rasterize_training_data(
+            mask_gdf,
+            image_file,
+            building_class_list,
+        )
+
+        # re-sizing to img_size (defined above as 384)
+        normalised_training_arr = segmented_training_arr[0:img_size, 0:img_size]
+
+        # save the NumPy array
+        np.save(mask_dir.joinpath(f"{mask_filename}.npy"), normalised_training_arr)
+
+        # Add Feature counts for this tiles into features dictionary
+        if mask_path.name.endswith("background.geojson"):
+            unique_features = {"Building": 0, "Tent": 0}
+        else:
+            unique_features = count_unique_features(mask_gdf)
+
+        features_dict[mask_filename] = unique_features
+
+    return features_dict
