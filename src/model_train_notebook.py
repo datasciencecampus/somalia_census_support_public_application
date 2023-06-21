@@ -181,13 +181,14 @@ if include_backgrounds:
 all_stacked_filenames = np.concatenate(
     [stacked_filenames] + [background_filenames], axis=0
 )
+
 # Repeats the stacked_filenames to match the number of augmentations
 stacked_filenames = np.tile(stacked_filenames, 3)
+
 # Concatenates the remainder
 all_stacked_filenames = np.concatenate(
     [all_stacked_filenames] + [stacked_filenames], axis=0
 )
-all_stacked_filenames.shape
 
 # %% [markdown]
 # #### Sense checking hue/brightness/contrast
@@ -421,7 +422,7 @@ model = get_model()
 # choose loss function
 loss_function = "combined"  # specify the loss function you want to use: "combined", "segmentation_models, focal_tversky"
 
-optimizer = "adam"  # specific the optimizer you want to use
+optimizer = "adam"  # specify the optimizer you want to use
 
 metrics = ["accuracy", jacard_coef]  # specific the metrics
 
