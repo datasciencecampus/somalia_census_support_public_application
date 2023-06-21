@@ -506,10 +506,12 @@ y_pred = model.predict(X_test)
 X_test_filename = f"{runid}_xtest.npy"
 y_pred_filename = f"{runid}_ypred.npy"
 y_test_filename = f"{runid}_ytest.npy"
+filenames_test_filename = f"{runid}_filenamestest.npy"
 
 np.save(outputs_dir.joinpath(X_test_filename), X_test)
 np.save(outputs_dir.joinpath(y_pred_filename), y_pred)
 np.save(outputs_dir.joinpath(y_test_filename), y_test)
+np.save(outputs_dir.joinpath(filenames_test_filename), filenames_test)
 
 # %% [markdown]
 # ## Outputs <a name="output"></a>
