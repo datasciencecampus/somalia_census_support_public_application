@@ -41,11 +41,6 @@
 # %% [markdown]
 # ### segmentation_models framework
 
-# %%
-# choosing segmentation_models framework
-
-# %env SM_FRAMEWORK = tf.keras
-
 # %% [markdown]
 # ### Import libraries & custom functions
 
@@ -405,7 +400,7 @@ model = get_model()
 
 # %%
 # choose loss function
-loss_function = "custom"  # specify the loss function you want to use: "custom", "combined", "segmentation_models, focal_tversky"
+loss_function = "focal_tversky"  # specify the loss function you want to use: "custom", "combined", "segmentation_models, focal_tversky"
 
 optimizer = "adam"  # specific the optimizer you want to use
 
@@ -416,7 +411,7 @@ if loss_function == "custom":
     loss = get_custom_loss(distance_weights, size_weights)
 
 elif loss_function == "segmentation_models":
-    loss = get_sm_loss()
+    loss = get_sm_loss(size_weights)
 
 elif loss_function == "combined":
     loss = get_combined_loss()
@@ -553,7 +548,7 @@ print("Mean IoU =", IOU_keras.result().numpy())
 # predict for a few images
 
 # test_img_number = random.randint(0, len(X_test))
-test_img_number = 1
+test_img_number = 2
 test_img = X_test[test_img_number]
 ground_truth = y_test_argmax[test_img_number]
 # test_img_norm=test_img[:,:,0][:,:,None]
@@ -561,18 +556,18 @@ test_img_input = np.expand_dims(test_img, 0)
 prediction = model.predict(test_img_input)
 predicted_img = np.argmax(prediction, axis=3)[0, :, :]
 
-# %%
-plt.figure(figsize=(12, 8))
-plt.subplot(231)
-plt.title("Testing Image")
-plt.imshow(test_img[:, :, :3])
-plt.subplot(232)
-plt.title("Testing Label")
-plt.imshow(ground_truth)
-plt.subplot(233)
-plt.title("Prediction on test image")
-plt.imshow(predicted_img)
-plt.show()
+# %% [raw]
+# plt.figure(figsize=(12, 8))
+# plt.subplot(231)
+# plt.title("Testing Image")
+# plt.imshow(test_img[:, :, :3])
+# plt.subplot(232)
+# plt.title("Testing Label")
+# plt.imshow(ground_truth)
+# plt.subplot(233)
+# plt.title("Prediction on test image")
+# plt.imshow(predicted_img)
+# plt.show()
 
 # %% [markdown]
 # ### Confusion Matrix

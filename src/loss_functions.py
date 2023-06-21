@@ -5,7 +5,7 @@ import os
 os.environ["SM_FRAMEWORK"] = "tf.keras"
 
 from tensorflow.keras import backend as K
-import numpy as np
+import tensorflow as tf
 import segmentation_models as sm
 
 
@@ -64,28 +64,28 @@ def focal_tversky_loss(y_true, y_pred, alpha=0.7, beta=0.3, gamma=1.0, smooth=1e
     Focal Tversky loss
 
     Args:
-        y_true (array-like): The ground truth segmentation mask.
-        y_pred (array-like): The predicted segmentation mask.
+        y_true (tensor): The ground truth segmentation mask.
+        y_pred (tensor): The predicted segmentation mask.
         alpha (float, optional): Weight of false negatives. Defaults to 0.7.
         beta (float, optional): Weight of false positives. Defaults to 0.3.
         gamma (float, optional): Focusing paramter. Defaults to 1.0.
         smooth (float, optional): Smoothing term to avoid division by zero. Defaults to 1e-6.
 
     Returns:
-        array-like: The Focal Tversky loss.
+        tensor: The Focal Tversky loss.
 
     """
 
-    y_true_pos = np.ndarray.flatten(y_true)
-    y_pred_pos = np.ndarray.flatten(y_pred)
-    true_pos = np.sum(y_true_pos * y_pred_pos)
-    false_neg = np.sum(y_true_pos * (1 - y_pred_pos))
-    false_pos = np.sum((1 - y_true_pos) * y_pred_pos)
+    y_true_pos = tf.keras.backend.flatten(y_true)
+    y_pred_pos = tf.keras.backend.flatten(y_pred)
+    true_pos = tf.reduce_sum(y_true_pos * y_pred_pos)
+    false_neg = tf.reduce_sum(y_true_pos * (1 - y_pred_pos))
+    false_pos = tf.reduce_sum((1 - y_true_pos) * y_pred_pos)
 
     tversky_coef = (true_pos + smooth) / (
         true_pos + alpha * false_neg + beta * false_pos + smooth
     )
-    focal_tversky = np.power((1 - tversky_coef), gamma)
+    focal_tversky = tf.pow((1 - tversky_coef), gamma)
     loss = focal_tversky
 
     return loss
