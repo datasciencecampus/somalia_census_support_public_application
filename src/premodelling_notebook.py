@@ -44,7 +44,7 @@
 
 from pathlib import Path
 
-import geopandas as gpd
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -57,8 +57,8 @@ from image_processing_functions import (
 )
 from mask_processing_functions import (
     check_mask_files,
-    rasterize_training_data,
     training_data_summary,
+    process_geojson_files,
 )
 
 # %% [markdown]
@@ -130,49 +130,13 @@ check_img_files(img_dir)
 building_class_list = ["Building", "Tent"]
 
 # %%
-# building_class_list = ["Small", "Large", "Tent"]
+features_dict = process_geojson_files(mask_dir, img_dir, building_class_list, img_size)
 
 # %%
-# def determine_type(area):
-#    if area <25:
-#        return 'Small'
-#    else:
-#        return 'Large'
-
-# %%
-# loop through the GeoJSON files
-for mask_path in mask_dir.glob("*.geojson"):
-
-    # load the GeoJSON into a GeoPandas dataframe
-    mask_gdf = gpd.read_file(mask_path)
-
-    # add a 'Type' column if it doesn't exist (should be background tiles only)
-    if "Type" not in mask_gdf.columns:
-        mask_gdf["Type"] = ""
-
-    # replace values in 'Type' column
-    mask_gdf["Type"].replace({"House": "Building", "Service": "Building"}, inplace=True)
-
-    # separate building based on size
-    # mask_gdf.loc[mask_gdf['Type'] == 'Building', 'Type'] = mask_gdf[mask_gdf['Type'] == 'Building'].geometry.area.apply(determine_type)
-
-    # define corresponding image filename
-    mask_filename = Path(mask_path).stem
-    image_filename = f"{mask_filename}_bgr.tif"
-    image_file = img_dir.joinpath(image_filename)
-
-    # create rasterized training image
-    segmented_training_arr = rasterize_training_data(
-        mask_gdf,
-        image_file,
-        building_class_list,
-    )
-
-    # re-sizing to img_size (defined above as 384)
-    normalised_training_arr = segmented_training_arr[0:img_size, 0:img_size]
-
-    # save the NumPy array
-    np.save(mask_dir.joinpath(f"{mask_filename}.npy"), normalised_training_arr)
+# Output the completed features dictionary to a JSON for use in outputs notebook
+output_file = mask_dir.joinpath("feature_dict.json")
+with open(output_file, "w") as f:
+    json.dump(features_dict, f, indent=4)
 
 # %%
 # checking shape of .npy files matches

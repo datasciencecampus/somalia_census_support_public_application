@@ -137,11 +137,14 @@ def multi_unet_model(n_classes=4, IMG_HEIGHT=256, IMG_WIDTH=256, IMG_CHANNELS=1)
     return model
 
 
+# +
 def split_data(
     all_stacked_images,
     stacked_masks_cat,
+    all_stacked_filenames=None,
     validation_images=None,
     validation_masks_cat=None,
+
 ):
     if validation_images is not None:
 
@@ -151,7 +154,7 @@ def split_data(
         X_test = validation_images
         y_test = validation_masks_cat
     else:
-        X_train, X_test, y_train, y_test = train_test_split(
-            all_stacked_images, stacked_masks_cat, test_size=0.20, random_state=42
+        X_train, X_test, y_train, y_test, filename_train, filename_test = train_test_split(
+            all_stacked_images, stacked_masks_cat, all_stacked_filenames, test_size=0.20, random_state=42
         )
-    return X_train, X_test, y_train, y_test
+    return X_train, X_test, y_train, y_test, filename_train, filename_test
