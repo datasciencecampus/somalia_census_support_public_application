@@ -2,6 +2,7 @@
 
 
 from tensorflow.keras import backend as K
+import numpy as np
 
 
 def dice_loss(y_true, y_pred):
@@ -50,5 +51,37 @@ def weighted_multi_class_loss(
     loss = weights * (
         weights_ce * loss_ce + weights_dice * loss_dice + weights_focal * loss_focal
     )
+
+    return loss
+
+
+def focal_tversky_loss(y_true, y_pred, alpha=0.7, beta=0.3, gamma=1.0, smooth=1e-06):
+    """
+    Focal Tversky loss
+
+    Args:
+        y_true (array-like): The ground truth segmentation mask.
+        y_pred (array-like): The predicted segmentation mask.
+        alpha (float, optional): Weight of false negatives. Defaults to 0.7.
+        beta (float, optional): Weight of false positives. Defaults to 0.3.
+        gamma (float, optional): Focusing paramter. Defaults to 1.0.
+        smooth (float, optional): Smoothing term to avoid division by zero. Defaults to 1e-6.
+
+    Returns:
+        array-like: The Focal Tversky loss.
+
+    """
+
+    y_true_pos = np.ndarray.flatten(y_true)
+    y_pred_pos = np.ndarray.flatten(y_pred)
+    true_pos = np.sum(y_true_pos * y_pred_pos)
+    false_neg = np.sum(y_true_pos * (1 - y_pred_pos))
+    false_pos = np.sum((1 - y_true_pos) * y_pred_pos)
+
+    tversky_coef = (true_pos + smooth) / (
+        true_pos + alpha * false_neg + beta * false_pos + smooth
+    )
+    focal_tversky = np.power((1 - tversky_coef), gamma)
+    loss = focal_tversky
 
     return loss
