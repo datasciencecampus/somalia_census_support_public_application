@@ -74,12 +74,7 @@ from weight_functions import (
     calculate_building_distance_weights,
 )
 from multi_class_unet_model_build import jacard_coef, multi_unet_model, split_data
-from loss_functions import (
-    get_custom_loss,
-    get_sm_loss,
-    get_combined_loss,
-    get_focal_tversky_loss,
-)
+from loss_functions import get_sm_loss, get_combined_loss, get_focal_tversky_loss
 
 # %% [markdown]
 # ### Set-up filepaths
@@ -400,7 +395,7 @@ model = get_model()
 
 # %%
 # choose loss function
-loss_function = "combined"  # specify the loss function you want to use: "custom", "combined", "segmentation_models, focal_tversky"
+loss_function = "combined"  # specify the loss function you want to use: "combined", "segmentation_models, focal_tversky"
 
 optimizer = "adam"  # specific the optimizer you want to use
 
@@ -409,10 +404,7 @@ metrics = ["accuracy", jacard_coef]  # specific the metrics
 # %%
 loss_weights = None
 
-if loss_function == "custom":
-    loss = get_custom_loss(distance_weights, size_weights)
-
-elif loss_function == "segmentation_models":
+if loss_function == "segmentation_models":
     loss = get_sm_loss(size_weights)
 
 elif loss_function == "combined":
