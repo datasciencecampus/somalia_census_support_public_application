@@ -28,6 +28,7 @@
 # 1. ##### [Set-up](#setup)
 # 1. ##### [Validation setting](#validation)
 # 1. ##### [Data augmentation](#dataaug)
+# 1. ##### [Training parameters](#trainingparameters)
 # 1. ##### [Weights](#weights)
 # 1. ##### [Model parameters](#modelparameters)
 # 1. ##### [Model](#model)
@@ -56,7 +57,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import segmentation_models as sm
 import tensorflow as tf
 from keras.metrics import MeanIoU
 from keras.utils import to_categorical
@@ -79,7 +79,12 @@ from weight_functions import (
     calculate_building_distance_weights,
 )
 from multi_class_unet_model_build import jacard_coef, multi_unet_model, split_data
-from loss_functions import dice_loss, focal_loss, weighted_multi_class_loss
+from loss_functions import (
+    get_custom_loss,
+    get_sm_loss,
+    get_combined_loss,
+    get_focal_tversky_loss,
+)
 
 # %% [markdown]
 # ### Set-up filepaths
@@ -228,7 +233,6 @@ stacked_masks.shape
 
 # %%
 # if any of the above image augmentations have been performed then you need corresponding masks
-
 mask_hue, mask_brightness, mask_contrast = [np.copy(stacked_masks) for _ in range(3)]
 
 # %% [markdown]
@@ -277,7 +281,6 @@ n_classes
 # %%
 # encode building classes into training mask arrays
 stacked_masks_cat = to_categorical(all_stacked_masks, num_classes=n_classes)
-
 stacked_masks_cat.shape
 
 # %%
@@ -408,38 +411,22 @@ model = get_model()
 
 # %%
 # choose loss function
-loss_function = "custom"  # specify the loss function you want to use: "custom", "combined", "segmentation_models"
+loss_function = "custom"  # specify the loss function you want to use: "custom", "combined", "segmentation_models, focal_tversky"
 
 optimizer = "adam"  # specific the optimizer you want to use
 
 # %%
 if loss_function == "custom":
-    weights_distance = distance_weights
-    weights_size = size_weights
-    weights_ce = 1
-    weights_dice = (
-        1  # if accuracy low trying increasing to place more emphasis on Dice loss
-    )
-    weights_focal = 1  # helps deal with imbalanced data. Range from 0.5 to 5
-    loss = lambda y_true, y_pred: weighted_multi_class_loss(
-        y_true,
-        y_pred,
-        weights_distance,
-        weights_size,
-        weights_ce,
-        weights_dice,
-        weights_focal,
-    )
+    loss = get_custom_loss(distance_weights, size_weights)
 
 elif loss_function == "segmentation_models":
-    loss = sm.losses.DiceLoss(class_weights=size_weights) + (
-        1 * sm.losses.CategoricalFocalLoss()
-    )
+    loss = get_sm_loss()
 
 elif loss_function == "combined":
-    loss = ([focal_loss, dice_loss],)
-    loss_weights = ([0.5, 0.5],)
+    loss = get_combined_loss()
 
+elif loss_function == "focal_tversky":
+    loss = get_focal_tversky_loss()
 
 # %%
 model.compile(optimizer=optimizer, loss=loss, metrics=metrics)

@@ -1,8 +1,12 @@
 """ Script for loss functions """
 
+import os
+
+os.environ["SM_FRAMEWORK"] = "tf.keras"
 
 from tensorflow.keras import backend as K
 import numpy as np
+import segmentation_models as sm
 
 
 def dice_loss(y_true, y_pred):
@@ -84,4 +88,36 @@ def focal_tversky_loss(y_true, y_pred, alpha=0.7, beta=0.3, gamma=1.0, smooth=1e
     focal_tversky = np.power((1 - tversky_coef), gamma)
     loss = focal_tversky
 
+    return loss
+
+
+def get_custom_loss(weights_distance, weights_size):
+    weights_ce = 1
+    weights_dice = (
+        1  # if accuracy low trying increasing to place more emphasis on Dice loss
+    )
+    weights_focal = 1  # helps deal with imbalanced data. Range from 0.5 to 5
+    return lambda y_true, y_pred: weighted_multi_class_loss(
+        y_true,
+        y_pred,
+        weights_distance,
+        weights_size,
+        weights_ce,
+        weights_dice,
+        weights_focal,
+    )
+
+
+def get_sm_loss(class_weights):
+    return sm.losses.DiceLoss(class_weights) + sm.losses.CategoricalFocalLoss()
+
+
+def get_combined_loss():
+    loss = [focal_loss, dice_loss]
+    loss_weights = [0.5, 0.5]
+    return (loss, loss_weights)
+
+
+def get_focal_tversky_loss():
+    loss = focal_tversky_loss
     return loss
