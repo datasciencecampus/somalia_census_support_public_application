@@ -397,12 +397,6 @@ callbacks = [
 ]
 
 # %% [markdown]
-# ### Metrics
-
-# %%
-metrics = ["accuracy", jacard_coef]
-
-# %% [markdown]
 # ### Loss functions
 
 # %%
@@ -414,6 +408,8 @@ model = get_model()
 loss_function = "custom"  # specify the loss function you want to use: "custom", "combined", "segmentation_models, focal_tversky"
 
 optimizer = "adam"  # specific the optimizer you want to use
+
+metrics = ["accuracy", jacard_coef]  # specific the metrics
 
 # %%
 if loss_function == "custom":
@@ -465,6 +461,7 @@ history1 = model.fit(
 )
 
 # %%
+# optional
 # %load_ext tensorboard
 # %tensorboard --logdir logs/
 
