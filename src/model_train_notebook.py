@@ -329,9 +329,9 @@ if "validation_masks_cat" not in locals() or validation_masks_cat is None:
 X_train, X_test, y_train, y_test, filenames_train, filenames_test = split_data(
     all_stacked_images,
     stacked_masks_cat,
-    validation_images,
-    validation_masks_cat,
     all_stacked_filenames,
+    validation_images,
+    validation_masks_cat
 )
 
 # %%
