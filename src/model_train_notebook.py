@@ -177,18 +177,27 @@ if include_backgrounds:
 # #### Expand Filenames List
 
 # %%
+all_stacked_filenames = []
 # Order of Final image array needs to be followed
-all_stacked_filenames = np.concatenate(
-    [stacked_filenames] + [background_filenames], axis=0
-)
+if include_backgrounds:
+    all_stacked_filenames = np.concatenate(
+        [stacked_filenames] + [background_filenames], axis=0
+    )
+# Counts how many augmentations have been carried out
+total_augs = sum(1 for variable in 
+                 [include_hue_adjustment, 
+                  include_brightness_adjustments, 
+                  include_contrast_adjustments] 
+                 if variable)
 
 # Repeats the stacked_filenames to match the number of augmentations
-stacked_filenames = np.tile(stacked_filenames, 3)
+stacked_filenames = np.tile(stacked_filenames, total_augs)
 
 # Concatenates the remainder
 all_stacked_filenames = np.concatenate(
     [all_stacked_filenames] + [stacked_filenames], axis=0
 )
+all_stacked_filenames.shape
 
 # %% [markdown]
 # #### Sense checking hue/brightness/contrast
