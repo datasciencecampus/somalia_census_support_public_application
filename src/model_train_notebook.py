@@ -39,9 +39,6 @@
 # ## Set-up <a name="setup"></a>
 
 # %% [markdown]
-# ### segmentation_models framework
-
-# %% [markdown]
 # ### Import libraries & custom functions
 
 # %%
@@ -53,9 +50,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from keras.metrics import MeanIoU
 from keras.utils import to_categorical
-from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from sklearn.utils.class_weight import compute_class_weight
 
 # %%
@@ -184,11 +179,15 @@ if include_backgrounds:
         [stacked_filenames] + [background_filenames], axis=0
     )
 # Counts how many augmentations have been carried out
-total_augs = sum(1 for variable in 
-                 [include_hue_adjustment, 
-                  include_brightness_adjustments, 
-                  include_contrast_adjustments] 
-                 if variable)
+total_augs = sum(
+    1
+    for variable in [
+        include_hue_adjustment,
+        include_brightness_adjustments,
+        include_contrast_adjustments,
+    ]
+    if variable
+)
 
 # Repeats the stacked_filenames to match the number of augmentations
 stacked_filenames = np.tile(stacked_filenames, total_augs)
@@ -340,7 +339,7 @@ X_train, X_test, y_train, y_test, filenames_train, filenames_test = split_data(
     stacked_masks_cat,
     all_stacked_filenames,
     validation_images,
-    validation_masks_cat
+    validation_masks_cat,
 )
 
 # %%
@@ -402,7 +401,7 @@ def get_model():
 
 # %%
 # define number of epochs
-num_epochs = 1
+num_epochs = 5
 
 # %% [markdown]
 # ### Batch size
