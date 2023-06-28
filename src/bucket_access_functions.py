@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.6
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -19,26 +19,6 @@
 # libraries
 from google.cloud import storage
 from pathlib import Path
-
-# %%
-# set data directory
-data_dir = Path.cwd().parent.joinpath("data")
-
-# set model and output directories
-models_dir = Path.cwd().parent.joinpath("models")
-outputs_dir = Path.cwd().parent.joinpath("outputs")
-
-# set training_data directory within data folder
-training_data_dir = data_dir.joinpath("training_data")
-
-# set img and mask directories within training_data directory
-img_dir = training_data_dir.joinpath("img")
-mask_dir = training_data_dir.joinpath("mask")
-
-# %%
-# work-in-progress bucket
-bucket_name = "ons-net-zero-analysis-prod-somalia-wip"
-destination_folder = "test/"
 
 
 # %% [markdown]
@@ -98,7 +78,7 @@ def move_folder_to_bucket(source_folder_path, bucket_name, destination_folder_na
 
 
 # %%
-def delete_folder_from_bucket(bucket_name, fodler_name):
+def delete_folder_from_bucket(bucket_name, folder_name):
     client = storage.Client()
     bucket = client.get_bucket(bucket_name)
 
@@ -125,18 +105,36 @@ def read_files_in_folder(bucket_name, folder_name):
 def download_folder_from_bucket(bucket_name, folder_name, destination_folder):
     client = storage.Client()
     bucket = client.get_bucket(bucket_name)
-    
+
     blobs = bucket.list_blobs(prefix=folder_name)
-    
+
     for blob in blobs:
-        if not blob.name.endswith('/'):
+        if not blob.name.endswith("/"):
             relative_path = Path(blob.name).relative_to(folder_name)
             destination_path = Path(destination_folder) / relative_path
-            
+
             destination_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             blob.download_to_filename(str(destination_path))
             print(f"File {blob.name} downloaded to {destination_path}")
+
+
+# %%
+def download_run_from_bucket(bucket_name, folder_name, destination_folder, run_id):
+    client = storage.Client()
+    bucket = client.get_bucket(bucket_name)
+
+    blobs = bucket.list_blobs(prefix=folder_name)
+    for blob in blobs:
+        if not blob.name.endswith("/"):
+            relative_path = Path(blob.name).relative_to(folder_name)
+            destination_path = Path(destination_folder) / relative_path
+
+            destination_path.parent.mkdir(parents=True, exist_ok=True)
+
+            if blob.name.startswith(folder_name + "/" + run_id):
+                blob.download_to_filename(str(destination_path))
+                print(f"File {blob.name} downloaded to {destination_path}")
 
 
 # %% [markdown]
@@ -145,41 +143,41 @@ def download_folder_from_bucket(bucket_name, folder_name, destination_folder):
 # %% [markdown]
 # ### Files
 
-# %%
-# for file testing
-runid = "outputs_alt_test"
-X_test_filename = f"{runid}_xtest.npy"
-X_test_path = outputs_dir.joinpath(X_test_filename)
+# %% [markdown]
+# # for file testing
+# runid = "outputs_alt_test"
+# X_test_filename = f"{runid}_xtest.npy"
+# X_test_path = outputs_dir.joinpath(X_test_filename)
+#
+# X_test_path
 
-X_test_path
+# %% [markdown]
+# move_file_to_bucket(X_test_path, bucket_name)
 
-# %%
-move_file_to_bucket(X_test_path, bucket_name)
+# %% [markdown]
+# delete_file_from_bucket(bucket_name, "test/X_test.npy")
 
-# %%
-delete_file_from_bucket(bucket_name, "test/X_test.npy")
-
-# %%
-read_files_in_bucket(bucket_name)
+# %% [markdown]
+# read_files_in_bucket(bucket_name)
 
 # %% [markdown]
 # #### Folders
 
-# %%
-destination_folder_name = "mask"
-move_folder_to_bucket(mask_dir, bucket_name, destination_folder_name)
+# %% [markdown]
+# destination_folder_name = "mask"
+# move_folder_to_bucket(mask_dir, bucket_name, destination_folder_name)
 
-# %% jupyter={"outputs_hidden": true}
-folder_name = "mask"
-delete_folder_from_bucket(bucket_name, folder_name)
+# %% [markdown] jupyter={"outputs_hidden": true}
+# folder_name = "mask"
+# delete_folder_from_bucket(bucket_name, folder_name)
 
-# %%
-folder_name = "mask"
-read_files_in_folder(bucket_name, folder_name)
+# %% [markdown]
+# folder_name = "mask"
+# read_files_in_folder(bucket_name, folder_name)
 
-# %%
-folder_name = 'mask'
-destination_folder = mask_dir
-download_folder_from_bucket(bucket_name, folder_name, destination_folder)
+# %% [markdown]
+# folder_name = 'mask'
+# destination_folder = mask_dir
+# download_folder_from_bucket(bucket_name, folder_name, destination_folder)
 
 # %%
