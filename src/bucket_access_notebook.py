@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.14.6
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -121,6 +121,24 @@ def read_files_in_folder(bucket_name, folder_name):
             print(f"File: {blob.name}")
 
 
+# %%
+def download_folder_from_bucket(bucket_name, folder_name, destination_folder):
+    client = storage.Client()
+    bucket = client.get_bucket(bucket_name)
+    
+    blobs = bucket.list_blobs(prefix=folder_name)
+    
+    for blob in blobs:
+        if not blob.name.endswith('/'):
+            relative_path = Path(blob.name).relative_to(folder_name)
+            destination_path = Path(destination_folder) / relative_path
+            
+            destination_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            blob.download_to_filename(str(destination_path))
+            print(f"File {blob.name} downloaded to {destination_path}")
+
+
 # %% [markdown]
 # ### In action
 
@@ -158,5 +176,10 @@ delete_folder_from_bucket(bucket_name, folder_name)
 # %%
 folder_name = "mask"
 read_files_in_folder(bucket_name, folder_name)
+
+# %%
+folder_name = 'mask'
+destination_folder = mask_dir
+download_folder_from_bucket(bucket_name, folder_name, destination_folder)
 
 # %%
