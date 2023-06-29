@@ -24,12 +24,12 @@ from keras.models import Model
 from sklearn.model_selection import train_test_split
 
 
-def jacard_coef(y_true, y_pred):
-    y_true_f = K.flatten(y_true)
+def jacard_coef(y_test, y_pred):
+    y_test_f = K.flatten(y_test)
     y_pred_f = K.flatten(y_pred)
-    intersection = K.sum(y_true_f * y_pred_f)
+    intersection = K.sum(y_test_f * y_pred_f)
     return (intersection + 1.0) / (
-        K.sum(y_true_f) + K.sum(y_pred_f) - intersection + 1.0
+        K.sum(y_test_f) + K.sum(y_pred_f) - intersection + 1.0
     )
 
 
@@ -144,7 +144,6 @@ def split_data(
     all_stacked_filenames=None,
     validation_images=None,
     validation_masks_cat=None,
-
 ):
     if validation_images is not None:
 
@@ -154,7 +153,18 @@ def split_data(
         X_test = validation_images
         y_test = validation_masks_cat
     else:
-        X_train, X_test, y_train, y_test, filename_train, filename_test = train_test_split(
-            all_stacked_images, stacked_masks_cat, all_stacked_filenames, test_size=0.20, random_state=42
+        (
+            X_train,
+            X_test,
+            y_train,
+            y_test,
+            filename_train,
+            filename_test,
+        ) = train_test_split(
+            all_stacked_images,
+            stacked_masks_cat,
+            all_stacked_filenames,
+            test_size=0.20,
+            random_state=42,
         )
     return X_train, X_test, y_train, y_test, filename_train, filename_test
