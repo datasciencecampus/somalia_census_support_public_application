@@ -210,6 +210,11 @@ plt.imshow(predicted_img)
 plt.show()
 
 # %%
+class_counts_df = compute_class_counts(y_pred, y_test, filenames_test)
+# class_counts_df = class_counts_df.drop(columns="Background")
+class_counts_df
+
+# %%
 plt.figure(figsize=(12, 8))
 plt.subplot(231)
 plt.title("Testing Image")
@@ -281,8 +286,3 @@ plt.show()
 
 # %% [markdown]
 # ## Compute class outputs
-
-# %%
-class_counts_df = compute_class_counts(y_pred, y_test, filenames_test)
-# class_counts_df = class_counts_df.drop(columns="Background")
-class_counts_df
