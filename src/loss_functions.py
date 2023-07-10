@@ -9,27 +9,27 @@ import tensorflow as tf
 import segmentation_models as sm
 
 
-def dice_loss(y_true, y_pred):
+def dice_loss(y_test, y_pred):
     """Dice loss function."""
     smooth = 1e-5
-    intersection = K.sum(y_true * y_pred)
-    union = K.sum(y_true) + K.sum(y_pred)
+    intersection = K.sum(y_test * y_pred)
+    union = K.sum(y_test) + K.sum(y_pred)
     dice_coef = (2.0 * intersection + smooth) / (union + smooth)
     return 1 - dice_coef
 
 
-def focal_loss(y_true, y_pred, gamma=2.0, alpha=0.25):
+def focal_loss(y_test, y_pred, gamma=2.0, alpha=0.25):
     """Focal loss function"""
     y_pred = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
-    cross_entropy = -y_true * K.log(y_pred)
-    weight = alpha * y_true * K.pow(1 - y_pred, gamma)
+    cross_entropy = -y_test * K.log(y_pred)
+    weight = alpha * y_test * K.pow(1 - y_pred, gamma)
     loss = weight * cross_entropy
 
     return K.mean(loss)
 
 
 def weighted_multi_class_loss(
-    y_true,
+    y_test,
     y_pred,
     weights_distance,
     weights_size,
@@ -40,13 +40,13 @@ def weighted_multi_class_loss(
     """weighted multi-class loss function"""
 
     # cross entropy loss
-    loss_ce = K.sparse_categorical_crossentropy(y_true, y_pred)
+    loss_ce = K.sparse_categorical_crossentropy(y_test, y_pred)
 
     # dice loss
-    loss_dice = dice_loss(y_true, y_pred)
+    loss_dice = dice_loss(y_test, y_pred)
 
     # focal loss
-    loss_focal = focal_loss(y_true, y_pred)
+    loss_focal = focal_loss(y_test, y_pred)
 
     # calculate pixel weights
     weights = weights_distance * weights_size
@@ -59,12 +59,12 @@ def weighted_multi_class_loss(
     return loss
 
 
-def focal_tversky_loss(y_true, y_pred, alpha=0.7, beta=0.3, gamma=1.0, smooth=1e-06):
+def focal_tversky_loss(y_test, y_pred, alpha=0.7, beta=0.3, gamma=1.0, smooth=1e-06):
     """
     Focal Tversky loss
 
     Args:
-        y_true (tensor): The ground truth segmentation mask.
+        y_test (tensor): The ground truth segmentation mask.
         y_pred (tensor): The predicted segmentation mask.
         alpha (float, optional): Weight of false negatives. Defaults to 0.7.
         beta (float, optional): Weight of false positives. Defaults to 0.3.
@@ -76,14 +76,14 @@ def focal_tversky_loss(y_true, y_pred, alpha=0.7, beta=0.3, gamma=1.0, smooth=1e
 
     """
 
-    y_true_pos = tf.keras.backend.flatten(y_true)
+    y_test_pos = tf.keras.backend.flatten(y_test)
     y_pred_pos = tf.keras.backend.flatten(y_pred)
-    true_pos = tf.reduce_sum(y_true_pos * y_pred_pos)
-    false_neg = tf.reduce_sum(y_true_pos * (1 - y_pred_pos))
-    false_pos = tf.reduce_sum((1 - y_true_pos) * y_pred_pos)
+    test_pos = tf.reduce_sum(y_test_pos * y_pred_pos)
+    false_neg = tf.reduce_sum(y_test_pos * (1 - y_pred_pos))
+    false_pos = tf.reduce_sum((1 - y_test_pos) * y_pred_pos)
 
-    tversky_coef = (true_pos + smooth) / (
-        true_pos + alpha * false_neg + beta * false_pos + smooth
+    tversky_coef = (test_pos + smooth) / (
+        test_pos + alpha * false_neg + beta * false_pos + smooth
     )
     focal_tversky = tf.pow((1 - tversky_coef), gamma)
     loss = focal_tversky
@@ -97,8 +97,8 @@ def get_custom_loss(weights_distance, weights_size):
         1  # if accuracy low trying increasing to place more emphasis on Dice loss
     )
     weights_focal = 1  # helps deal with imbalanced data. Range from 0.5 to 5
-    return lambda y_true, y_pred: weighted_multi_class_loss(
-        y_true,
+    return lambda y_test, y_pred: weighted_multi_class_loss(
+        y_test,
         y_pred,
         weights_distance,
         weights_size,
