@@ -34,34 +34,27 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import h5py
-
 from pathlib import Path
+from keras.metrics import MeanIoU
+from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+
+from functions_library import get_folder_paths
 from loss_functions import get_combined_loss
 from multi_class_unet_model_build import jacard_coef
 from model_outputs_functions import compute_class_counts
-
-# from keras.models import load_model
-from keras.metrics import MeanIoU
-from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 
 
 # %% [markdown]
 # ### File directories
 
 # %%
-# set data directory
-data_dir = Path.cwd().parent.joinpath("data")
+folder_dict = get_folder_paths()
 
-# set model and output directories
-models_dir = Path.cwd().parent.joinpath("models")
-outputs_dir = Path.cwd().parent.joinpath("outputs")
-
-# set training_data directory within data folder
-training_data_dir = data_dir.joinpath("training_data")
-
-# set img and mask directories within training_data directory
-img_dir = training_data_dir.joinpath("img")
-mask_dir = training_data_dir.joinpath("mask")
+# Set directories to pull run files from
+models_dir = Path(folder_dict["models_dir"])
+outputs_dir = Path(folder_dict["outputs_dir"])
+img_dir = Path(folder_dict["img_dir"])
+mask_dir = Path(folder_dict["mask_dir"])
 
 # %% [markdown]
 # ## Import data
@@ -210,11 +203,6 @@ plt.imshow(predicted_img)
 plt.show()
 
 # %%
-class_counts_df = compute_class_counts(y_pred, y_test, filenames_test)
-# class_counts_df = class_counts_df.drop(columns="Background")
-class_counts_df
-
-# %%
 plt.figure(figsize=(12, 8))
 plt.subplot(231)
 plt.title("Testing Image")
@@ -226,6 +214,14 @@ plt.subplot(233)
 plt.title("Prediction on test image")
 plt.imshow(y_pred[100])
 plt.show()
+
+# %% [markdown]
+# ## Compute class outputs
+
+# %%
+class_counts_df = compute_class_counts(y_pred, y_test, filenames_test)
+# class_counts_df = class_counts_df.drop(columns="Background")
+class_counts_df
 
 # %% [markdown]
 # ## Confusion Matrix
@@ -283,6 +279,3 @@ display.plot(cmap="cividis", values_format=".2%")
 
 # show the plot
 plt.show()
-
-# %% [markdown]
-# ## Compute class outputs
