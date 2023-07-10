@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import List
+import yaml
 
 
 def setup_sub_dir(data_dir: Path, sub_dir_name: str) -> Path:
@@ -70,3 +71,9 @@ def generate_file_list(
 def list_directories_at_path(dir_path):
     """Return list of subdirectories at given path directory."""
     return [item for item in dir_path.iterdir() if item.is_dir()]
+
+
+def get_folder_paths():
+    with open("../config.yaml", "r") as f:
+        folder_paths = yaml.safe_load(f)
+    return folder_paths
