@@ -1,6 +1,10 @@
+# ## Notebook for exporting data to WIP bucket
+#
+# > More functions including how to delete files are in `bucket_access_functions.py`
+
+from pathlib import Path
 from bucket_access_functions import move_file_to_bucket
 from functions_library import get_folder_paths
-from pathlib import Path
 
 # +
 folder_dict = get_folder_paths()
@@ -15,13 +19,19 @@ bucket_name = folder_dict["wip_bucket"]
 
 run_id = "outputs_alt_test"
 
-# #### Upload the Model to the WIP bucket
+# ### Upload the model to the WIP bucket
 
 for file in model_dir.iterdir():
     if file.name.startswith(run_id):
         move_file_to_bucket(file, bucket_name)
 
-# #### Upload the additional config files to the WIP bucket
+# ### Upload the model outputs to the WIP bucket
+
+for file in output_dir.iterdir():
+    if file.name.startswith(run_id):
+        move_file_to_bucket(file, bucket_name)
+
+# ### Upload the additional config files to the WIP bucket
 
 for file in output_dir.iterdir():
     if file.name.startswith(run_id):
