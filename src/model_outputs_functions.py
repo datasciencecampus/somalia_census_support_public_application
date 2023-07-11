@@ -51,9 +51,9 @@ def calculate_metrics(y_true, y_pred, class_names):
         class_names (list): List of class names.
 
     Returns:
-        dict: Dictionary containing the calculated metrics for each class.
-    """
+        pandas.DataFrame: DataFrame containing the calculated metrics for each class.
 
+    """
     # Calculate the confusion matrix
     conf_mat = confusion_matrix(y_true.ravel(), y_pred.ravel())
 
@@ -62,6 +62,7 @@ def calculate_metrics(y_true, y_pred, class_names):
     precision = np.zeros(num_classes)
     recall = np.zeros(num_classes)
     f1_score = np.zeros(num_classes)
+    accuracy = np.zeros(num_classes)
 
     for i in range(num_classes):
         true_positives = conf_mat[i, i]
@@ -70,25 +71,20 @@ def calculate_metrics(y_true, y_pred, class_names):
         precision[i] = true_positives / (true_positives + false_positives)
         recall[i] = true_positives / (true_positives + false_negatives)
         f1_score[i] = 2 * precision[i] * recall[i] / (precision[i] + recall[i])
-
-    # Calculate the accuracy for each class
-    accuracy = np.zeros(num_classes)
-
-    for i in range(num_classes):
         accuracy[i] = conf_mat[i, i] / np.sum(conf_mat[i, :])
 
-    # Create a dictionary to store the calculated metrics
-    metrics = {}
-
-    for i in range(num_classes):
-        metrics[class_names[i]] = {
-            "Precision": precision[i],
-            "Recall": recall[i],
-            "F1-score": f1_score[i],
-            "Accuracy": accuracy[i],
+    # Create the DataFrame
+    metrics_df = pd.DataFrame(
+        {
+            "Class": class_names,
+            "Precision": precision,
+            "Recall": recall,
+            "F1-score": f1_score,
+            "Accuracy": accuracy,
         }
+    )
 
-    return metrics
+    return metrics_df
 
 
 def plot_confusion_matrix(y_true, y_pred, labels, show_percentages=False):
