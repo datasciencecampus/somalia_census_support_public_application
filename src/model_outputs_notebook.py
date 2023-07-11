@@ -36,12 +36,18 @@ import numpy as np
 import h5py
 from pathlib import Path
 from keras.metrics import MeanIoU
-from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 
 from functions_library import get_folder_paths
 from loss_functions import get_combined_loss
 from multi_class_unet_model_build import jacard_coef
-from model_outputs_functions import compute_class_counts
+from model_outputs_functions import (
+    calculate_metrics,
+    plot_confusion_matrix,
+    remove_rows_by_index,
+    compute_predicted_counts,
+    compute_actual_counts,
+    compute_object_counts,
+)
 
 
 # %% [markdown]
@@ -64,7 +70,7 @@ mask_dir = Path(folder_dict["mask_dir"])
 
 # %%
 # Set runid for outputs
-runid = "outputs_alt_test"
+runid = "phase_1_gpu_1_28_06_23"
 
 
 # %% [markdown]
@@ -76,7 +82,7 @@ model_phase = h5py.File(models_dir.joinpath(model_filename), "r")
 
 # %%
 # check loaded in correctly
-model_phase.keys()
+# model_phase.keys()
 
 # %% [markdown]
 # ### History (epochs)
@@ -122,7 +128,8 @@ total_loss = get_combined_loss()
 model = keras.models.load_model(
     model_phase,
     custom_objects={
-        "dice_loss_plus_1focal_loss": total_loss[1],
+        "dice_loss_plus_1focal_loss": total_loss,
+        "dice_loss_plus_focal_loss": total_loss,
         "focal_loss": total_loss[0],
         "dice_loss": total_loss[1],
         "jacard_coef": jacard_coef,
@@ -189,7 +196,7 @@ test_img_input = np.expand_dims(test_img, 0)
 prediction = model.predict(test_img_input)
 predicted_img = np.argmax(prediction, axis=3)[0, :, :]
 
-# %%
+# argmax
 plt.figure(figsize=(12, 8))
 plt.subplot(231)
 plt.title("Testing Image")
@@ -203,6 +210,7 @@ plt.imshow(predicted_img)
 plt.show()
 
 # %%
+# not argmax
 plt.figure(figsize=(12, 8))
 plt.subplot(231)
 plt.title("Testing Image")
@@ -216,14 +224,6 @@ plt.imshow(y_pred[100])
 plt.show()
 
 # %% [markdown]
-# ## Compute class outputs
-
-# %%
-class_counts_df = compute_class_counts(y_pred, y_test, filenames_test)
-# class_counts_df = class_counts_df.drop(columns="Background")
-class_counts_df
-
-# %% [markdown]
 # ## Confusion Matrix
 
 # %%
@@ -233,49 +233,51 @@ y_true = y_test_argmax
 y_pred = model.predict(X_test)
 y_pred = np.argmax(y_pred, axis=-1)
 
-# calculate the confusion matrix
-conf_mat = confusion_matrix(y_true.ravel(), y_pred.ravel())
-
-# calculate the precision, recall, and F1-score for each class
-num_classes = conf_mat.shape[0]
-precision = np.zeros(num_classes)
-recall = np.zeros(num_classes)
-f1_score = np.zeros(num_classes)
-
-for i in range(num_classes):
-    true_positives = conf_mat[i, i]
-    false_positives = np.sum(conf_mat[:, i]) - true_positives
-    false_negatives = np.sum(conf_mat[i, :]) - true_positives
-
-    precision[i] = true_positives / (true_positives + false_positives)
-    recall[i] = true_positives / (true_positives + false_negatives)
-    f1_score[i] = 2 * precision[i] * recall[i] / (precision[i] + recall[i])
-
-# calculate the accuracy for each class
-accuracy = np.zeros(num_classes)
-for i in range(num_classes):
-    accuracy[i] = conf_mat[i, i] / np.sum(conf_mat[i, :])
-
-# print the results
-for i in range(num_classes):
-    print(
-        f"{class_names[i]} - Precision: {precision[i]}, Recall: {recall[i]}, F1-score: {f1_score[i]}, Accuracy: {accuracy[i]}"
-    )
-
+metrics = calculate_metrics(y_true, y_pred, class_names)
+metrics = metrics.set_index("Class")
+metrics
 
 # %%
 labels = ["background", "building", "tent"]
 
-# calculate the percentages
-row_sums = conf_mat.sum(axis=1)
-conf_mat_percent = conf_mat / row_sums[:, np.newaxis]
+plot_confusion_matrix(y_true, y_pred, labels, show_percentages=True)
 
-display = ConfusionMatrixDisplay(
-    confusion_matrix=conf_mat_percent, display_labels=labels
+
+# %% [markdown]
+# ## Compute class outputs
+
+# %%
+# to remove background tiles
+words_to_remove = "background"
+
+# %% [markdown]
+# ### Actual from JSON
+
+# %%
+df_json = compute_actual_counts(filenames_test)
+df_json_filtered = remove_rows_by_index(df_json, words_to_remove)
+df_json_filtered = df_json_filtered[~df_json_filtered.index.duplicated()]
+
+# %% [markdown]
+# ### Connected components
+
+# %%
+df_connected = compute_predicted_counts(y_pred, filenames_test)
+
+df_connected_filtered = remove_rows_by_index(df_connected, words_to_remove)
+df_connected_final = df_connected_filtered.join(df_json_filtered)
+df_connected_final
+
+# %% [markdown]
+# ### Pixel counts
+
+# %%
+average_building_size = 100
+average_tent_size = 6
+
+df_pixel = compute_object_counts(
+    y_pred, filenames_test, average_building_size, average_tent_size
 )
-
-# plot the confusion matrix
-display.plot(cmap="cividis", values_format=".2%")
-
-# show the plot
-plt.show()
+df_pixel_filtered = remove_rows_by_index(df_pixel, words_to_remove)
+df_pixel_final = df_pixel_filtered.join(df_json_filtered)
+df_pixel_final
