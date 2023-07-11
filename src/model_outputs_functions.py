@@ -200,7 +200,15 @@ def compute_actual_counts(filenames_test):
             print(filename)
 
     # Create a pandas DataFrame
-    df = pd.DataFrame(columns=["Tile", "Tent_actual", "Building_actual"])
+    df = pd.DataFrame(
+        columns=[
+            "Tile",
+            "Tent_actual",
+            "Building_actual",
+            "tent_average",
+            "building_average",
+        ]
+    )
 
     # Populate the DataFrame with the actual counts for each class in each tile
     for tile_index in range(len(filenames_test)):
@@ -211,10 +219,19 @@ def compute_actual_counts(filenames_test):
             actual_count = tile_counts_actual.get(class_label, 0)
             row_data[class_label + "_actual"] = actual_count
 
+            row_data["tent_average"] = feature_data[filenames_test[tile_index]].get(
+                "tent_average", 0
+            )
+            row_data["building_average"] = feature_data[filenames_test[tile_index]].get(
+                "building_average", 0
+            )
+
         df = df.append(row_data, ignore_index=True)
     df.set_index("Tile", inplace=True)
 
-    df = df.reindex(columns=["Tent_actual", "Building_actual"])
+    df = df.reindex(
+        columns=["Tent_actual", "Building_actual", "tent_average", "building_average"]
+    )
 
     return df
 
@@ -273,6 +290,58 @@ def compute_object_counts(
             row_data[class_label + "_object_count"] = tile_objects.get(
                 class_label + "_object_count", 0
             )
+
+        df = df.append(row_data, ignore_index=True)
+
+    df.set_index("Tile", inplace=True)
+
+    return df
+
+
+def compute_pixel_counts(y_pred, filenames_test):
+    """
+    Compute the number of individual objects for each class in a new object based on average sizes.
+
+    Args:
+        y_pred (ndarray): Predicted array with shape (batch_size, height, width, num_classes).
+        filenames_test (ndarray): Array with filenames for each tile.
+
+    Returns:
+        DataFrame: Pandas DataFrame containing the number of individual objects for each class in each sample.
+    """
+
+    class_labels = {1: "Building", 2: "Tent"}
+    object_counts = []
+
+    pixel_area = 0.5
+
+    for tile_index in range(y_pred.shape[0]):
+        tile_objects = {}
+        for class_index, class_label in class_labels.items():
+
+            # Extract the predicted mask for the current class
+            class_mask_pred = np.argmax(y_pred[tile_index], axis=-1) == class_index
+            # Compute the sum of pixels for the current class in the current tile
+            pixel_sum = np.sum(class_mask_pred)
+
+            # Convert pixel sum to area in square meters
+            area = pixel_sum * pixel_area  # Assuming each pixel represents 0.5m
+            tile_objects[class_label + "_area"] = area
+
+        object_counts.append(tile_objects)
+
+    # Create a pandas DataFrame
+    df = pd.DataFrame(
+        columns=["Tile"]
+        + [class_label + "_area" for class_label in class_labels.values()]
+    )
+
+    # Populate the DataFrame with the number of objects for each class in each tile
+    for tile_index, filename in enumerate(filenames_test):
+        tile_objects = object_counts[tile_index]
+        row_data = {"Tile": filename}
+        for class_label in class_labels.values():
+            row_data[class_label + "_area"] = tile_objects.get(class_label + "_area", 0)
 
         df = df.append(row_data, ignore_index=True)
 

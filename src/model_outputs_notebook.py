@@ -47,6 +47,7 @@ from model_outputs_functions import (
     compute_predicted_counts,
     compute_actual_counts,
     compute_object_counts,
+    compute_pixel_counts,
 )
 
 
@@ -231,9 +232,9 @@ class_names = ["Background", "Building", "Tent"]
 
 y_true = y_test_argmax
 y_pred = model.predict(X_test)
-y_pred = np.argmax(y_pred, axis=-1)
+y_pred_arg = np.argmax(y_pred, axis=-1)
 
-metrics = calculate_metrics(y_true, y_pred, class_names)
+metrics = calculate_metrics(y_true, y_pred_arg, class_names)
 metrics = metrics.set_index("Class")
 metrics
 
@@ -272,12 +273,25 @@ df_connected_final
 # ### Pixel counts
 
 # %%
+df_pixel = compute_pixel_counts(y_pred, filenames_test)
+df_pixel_filtered = remove_rows_by_index(df_pixel, words_to_remove)
+df_pixel_final = df_pixel_filtered.join(df_json_filtered)
+df_pixel_final["tent_calc"] = (
+    df_pixel_final["Tent_area"] / df_pixel_final["tent_average"]
+)
+df_pixel_final["build_calc"] = (
+    df_pixel_final["Building_area"] / df_pixel_final["building_average"]
+)
+
+df_pixel_final
+
+# %%
 average_building_size = 100
 average_tent_size = 6
 
-df_pixel = compute_object_counts(
+df_pixelobj = compute_object_counts(
     y_pred, filenames_test, average_building_size, average_tent_size
 )
-df_pixel_filtered = remove_rows_by_index(df_pixel, words_to_remove)
-df_pixel_final = df_pixel_filtered.join(df_json_filtered)
-df_pixel_final
+df_pixelobj_filtered = remove_rows_by_index(df_pixelobj, words_to_remove)
+df_pixelobj_final = df_pixelobj_filtered.join(df_json_filtered)
+df_pixelobj_final
