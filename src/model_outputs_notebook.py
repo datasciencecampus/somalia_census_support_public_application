@@ -33,7 +33,8 @@ import keras
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-import h5py
+
+# import h5py
 from pathlib import Path
 from keras.metrics import MeanIoU
 
@@ -71,19 +72,15 @@ mask_dir = Path(folder_dict["mask_dir"])
 
 # %%
 # Set runid for outputs
-runid = "phase_1_gpu_1_28_06_23"
+runid = "phase_1_gpu_3_np_10_07_23"
 
 
 # %% [markdown]
 # ### Model conditions
 
 # %%
-model_filename = f"{runid}.hdf5"
-model_phase = h5py.File(models_dir.joinpath(model_filename), "r")
-
-# %%
-# check loaded in correctly
-# model_phase.keys()
+model_filename = runid
+model_phase = models_dir.joinpath(model_filename)
 
 # %% [markdown]
 # ### History (epochs)
@@ -239,9 +236,7 @@ metrics = metrics.set_index("Class")
 metrics
 
 # %%
-labels = ["background", "building", "tent"]
-
-plot_confusion_matrix(y_true, y_pred, labels, show_percentages=True)
+plot_confusion_matrix(y_true, y_pred_arg)
 
 
 # %% [markdown]

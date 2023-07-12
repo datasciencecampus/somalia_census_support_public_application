@@ -87,23 +87,24 @@ def calculate_metrics(y_true, y_pred, class_names):
     return metrics_df
 
 
-def plot_confusion_matrix(y_true, y_pred, labels, show_percentages=False):
+def plot_confusion_matrix(y_true, y_pred):
+
+    labels = ["background", "building", "tent"]
 
     conf_mat = confusion_matrix(y_true.ravel(), y_pred.ravel())
 
-    if show_percentages:
-        row_sums = conf_mat.sum(axis=1)
-        conf_mat_percent = conf_mat / row_sums[:, np.newaxis]
-        values_format = ".2%"
-    else:
-        conf_mat_percent = conf_mat
-        values_format = ".0f"
+    # calculate the percentages
+    row_sums = conf_mat.sum(axis=1)
+    conf_mat_percent = conf_mat / row_sums[:, np.newaxis]
+
     display = ConfusionMatrixDisplay(
         confusion_matrix=conf_mat_percent, display_labels=labels
     )
-    # Plot the confusion matrix
-    display.plot(cmap="cividis", values_format=values_format)
-    # Show the plot
+
+    # plot the confusion matrix
+    display.plot(cmap="cividis", values_format=".2%")
+
+    # show the plot
     plt.show()
 
 
