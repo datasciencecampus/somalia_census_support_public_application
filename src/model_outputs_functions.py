@@ -173,6 +173,9 @@ def compute_predicted_counts(y_pred, filenames_test):
     df.index.name = "Tile"
     df = df.reindex(columns=["Tent", "Building"])
 
+    # change column names for Tent and Building
+    df = df.rename(columns={"Tent": "tent_computed", "Building": "building_computed"})
+
     return df
 
 
