@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
+# %%
 
-# In[ ]:
+# %%
 
 
 """ Script for compute class counts function """
 
 
-# In[ ]:
+# %%
 
 
 import pandas as pd
@@ -20,7 +21,7 @@ from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from functions_library import setup_sub_dir
 
 
-# In[ ]:
+# %%
 
 
 # set data directory
@@ -38,7 +39,7 @@ img_dir = training_data_dir.joinpath("img")
 mask_dir = training_data_dir.joinpath("mask")
 
 
-# In[ ]:
+# %%
 
 
 def calculate_metrics(y_true, y_pred, class_names):
@@ -349,3 +350,27 @@ def compute_pixel_counts(y_pred, filenames_test):
     df.set_index("Tile", inplace=True)
 
     return df
+
+
+def create_stats_df(y_pred, y_test_argmax, class_names, filenames_test):
+    metrics_df = pd.DataFrame()
+    filenames_without_background = []
+    for tile in range(len(y_test_argmax)):
+        y_true = y_test_argmax[tile]
+        y_single_pred = np.argmax(y_pred[tile], axis=-1)
+
+        if not filenames_test[tile].endswith("background"):
+            tile_metrics = calculate_metrics(y_true, y_single_pred, class_names)
+            tile_metrics.index = tile_metrics.index + 1
+            tile_metrics = tile_metrics.stack()
+            tile_metrics.index = tile_metrics.index.map("{0[1]}_{0[0]}".format)
+            tile_metrics.to_frame().T
+            filenames_without_background.append(filenames_test[tile])
+            metrics_df = pd.concat(
+                [metrics_df, tile_metrics], axis=1, ignore_index=True
+            )
+
+    metrics_df = metrics_df.T
+    metrics_df.insert(0, "tile", filenames_without_background)
+
+    return metrics_df

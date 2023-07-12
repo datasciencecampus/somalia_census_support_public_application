@@ -34,7 +34,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-# import h5py
+import h5py
 from pathlib import Path
 from keras.metrics import MeanIoU
 
@@ -49,6 +49,7 @@ from model_outputs_functions import (
     compute_actual_counts,
     compute_object_counts,
     compute_pixel_counts,
+    create_stats_df,
 )
 
 
@@ -72,15 +73,21 @@ mask_dir = Path(folder_dict["mask_dir"])
 
 # %%
 # Set runid for outputs
-runid = "phase_1_gpu_3_np_10_07_23"
+runid = "phase_1_gpu_1_28_06_23"
 
 
 # %% [markdown]
 # ### Model conditions
 
 # %%
-model_filename = runid
-model_phase = models_dir.joinpath(model_filename)
+old_model = False
+if old_model:
+    model_filename = f"{runid}.hdf5"
+    model_phase = h5py.File(models_dir.joinpath(model_filename), "r")
+else:
+    model_filename = runid
+    model_phase = models_dir.joinpath(model_filename)
+
 
 # %% [markdown]
 # ### History (epochs)
@@ -212,13 +219,13 @@ plt.show()
 plt.figure(figsize=(12, 8))
 plt.subplot(231)
 plt.title("Testing Image")
-plt.imshow(X_test[100][:, :, :3])
+plt.imshow(X_test[97][:, :, :3])
 plt.subplot(232)
 plt.title("Testing Label")
-plt.imshow(y_test[100])
+plt.imshow(y_test[97])
 plt.subplot(233)
 plt.title("Prediction on test image")
-plt.imshow(y_pred[100])
+plt.imshow(y_pred[97])
 plt.show()
 
 # %% [markdown]
@@ -234,6 +241,12 @@ y_pred_arg = np.argmax(y_pred, axis=-1)
 metrics = calculate_metrics(y_true, y_pred_arg, class_names)
 metrics = metrics.set_index("Class")
 metrics
+
+# %%
+metrics_df = create_stats_df(y_pred, y_test_argmax, class_names, filenames_test)
+
+metrics_df.to_csv(str(outputs_dir) + "/" + runid + "_metrics.csv")
+metrics_df
 
 # %%
 plot_confusion_matrix(y_true, y_pred_arg)
