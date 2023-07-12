@@ -262,6 +262,9 @@ df_connected = compute_predicted_counts(y_pred, filenames_test)
 
 df_connected_filtered = remove_rows_by_index(df_connected, words_to_remove)
 df_connected_final = df_connected_filtered.join(df_json_filtered)
+df_connected_final = df_connected_final[
+    ["tent_computed", "building_computed", "Tent_actual", "Building_actual"]
+]
 df_connected_final
 
 # %% [markdown]

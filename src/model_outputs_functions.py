@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
+# %%
 
-# In[ ]:
+# %%
 
 
 """ Script for compute class counts function """
 
 
-# In[ ]:
+# %%
 
 
 import pandas as pd
@@ -20,7 +21,7 @@ from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from functions_library import setup_sub_dir
 
 
-# In[ ]:
+# %%
 
 
 # set data directory
@@ -38,7 +39,7 @@ img_dir = training_data_dir.joinpath("img")
 mask_dir = training_data_dir.joinpath("mask")
 
 
-# In[ ]:
+# %%
 
 
 def calculate_metrics(y_true, y_pred, class_names):
@@ -171,6 +172,9 @@ def compute_predicted_counts(y_pred, filenames_test):
     df.index = filenames_test
     df.index.name = "Tile"
     df = df.reindex(columns=["Tent", "Building"])
+
+    # change column names for Tent and Building
+    df = df.rename(columns={"Tent": "tent_computed", "Building": "building_computed"})
 
     return df
 
