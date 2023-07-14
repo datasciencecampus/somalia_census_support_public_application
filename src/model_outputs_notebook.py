@@ -49,6 +49,8 @@ from model_outputs_functions import (
     compute_actual_counts,
     compute_object_counts,
     compute_pixel_counts,
+    make_stats_connected_df,
+    make_stats_pixel_df,
 )
 
 
@@ -267,6 +269,17 @@ df_connected_final = df_connected_final[
 ]
 df_connected_final
 
+# %%
+# stats_df for connected components
+stats_connected_df = make_stats_connected_df(df_connected_final)
+stats_connected_df
+
+# %%
+# save to csv file
+stats_connected_filename = "stats_connected_df_" + csv_filename
+stats_connected_df_filename = outputs_dir / stats_connected_filename
+stats_connected_df.to_csv(stats_connected_df_filename, index=True)
+
 # %% [markdown]
 # ### Pixel counts
 
@@ -293,3 +306,16 @@ df_pixelobj = compute_object_counts(
 df_pixelobj_filtered = remove_rows_by_index(df_pixelobj, words_to_remove)
 df_pixelobj_final = df_pixelobj_filtered.join(df_json_filtered)
 df_pixelobj_final
+
+# %%
+# stats_df for pixels
+stats_pixel_df = make_stats_pixel_df(df_pixelobj_final)
+stats_pixel_df
+
+# %%
+# save to csv file
+stats_pixel_filename = "stats_pixel_df_" + csv_filename
+stats_pixel_df_filename = outputs_dir / stats_pixel_filename
+stats_pixel_df.to_csv(stats_pixel_df_filename, index=True)
+
+# %%
