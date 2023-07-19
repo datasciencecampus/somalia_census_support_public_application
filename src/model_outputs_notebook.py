@@ -49,8 +49,7 @@ from model_outputs_functions import (
     compute_actual_counts,
     compute_object_counts,
     compute_pixel_counts,
-    make_stats_connected_df,
-    make_stats_pixel_df,
+    make_stats_df,
 )
 
 
@@ -271,7 +270,7 @@ df_connected_final
 
 # %%
 # stats_df for connected components
-stats_connected_df = make_stats_connected_df(df_connected_final)
+stats_connected_df = make_stats_df(df_connected_final, connected_or_pixel="connected")
 stats_connected_df
 
 # %% [markdown]
@@ -303,7 +302,5 @@ df_pixelobj_final
 
 # %%
 # stats_df for pixels
-stats_pixel_df = make_stats_pixel_df(df_pixelobj_final)
+stats_pixel_df = make_stats_df(df_pixelobj_final, connected_or_pixel="pixel")
 stats_pixel_df
-
-# %%

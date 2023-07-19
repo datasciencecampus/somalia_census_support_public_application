@@ -356,158 +356,33 @@ def compute_pixel_counts(y_pred, filenames_test):
 
 
 # %%
-def make_stats_connected_df(df_connected_final):
+def make_stats_df(dataframe, connected_or_pixel):
     """
-    Creates groupby dataframe from tent/building counts with the mean, maximum and minimum values based on
-    the predicted tents and buildings for tiles.
+    Creates groupby dataframe from tent/building counts or pixels with the mean, maximum and minimum values.
 
     Args:
-       df_connected_final (DataFrame): Dataframe with predicted counts for tents and buildings
+       Dataframe (DataFrame): Dataframe with predicted counts for tents and buildings or pixels.
+       connected_or_pixel(character): If "pixel" will remove `tent_average` and `building_average`
+                                      from pixel dataframe.
 
     Returns:
-        DataFrame: Pandas DataFrame containing the mean, max and min values for predicted tents and
-        buildings for tiles.
+        DataFrame: Pandas DataFrame containing the mean, max and min values.
     """
 
-    # mean for tent computed
-    mean_tent_computed = (
-        df_connected_final.groupby(["Tile"])["tent_computed"].mean().round()
-    )
-    # mean for building computed
-    mean_building_computed = (
-        df_connected_final.groupby(["Tile"])["building_computed"].mean().round()
-    )
+    # for connected
+    if connected_or_pixel == "connected":
+        df_tile = dataframe.groupby("Tile").agg(["min", "max", "mean"])
 
-    mean_merge_df = pd.merge(
-        mean_tent_computed, mean_building_computed, how="inner", on="Tile"
-    )
-    mean_merge_df = mean_merge_df.rename(
-        columns={
-            "tent_computed": "mean_tent_computed",
-            "building_computed": "mean_building_computed",
-        }
-    )
+    # for pixel
+    elif connected_or_pixel == "pixel":
+        df_tile = dataframe.groupby("Tile").agg(["min", "max", "mean"])
+        df_tile = df_tile[
+            [
+                "Building_object_count",
+                "Tent_object_count",
+                "Tent_actual",
+                "Building_actual",
+            ]
+        ]
 
-    # max tent computed
-    max_tent_computed = df_connected_final.groupby(["Tile"])["tent_computed"].max()
-    # max building computed
-    max_building_computed = df_connected_final.groupby(["Tile"])[
-        "building_computed"
-    ].max()
-
-    max_merge_df = pd.merge(
-        max_tent_computed, max_building_computed, how="inner", on="Tile"
-    )
-    max_merge_df = max_merge_df.rename(
-        columns={
-            "tent_computed": "max_tent_computed",
-            "building_computed": "max_building_computed",
-        }
-    )
-
-    # min tent computed
-    min_tent_computed = df_connected_final.groupby(["Tile"])["tent_computed"].min()
-    # min tent computed
-    min_building_computed = df_connected_final.groupby(["Tile"])[
-        "building_computed"
-    ].min()
-
-    min_merge_df = pd.merge(
-        min_tent_computed, min_building_computed, how="inner", on="Tile"
-    )
-    min_merge_df = min_merge_df.rename(
-        columns={
-            "tent_computed": "min_tent_computed",
-            "building_computed": "min_building_computed",
-        }
-    )
-
-    # merge grouped df
-    min_max_merge_df = pd.merge(min_merge_df, max_merge_df, how="inner", on="Tile")
-    min_max_merge_df
-
-    stats_connected_df = pd.merge(
-        mean_merge_df, min_max_merge_df, how="inner", on="Tile"
-    )
-
-    return stats_connected_df
-
-
-# %%
-def make_stats_pixel_df(df_pixelobj_final):
-    """
-    Creates groupby dataframe from pixel tent/building counts with the mean, maximum and minimum values
-    for tiles.
-
-    Args:
-       df_pixelobj_final (DataFrame): Dataframe with predicted counts for tents and buildings
-
-    Returns:
-        DataFrame: Pandas DataFrame containing the mean, max and min values for the pixels in predicted tents
-        and buildings for tiles.
-    """
-
-    # mean for tent object count
-    mean_tent_object_count = (
-        df_pixelobj_final.groupby(["Tile"])["Tent_object_count"].mean().round()
-    )
-    # mean for building object count
-    mean_building_object_count = (
-        df_pixelobj_final.groupby(["Tile"])["Building_object_count"].mean().round()
-    )
-
-    mean_merge_df = pd.merge(
-        mean_tent_object_count, mean_building_object_count, how="inner", on="Tile"
-    )
-    mean_merge_df = mean_merge_df.rename(
-        columns={
-            "Tent_object_count": "mean_tent_object_count",
-            "Building_object_count": "mean_building_object_count",
-        }
-    )
-
-    # max value for tent object count
-    max_tent_object_count = df_pixelobj_final.groupby(["Tile"])[
-        "Tent_object_count"
-    ].max()
-    # max value for building object count
-    max_building_object_count = df_pixelobj_final.groupby(["Tile"])[
-        "Building_object_count"
-    ].max()
-
-    max_merge_df = pd.merge(
-        max_tent_object_count, max_building_object_count, how="inner", on="Tile"
-    )
-    max_merge_df = max_merge_df.rename(
-        columns={
-            "Tent_object_count": "max_tent_object_count",
-            "Building_object_count": "max_building_object_count",
-        }
-    )
-
-    # min value for tent object count
-    min_tent_object_count = df_pixelobj_final.groupby(["Tile"])[
-        "Tent_object_count"
-    ].min()
-    # min value for building object count
-    min_building_object_count = df_pixelobj_final.groupby(["Tile"])[
-        "Building_object_count"
-    ].min()
-
-    min_merge_df = pd.merge(
-        min_tent_object_count, min_building_object_count, how="inner", on="Tile"
-    )
-    min_merge_df = min_merge_df.rename(
-        columns={
-            "Tent_object_count": "min_tent_object_count",
-            "Building_object_count": "min_building_object_count",
-        }
-    )
-
-    # merge grouped df
-    min_max_merge_df = pd.merge(min_merge_df, max_merge_df, how="inner", on="Tile")
-    min_max_merge_df
-
-    stats_pixel_df = pd.merge(mean_merge_df, min_max_merge_df, how="inner", on="Tile")
-
-    return stats_pixel_df
+    return df_tile
