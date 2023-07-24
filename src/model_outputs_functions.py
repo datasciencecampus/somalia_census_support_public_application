@@ -73,9 +73,14 @@ def calculate_metrics(y_true, y_pred, class_names):
         precision[i] = true_positives / (true_positives + false_positives)
         recall[i] = true_positives / (true_positives + false_negatives)
         f1_score[i] = 2 * precision[i] * recall[i] / (precision[i] + recall[i])
-        accuracy[i] = (
-            true_positives + np.sum(conf_mat.diagonal()) - conf_mat[i, i]
-        ) / np.sum(conf_mat)
+
+        true_negatives = (
+            np.sum(conf_mat)
+            - np.sum(conf_mat[:, i])
+            - np.sum(conf_mat[i, :])
+            + true_positives
+        )
+        accuracy[i] = (true_positives + true_negatives) / np.sum(conf_mat)
 
     # Create the DataFrame
     metrics_df = pd.DataFrame(
@@ -432,3 +437,6 @@ def make_pixel_stats(dataframe):
     pixel_stats_final_df.set_index("Tile", inplace=True)
 
     return pixel_stats_final_df
+
+
+# %%
