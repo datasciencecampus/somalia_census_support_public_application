@@ -43,14 +43,14 @@ from loss_functions import get_combined_loss
 from multi_class_unet_model_build import jacard_coef
 from model_outputs_functions import (
     calculate_metrics,
+    calculate_tile_metrics,
     plot_confusion_matrix,
     remove_rows_by_index,
     compute_predicted_counts,
     compute_actual_counts,
     compute_object_counts,
     compute_pixel_counts,
-    make_stats_df,
-    create_stats_df,
+    make_pixel_stats,
 )
 
 
@@ -74,13 +74,14 @@ mask_dir = Path(folder_dict["mask_dir"])
 
 # %%
 # Set runid for outputs
-runid = "phase_1_gpu_1_28_06_23"
+runid = "phase_1_gpu_3_np_10_07_23"
 
 
 # %% [markdown]
 # ### Model conditions
 
 # %%
+# set model input read depending on when model was run
 old_model = False
 if old_model:
     model_filename = f"{runid}.hdf5"
@@ -108,17 +109,18 @@ history.head()
 X_test_filename = f"{runid}_xtest.npy"
 y_pred_filename = f"{runid}_ypred.npy"
 y_test_filename = f"{runid}_ytest.npy"
-filenames_test_filename = f"{runid}_filenamestest.npy"
+filenames_filename = f"{runid}_filenamestest.npy"
 
 X_test = np.load(outputs_dir.joinpath(X_test_filename))
 y_pred = np.load(outputs_dir.joinpath(y_pred_filename))
 y_test = np.load(outputs_dir.joinpath(y_test_filename))
-filenames_test = np.load(outputs_dir.joinpath(filenames_test_filename))
+filenames = np.load(outputs_dir.joinpath(filenames_filename))
 
 
 # %%
 # check arrays loaded in
-filenames_test[4]
+filenames[4]
+y_pred.shape
 
 # %% [markdown]
 # ### Set loss
@@ -150,7 +152,9 @@ model = keras.models.load_model(
 # create plot showing training and validation loss
 loss = history["loss"]
 val_loss = history["val_loss"]
+
 epochs = range(1, len(history.loss) + 1)
+
 plt.plot(epochs, history.loss, "y", label="Training loss")
 plt.plot(epochs, history.val_loss, "r", label="Validation loss")
 plt.title("Training and validation loss")
@@ -220,17 +224,20 @@ plt.show()
 plt.figure(figsize=(12, 8))
 plt.subplot(231)
 plt.title("Testing Image")
-plt.imshow(X_test[97][:, :, :3])
+plt.imshow(X_test[test_img_number][:, :, :3])
 plt.subplot(232)
 plt.title("Testing Label")
-plt.imshow(y_test[97])
+plt.imshow(y_test[test_img_number])
 plt.subplot(233)
 plt.title("Prediction on test image")
-plt.imshow(y_pred[97])
+plt.imshow(y_pred[test_img_number])
 plt.show()
 
 # %% [markdown]
 # ## Confusion Matrix
+
+# %% [markdown]
+# ### Whole run metrics
 
 # %%
 class_names = ["Background", "Building", "Tent"]
@@ -239,15 +246,21 @@ y_true = y_test_argmax
 y_pred = model.predict(X_test)
 y_pred_arg = np.argmax(y_pred, axis=-1)
 
-metrics = calculate_metrics(y_true, y_pred_arg, class_names)
-metrics = metrics.set_index("Class")
-metrics
+metrics_df = calculate_metrics(y_true, y_pred_arg, class_names)
+metrics_df = metrics_df.set_index("Class")
+metrics_df
+
+# %% [markdown]
+# ### Tile metrics
 
 # %%
-metrics_df = create_stats_df(y_pred, y_test_argmax, class_names, filenames_test)
+tile_metrics_df = calculate_tile_metrics(y_pred, y_test_argmax, class_names, filenames)
+tile_metrics_df = tile_metrics_df.set_index("tile")
+tile_metrics_df.to_csv(str(outputs_dir) + "/" + runid + "_tile_metrics.csv")
+tile_metrics_df
 
-metrics_df.to_csv(str(outputs_dir) + "/" + runid + "_metrics.csv")
-metrics_df
+# %% [markdown]
+# ### Confusion matrix plot
 
 # %%
 plot_confusion_matrix(y_true, y_pred_arg)
@@ -261,10 +274,10 @@ plot_confusion_matrix(y_true, y_pred_arg)
 words_to_remove = "background"
 
 # %% [markdown]
-# ### Actual from JSON
+# ### Actual class counts from JSON
 
 # %%
-df_json = compute_actual_counts(filenames_test)
+df_json = compute_actual_counts(filenames)
 df_json_filtered = remove_rows_by_index(df_json, words_to_remove)
 df_json_filtered = df_json_filtered[~df_json_filtered.index.duplicated()]
 
@@ -272,7 +285,7 @@ df_json_filtered = df_json_filtered[~df_json_filtered.index.duplicated()]
 # ### Connected components
 
 # %%
-df_connected = compute_predicted_counts(y_pred, filenames_test)
+df_connected = compute_predicted_counts(y_pred, filenames)
 
 df_connected_filtered = remove_rows_by_index(df_connected, words_to_remove)
 df_connected_final = df_connected_filtered.join(df_json_filtered)
@@ -281,18 +294,21 @@ df_connected_final = df_connected_final[
 ]
 df_connected_final
 
+# %% [markdown]
+# #### Summary connected component stats
+
 # %%
-# stats_df for connected components
-stats_connected_df = make_stats_df(df_connected_final, connected_or_pixel="connected")
-stats_connected_df
+connected_stats_df = df_connected_final.groupby("Tile").agg(["min", "max", "mean"])
+connected_stats_df
 
 # %% [markdown]
 # ### Pixel counts
 
 # %%
-df_pixel = compute_pixel_counts(y_pred, filenames_test)
+df_pixel = compute_pixel_counts(y_pred, filenames)
 df_pixel_filtered = remove_rows_by_index(df_pixel, words_to_remove)
 df_pixel_final = df_pixel_filtered.join(df_json_filtered)
+
 df_pixel_final["tent_calc"] = (
     df_pixel_final["Tent_area"] / df_pixel_final["tent_average"]
 )
@@ -307,13 +323,15 @@ average_building_size = 100
 average_tent_size = 6
 
 df_pixelobj = compute_object_counts(
-    y_pred, filenames_test, average_building_size, average_tent_size
+    y_pred, filenames, average_building_size, average_tent_size
 )
 df_pixelobj_filtered = remove_rows_by_index(df_pixelobj, words_to_remove)
 df_pixelobj_final = df_pixelobj_filtered.join(df_json_filtered)
 df_pixelobj_final
 
+# %% [markdown]
+# #### Summary pixel stats
+
 # %%
-# stats_df for pixels
-stats_pixel_df = make_stats_df(df_pixelobj_final, connected_or_pixel="pixel")
-stats_pixel_df
+pixel_stats_final_df = make_pixel_stats(df_pixelobj_final)
+pixel_stats_final_df
