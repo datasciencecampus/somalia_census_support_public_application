@@ -280,6 +280,7 @@ words_to_remove = "background"
 df_json = compute_actual_counts(filenames)
 df_json_filtered = remove_rows_by_index(df_json, words_to_remove)
 df_json_filtered = df_json_filtered[~df_json_filtered.index.duplicated()]
+df_json_filtered
 
 # %% [markdown]
 # ### Connected components

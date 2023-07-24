@@ -416,10 +416,11 @@ def make_pixel_stats(dataframe):
     # reset index to have 'tile' as regular column
     dataframe_reset = dataframe.reset_index()
 
+    # columns for ref
+    col_for_ref = ["building_actual", "tent_actual", "tent_average", "building_average"]
+
     # take reference figures and group by tile for first df
-    ref_fig_df = dataframe_reset[
-        ["Tile", "building_actual", "tent_actual", "tent_average", "building_average"]
-    ]
+    ref_fig_df = dataframe_reset.groupby("Tile")[col_for_ref].max()
 
     # columns for stats
     col_for_stats = ["building_object_count", "tent_object_count"]
@@ -433,8 +434,6 @@ def make_pixel_stats(dataframe):
 
     # merge two df on 'tile' column
     pixel_stats_final_df = pixel_stats_df.merge(ref_fig_df, on="Tile")
-    # re-set 'tile' as index
-    pixel_stats_final_df.set_index("Tile", inplace=True)
 
     return pixel_stats_final_df
 
