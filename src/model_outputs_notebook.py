@@ -198,7 +198,7 @@ print("Mean IoU =", IOU_keras.result().numpy())
 
 # %%
 # test_img_number = random.randint(0, len(X_test))
-test_img_number = 2
+test_img_number = 119
 test_img = X_test[test_img_number]
 ground_truth = y_test_argmax[test_img_number]
 # test_img_norm=test_img[:,:,0][:,:,None]
@@ -290,7 +290,7 @@ df_connected = compute_predicted_counts(y_pred, filenames)
 df_connected_filtered = remove_rows_by_index(df_connected, words_to_remove)
 df_connected_final = df_connected_filtered.join(df_json_filtered)
 df_connected_final = df_connected_final[
-    ["tent_computed", "building_computed", "Tent_actual", "Building_actual"]
+    ["tent_computed", "building_computed", "tent_actual", "building_actual"]
 ]
 df_connected_final
 
@@ -310,10 +310,11 @@ df_pixel_filtered = remove_rows_by_index(df_pixel, words_to_remove)
 df_pixel_final = df_pixel_filtered.join(df_json_filtered)
 
 df_pixel_final["tent_calc"] = (
-    df_pixel_final["Tent_area"] / df_pixel_final["tent_average"]
+    df_pixel_final["tent_area"] / df_pixel_final["tent_average"]
 )
+
 df_pixel_final["build_calc"] = (
-    df_pixel_final["Building_area"] / df_pixel_final["building_average"]
+    df_pixel_final["building_area"] / df_pixel_final["building_average"]
 )
 
 df_pixel_final

@@ -220,7 +220,7 @@ def compute_predicted_counts(y_pred, filenames_test):
     df = df.reindex(columns=["Tent", "Building"])
 
     # change column names for Tent and Building
-    df = df.rename(columns={"tent": "tent_computed", "building": "building_computed"})
+    df = df.rename(columns={"Tent": "tent_computed", "Building": "building_computed"})
 
     return df
 
@@ -266,7 +266,7 @@ def compute_actual_counts(filenames_test):
         tile_counts_actual = class_counts_actual[tile_index]
         row_data = {"Tile": filenames_test[tile_index]}
 
-        for class_label in ["Tent", "Building"]:
+        for class_label in ["tent", "building"]:
             actual_count = tile_counts_actual.get(class_label, 0)
             row_data[class_label + "_actual"] = actual_count
 
@@ -281,7 +281,7 @@ def compute_actual_counts(filenames_test):
     df.set_index("Tile", inplace=True)
 
     df = df.reindex(
-        columns=["Tent_actual", "Building_actual", "tent_average", "building_average"]
+        columns=["tent_actual", "building_actual", "tent_average", "building_average"]
     )
 
     return df
@@ -317,9 +317,9 @@ def compute_object_counts(
 
             # Convert pixel sum to area in square meters
             area = pixel_sum * 0.5  # Assuming each pixel represents 0.5m
-            if class_label == "Building":
+            if class_label == "building":
                 object_count = area / average_building_size
-            elif class_label == "Tent":
+            elif class_label == "tent":
                 object_count = area / average_tent_size
             else:
                 object_count = 0
@@ -418,11 +418,11 @@ def make_pixel_stats(dataframe):
 
     # take reference figures and group by tile for first df
     ref_fig_df = dataframe_reset[
-        ["Tile", "Building_actual", "Tent_actual", "tent_average", "building_average"]
+        ["Tile", "building_actual", "tent_actual", "tent_average", "building_average"]
     ]
 
     # columns for stats
-    col_for_stats = ["Building_object_count", "Tent_object_count"]
+    col_for_stats = ["building_object_count", "tent_object_count"]
 
     # second df with summary stats for selected columns
     pixel_stats_df = dataframe_reset.groupby("Tile")[col_for_stats].agg(
