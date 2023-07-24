@@ -62,7 +62,7 @@ def stack_array(directory, validation_area=None, expanded_outputs=False):
     stacked_images = np.concatenate([array_list] + rotations + mirrors, axis=0)
     # Tile repeats the pattern, repeat would order them incorrectly.
     stacked_filenames = np.tile(filenames, 9)
-    
+
     if expanded_outputs:
         return stacked_images, stacked_filenames
     else:
@@ -89,7 +89,7 @@ def stack_background_arrays(directory, expanded_outputs=False):
 
     # empty list for appending loaded arrays
     background_arrays = []
-    
+
     # empty list or appending file names
     background_filenames = []
 
@@ -98,14 +98,14 @@ def stack_background_arrays(directory, expanded_outputs=False):
         np_array = np.load(file)
         background_arrays.append(np_array)
         background_filenames.append(file.stem)
-    
+
     if expanded_outputs:
         return background_arrays, background_filenames
     else:
         return background_arrays
 
 
-def stack_array_with_validation(directory, validation_area):
+def stack_array_with_validation(directory, validation_area, expanded_outputs=False):
     """
     Stack all .npy files in the specified directory that contain the validation area.
 
@@ -131,15 +131,22 @@ def stack_array_with_validation(directory, validation_area):
     # empty list for appending originals
     array_list = []
 
+    # empty list or appending file names
+    val_filenames = []
+
     # load each .npy and appent to list
     for file in array_files:
         np_array = np.load(file)
         array_list.append(np_array)
+        val_filenames.append(file.stem)
 
     # stack the arrays
     stacked_images = np.stack(array_list, axis=0)
 
-    return stacked_images
+    if expanded_outputs:
+        return stacked_images, val_filenames
+    else:
+        return stacked_images
 
 
 def hue_shift(images, shift):
