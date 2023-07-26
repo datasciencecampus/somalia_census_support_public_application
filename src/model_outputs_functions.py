@@ -69,10 +69,18 @@ def calculate_metrics(y_true, y_pred, class_names):
         true_positives = conf_mat[i, i]
         false_positives = np.sum(conf_mat[:, i]) - true_positives
         false_negatives = np.sum(conf_mat[i, :]) - true_positives
+
         precision[i] = true_positives / (true_positives + false_positives)
         recall[i] = true_positives / (true_positives + false_negatives)
         f1_score[i] = 2 * precision[i] * recall[i] / (precision[i] + recall[i])
-        accuracy[i] = conf_mat[i, i] / np.sum(conf_mat[i, :])
+
+        true_negatives = (
+            np.sum(conf_mat)
+            - np.sum(conf_mat[:, i])
+            - np.sum(conf_mat[i, :])
+            + true_positives
+        )
+        accuracy[i] = (true_positives + true_negatives) / np.sum(conf_mat)
 
     # Create the DataFrame
     metrics_df = pd.DataFrame(
@@ -84,6 +92,44 @@ def calculate_metrics(y_true, y_pred, class_names):
             "Accuracy": accuracy,
         }
     )
+
+    return metrics_df
+
+
+def calculate_tile_metrics(y_pred, y_test_argmax, class_names, filenames):
+    """
+    Calculate performance metrics for each tile and create a DataFrame.
+
+    Args:
+        y_pred (np.ndarray): Array of predicted labels, where each element corresponds to a tile.
+        y_test_argmax (np.ndarray): Array of true labels, where each element corresponds to a tile.
+        class_names (list): List of class names.
+        filenames (list): List of filesnames for each tile.
+
+    Returns:
+        pandas.DataFrame: DataFrame containing performance metrics for each tile.
+
+    """
+    metrics_df = pd.DataFrame()
+    filenames_without_background = []
+
+    for tile in range(len(y_test_argmax)):
+        y_true = y_test_argmax[tile]
+        y_single_pred = np.argmax(y_pred[tile], axis=-1)
+
+        if not filenames[tile].endswith("background"):
+            tile_metrics = calculate_metrics(y_true, y_single_pred, class_names)
+            tile_metrics.index = tile_metrics.index + 1
+            tile_metrics = tile_metrics.stack()
+            tile_metrics.index = tile_metrics.index.map("{0[1]}_{0[0]}".format)
+            tile_metrics.to_frame().T
+            filenames_without_background.append(filenames[tile])
+            metrics_df = pd.concat(
+                [metrics_df, tile_metrics], axis=1, ignore_index=True
+            )
+
+    metrics_df = metrics_df.T
+    metrics_df.insert(0, "tile", filenames_without_background)
 
     return metrics_df
 
@@ -220,7 +266,7 @@ def compute_actual_counts(filenames_test):
         tile_counts_actual = class_counts_actual[tile_index]
         row_data = {"Tile": filenames_test[tile_index]}
 
-        for class_label in ["Tent", "Building"]:
+        for class_label in ["tent", "building"]:
             actual_count = tile_counts_actual.get(class_label, 0)
             row_data[class_label + "_actual"] = actual_count
 
@@ -235,7 +281,7 @@ def compute_actual_counts(filenames_test):
     df.set_index("Tile", inplace=True)
 
     df = df.reindex(
-        columns=["Tent_actual", "Building_actual", "tent_average", "building_average"]
+        columns=["tent_actual", "building_actual", "tent_average", "building_average"]
     )
 
     return df
@@ -257,7 +303,7 @@ def compute_object_counts(
         DataFrame: Pandas DataFrame containing the number of individual objects for each class in each sample.
     """
 
-    class_labels = {1: "Building", 2: "Tent"}
+    class_labels = {1: "building", 2: "tent"}
     object_counts = []
 
     for tile_index in range(y_pred.shape[0]):
@@ -271,9 +317,9 @@ def compute_object_counts(
 
             # Convert pixel sum to area in square meters
             area = pixel_sum * 0.5  # Assuming each pixel represents 0.5m
-            if class_label == "Building":
+            if class_label == "building":
                 object_count = area / average_building_size
-            elif class_label == "Tent":
+            elif class_label == "tent":
                 object_count = area / average_tent_size
             else:
                 object_count = 0
@@ -315,7 +361,7 @@ def compute_pixel_counts(y_pred, filenames_test):
         DataFrame: Pandas DataFrame containing the number of individual objects for each class in each sample.
     """
 
-    class_labels = {1: "Building", 2: "Tent"}
+    class_labels = {1: "building", 2: "tent"}
     object_counts = []
 
     pixel_area = 0.5
@@ -355,25 +401,41 @@ def compute_pixel_counts(y_pred, filenames_test):
     return df
 
 
-def create_stats_df(y_pred, y_test_argmax, class_names, filenames_test):
-    metrics_df = pd.DataFrame()
-    filenames_without_background = []
-    for tile in range(len(y_test_argmax)):
-        y_true = y_test_argmax[tile]
-        y_single_pred = np.argmax(y_pred[tile], axis=-1)
+def make_pixel_stats(dataframe):
+    """
+    Calculates and merges statistics for building and tent object counts.
 
-        if not filenames_test[tile].endswith("background"):
-            tile_metrics = calculate_metrics(y_true, y_single_pred, class_names)
-            tile_metrics.index = tile_metrics.index + 1
-            tile_metrics = tile_metrics.stack()
-            tile_metrics.index = tile_metrics.index.map("{0[1]}_{0[0]}".format)
-            tile_metrics.to_frame().T
-            filenames_without_background.append(filenames_test[tile])
-            metrics_df = pd.concat(
-                [metrics_df, tile_metrics], axis=1, ignore_index=True
-            )
+    Args:
+        dataframe (DataFrame): Input DataFrame containing the columns 'Building_actual', 'Tent_actual',
+                              'tent_average', 'building_average', Building_object_count', 'Tent_object_count'.
 
-    metrics_df = metrics_df.T
-    metrics_df.insert(0, "tile", filenames_without_background)
+    Returns:
+        DataFrame: Merged DataFrame containing statistics for calculated columns and reference columns
 
-    return metrics_df
+    """
+    # reset index to have 'tile' as regular column
+    dataframe_reset = dataframe.reset_index()
+
+    # columns for ref
+    col_for_ref = ["building_actual", "tent_actual", "tent_average", "building_average"]
+
+    # take reference figures and group by tile for first df
+    ref_fig_df = dataframe_reset.groupby("Tile")[col_for_ref].max()
+
+    # columns for stats
+    col_for_stats = ["building_object_count", "tent_object_count"]
+
+    # second df with summary stats for selected columns
+    pixel_stats_df = dataframe_reset.groupby("Tile")[col_for_stats].agg(
+        ["min", "max", "mean"]
+    )
+    # rename columns with building and tent to keep on one level
+    pixel_stats_df.columns = [f"{col}_{label}" for col, label in pixel_stats_df.columns]
+
+    # merge two df on 'tile' column
+    pixel_stats_final_df = pixel_stats_df.merge(ref_fig_df, on="Tile")
+
+    return pixel_stats_final_df
+
+
+# %%
