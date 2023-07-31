@@ -266,7 +266,7 @@ def compute_actual_counts(filenames_test):
         tile_counts_actual = class_counts_actual[tile_index]
         row_data = {"Tile": filenames_test[tile_index]}
 
-        for class_label in ["tent", "building"]:
+        for class_label in ["Tent", "Building"]:
             actual_count = tile_counts_actual.get(class_label, 0)
             row_data[class_label + "_actual"] = actual_count
 
@@ -279,6 +279,8 @@ def compute_actual_counts(filenames_test):
 
         df = df.append(row_data, ignore_index=True)
     df.set_index("Tile", inplace=True)
+
+    df.rename(columns=lambda x: x.lower(), inplace=True)
 
     df = df.reindex(
         columns=["tent_actual", "building_actual", "tent_average", "building_average"]
@@ -398,6 +400,7 @@ def compute_pixel_counts(y_pred, filenames_test):
             row_data[class_label + "_pixel_sum"] = tile_objects.get(
                 class_label + "_pixel_sum", 0
             )
+
         df = df.append(row_data, ignore_index=True)
 
     df.set_index("Tile", inplace=True)
@@ -440,6 +443,43 @@ def make_pixel_stats(dataframe):
     pixel_stats_final_df = pixel_stats_df.merge(ref_fig_df, on="Tile")
 
     return pixel_stats_final_df
+
+
+def make_computed_stats(dataframe):
+    """
+    Calculates and merges statistics for building and tent object counts.
+
+    Args:
+        dataframe (DataFrame): Input DataFrame containing the columns 'Building_actual', 'Tent_actual',
+                              'tent_average', 'building_average', Building_object_count', 'Tent_object_count'.
+
+    Returns:
+        DataFrame: Merged DataFrame containing statistics for calculated columns and reference columns
+
+    """
+    # reset index to have 'tile' as regular column
+    dataframe_reset = dataframe.reset_index()
+
+    # columns for ref
+    col_for_ref = ["building_actual", "tent_actual"]
+
+    # take reference figures and group by tile for first df
+    ref_fig_df = dataframe_reset.groupby("Tile")[col_for_ref].max()
+
+    # columns for stats
+    col_for_stats = ["building_computed", "tent_computed"]
+
+    # second df with summary stats for selected columns
+    stats_df = dataframe_reset.groupby("Tile")[col_for_stats].agg(
+        ["min", "max", "mean"]
+    )
+    # rename columns with building and tent to keep on one level
+    stats_df.columns = [f"{col}_{label}" for col, label in stats_df.columns]
+
+    # merge two df on 'tile' column
+    stats_final_df = stats_df.merge(ref_fig_df, on="Tile")
+
+    return stats_final_df
 
 
 # %%

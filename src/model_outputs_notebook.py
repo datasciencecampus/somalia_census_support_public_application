@@ -51,6 +51,7 @@ from model_outputs_functions import (
     compute_object_counts,
     compute_pixel_counts,
     make_pixel_stats,
+    make_computed_stats,
 )
 
 
@@ -120,7 +121,6 @@ filenames = np.load(outputs_dir.joinpath(filenames_filename))
 # %%
 # check arrays loaded in
 filenames[4]
-y_pred.shape
 
 # %% [markdown]
 # ### Set loss
@@ -299,8 +299,73 @@ df_connected_final
 # #### Summary connected component stats
 
 # %%
-connected_stats_df = df_connected_final.groupby("Tile").agg(["min", "max", "mean"])
+connected_stats_df = make_computed_stats(df_connected_final)
 connected_stats_df
+
+# %%
+orange = "#FFA500"
+paler_orange = "#FFD278"
+blue = "#1f77b4"
+paler_blue = "#aec7e8"
+
+df_sorted_tent = connected_stats_df.sort_values(by="tent_actual")
+df_sorted_build = connected_stats_df.sort_values(by="building_actual")
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+
+ax1.plot(
+    df_sorted_tent["tent_actual"],
+    df_sorted_tent["tent_actual"],
+    color="grey",
+    linestyle="dotted",
+)
+ax1.errorbar(
+    connected_stats_df["tent_actual"],
+    connected_stats_df["tent_computed_mean"],
+    xerr=None,
+    yerr=[
+        connected_stats_df["tent_computed_min"],
+        connected_stats_df["tent_computed_max"],
+    ],
+    fmt="o",
+    capsize=5,
+    color=orange,
+    ecolor=paler_orange,
+)
+ax1.set_xlabel("actual tent count")
+ax1.set_ylabel("computed tent count")
+# ax1.set_xlim(0, 900)
+# ax1.set_ylim(0,900)
+
+
+ax2.plot(
+    df_sorted_build["building_actual"],
+    df_sorted_build["building_actual"],
+    color="grey",
+    linestyle="dotted",
+)
+ax2.errorbar(
+    connected_stats_df["building_actual"],
+    connected_stats_df["building_computed_mean"],
+    xerr=None,
+    yerr=[
+        connected_stats_df["building_computed_min"],
+        connected_stats_df["building_computed_max"],
+    ],
+    fmt="o",
+    capsize=5,
+    color=blue,
+    ecolor=paler_blue,
+)
+ax2.set_xlabel("actual building count")
+ax2.set_ylabel("computed building count")
+# ax2.set_xlim(0, 300)
+# ax2.set_ylim(0,300)
+
+plt.tight_layout()
+
+plt.show()
+
 
 # %% [markdown]
 # ### Pixel counts
@@ -334,7 +399,7 @@ df_pixelobj_final
 # %% [markdown]
 # #### Summary pixel stats
 
-# %%
+# %% jupyter={"outputs_hidden": true}
 pixel_stats_final_df = make_pixel_stats(df_pixelobj_final)
 pixel_stats_final_df
 
