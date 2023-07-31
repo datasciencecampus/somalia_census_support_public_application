@@ -378,6 +378,7 @@ def compute_pixel_counts(y_pred, filenames_test):
             # Convert pixel sum to area in square meters
             area = pixel_sum * pixel_area  # Assuming each pixel represents 0.5m
             tile_objects[class_label + "_area"] = area
+            tile_objects[class_label + "_pixel_sum"] = pixel_sum
 
         object_counts.append(tile_objects)
 
@@ -385,6 +386,7 @@ def compute_pixel_counts(y_pred, filenames_test):
     df = pd.DataFrame(
         columns=["Tile"]
         + [class_label + "_area" for class_label in class_labels.values()]
+        + [class_label + "_pixel_sum" for class_label in class_labels.values()]
     )
 
     # Populate the DataFrame with the number of objects for each class in each tile
@@ -393,7 +395,9 @@ def compute_pixel_counts(y_pred, filenames_test):
         row_data = {"Tile": filename}
         for class_label in class_labels.values():
             row_data[class_label + "_area"] = tile_objects.get(class_label + "_area", 0)
-
+            row_data[class_label + "_pixel_sum"] = tile_objects.get(
+                class_label + "_pixel_sum", 0
+            )
         df = df.append(row_data, ignore_index=True)
 
     df.set_index("Tile", inplace=True)

@@ -74,7 +74,7 @@ mask_dir = Path(folder_dict["mask_dir"])
 
 # %%
 # Set runid for outputs
-runid = "phase_1_gpu_3_np_10_07_23"
+runid = "phase_1_gpu_1_28_06_23"
 
 
 # %% [markdown]
@@ -337,3 +337,41 @@ df_pixelobj_final
 # %%
 pixel_stats_final_df = make_pixel_stats(df_pixelobj_final)
 pixel_stats_final_df
+
+# %%
+test_pixels = compute_pixel_counts(y_test, filenames)
+pred_pixels = compute_pixel_counts(y_pred, filenames)
+
+# %%
+combined_pixels = pd.concat([test_pixels, pred_pixels], axis=1)
+new_column_names = [
+    "actual_building_area",
+    "actual_tent_area",
+    "actual_building_sum",
+    "actual_tent_sum",
+    " pred_building_area",
+    "pred_tent_area",
+    "pred_building_sum",
+    "pred_tent_sum",
+]
+combined_pixels.columns = new_column_names
+
+# %%
+from IPython.display import display, HTML
+
+## Jupyter settings to display rows of data nicely ##
+display(HTML("<style>.container { width:85% !important; }</style>"))
+display(
+    HTML(
+        "<style>.output_result { max-width:85% !important; flex-direction:row; }</style>"
+    )
+)
+pd.set_option("display.max_rows", 500)
+pd.set_option("display.max_columns", 504)
+pd.set_option("display.width", 1000)
+
+display(HTML(combined_pixels.to_html(index=True)))
+# or
+# display(HTML(combined_pixels.head().to_html(index=True)))
+
+# %%
