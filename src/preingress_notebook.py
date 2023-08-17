@@ -44,7 +44,9 @@ from preingress_functions import (
     change_to_lower_case, 
     vice_versa_check_mask_file_for_img_file, 
     check_naming_convention_upheld, 
-    cleaning_of_mask_files
+    cleaning_of_mask_files,
+    check_same_number_of_files_present,
+    create_path_list_variables
 )
 
 # %%
@@ -66,43 +68,23 @@ validation_img_dir = setup_sub_dir(
 validation_mask_dir = setup_sub_dir(validation_data_dir, "mask")
 
 # %% [markdown]
-# ## Explore files
-
-# %% [markdown]
-# ##### For img and mask files in training data folder
+# ## Select Training or Validation
 
 # %%
-# Get all the img and mask files present for training data
-
-# Absolute path for img files
-img_files = list(img_dir.glob("*.tif"))
-
-# Absolute path for mask files
-mask_files = list(mask_dir.glob("*.geojson"))
-
-# Check that same number of imgs and mask files present - if not then warning
-if len(img_files) != len(mask_files):
-    warnings.warn(
-        f"Number of image files {len(img_files)} doesn't match number of mask files {len(mask_files)}"
-    )
+# Choose which data you are checking "training" or "validation"
+data_for = "validation"
 
 # %% [markdown]
-# ##### For validation img and mask files in validation data folder
+# ### Explore files
 
 # %%
-# Get all the img and mask files present for validation data
+# Create path lists for img and mask files
 
-# Absolute path for validation img files
-validation_img_files = list(validation_img_dir.glob("*.tif"))
-
-# Absolute path for validation mask files
-validation_mask_files = list(validation_mask_dir.glob("*.geojson"))
-
-# Check that same number of imgs and mask files present - if not then warning
-if len(validation_img_files) != len(validation_mask_files):
-    warnings.warn(
-        f"Number of validation image files {len(validation_img_files)} doesn't match number of validation mask files {len(validation_mask_files)}"
-    )
+img_files, mask_files = create_path_list_variables(data_for, 
+                                                   img_dir = img_dir, 
+                                                   mask_dir = mask_dir, 
+                                                   validation_img_dir = validation_img_dir, 
+                                                   validation_mask_dir = validation_mask_dir)
 
 # %% [markdown]
 # ##### List img files in img folder
@@ -119,18 +101,14 @@ mask_file_names = [file.name for file in mask_files]
 mask_file_names
 
 # %% [markdown]
-# ##### List validation img files in validation img folder
+# ##### Check same number of img and mask files present
 
 # %%
-validation_img_file_names = [file.name for file in validation_img_files]
-validation_img_file_names
-
-# %% [markdown]
-# ##### List validation mask files in validation mask folder
-
-# %%
-validation_mask_file_names = [file.name for file in validation_mask_files]
-validation_mask_file_names
+check_same_number_of_files_present(data_for, 
+                                   img_dir = img_dir, 
+                                   mask_dir = mask_dir, 
+                                   validation_img_dir = validation_img_dir, 
+                                   validation_mask_dir = validation_mask_dir)
 
 # %% [markdown]
 # ## General file cleaning

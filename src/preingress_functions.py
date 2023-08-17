@@ -238,3 +238,91 @@ def cleaning_of_mask_files(mask_files_lower):
 
         # write back to geojson
         mask_gdf.to_file(mask_dir.joinpath(f"{(mask_file)}"), driver="GeoJSON")
+
+
+# %%
+def check_same_number_of_files_present(data_for, img_dir, mask_dir, validation_img_dir, validation_mask_dir):
+    
+    """
+    Checks if...
+
+    Parameters
+    ----------
+    data_for: character
+        
+
+    Returns
+    -------
+    Warning message if number of validation/training img files doesn't 
+    match number of validation/training mask files
+    """
+
+    if data_for == "training":
+        
+        # Absolute path for img files
+        img_files = list(img_dir.glob("*.tif"))
+
+        # Absolute path for mask files
+        mask_files = list(mask_dir.glob("*.geojson"))
+
+        # Check that same number of imgs and mask files present - if not then warning
+        if len(img_files) != len(mask_files):
+            warnings.warn(
+                f"Number of image files {len(img_files)} doesn't match number of mask files {len(mask_files)}"
+        )
+        
+    elif data_for == "validation":
+        
+        # Absolute path for validation img files
+        validation_img_files = list(validation_img_dir.glob("*.tif"))
+
+        # Absolute path for validation mask files
+        validation_mask_files = list(validation_mask_dir.glob("*.geojson"))
+
+        # Check that same number of imgs and mask files present - if not then warning
+        if len(validation_img_files) != len(validation_mask_files):
+            warnings.warn(
+                f"Number of validation image files {len(validation_img_files)} doesn't match number of validation mask files {len(validation_mask_files)}"
+        )
+        
+    return
+
+
+# %%
+def create_path_list_variables(data_for, img_dir, mask_dir, validation_img_dir, validation_mask_dir):
+    
+    """
+    Checks if...
+
+    Parameters
+    ----------
+    data_for: character
+        
+
+    Returns
+    -------
+    Warning message if number of validation/training img files doesn't 
+    match number of validation/training mask files
+    """
+    
+    if data_for == "training":
+    
+        # Absolute path for img files
+        img_files = list(img_dir.glob("*.tif"))
+
+        # Absolute path for mask files
+        mask_files = list(mask_dir.glob("*.geojson"))
+     
+        #return img_files, mask_files
+    
+    elif data_for == "validation":
+    
+        # Absolute path for validation img files
+        img_files = list(validation_img_dir.glob("*.tif"))
+
+        # Absolute path for validation mask files
+        mask_files = list(validation_mask_dir.glob("*.geojson"))
+    
+        return img_files, mask_files
+
+# %%
