@@ -133,9 +133,14 @@ def check_naming_convention_upheld(
         List of img files in lower case
     mask_files_lower: list
         List of mask files in lower case
-    naming_convention_pattern: str
+    data_for: character
+        determines whether checked tile is for training or validation data
+    naming_convention_pattern_for_training: str
         Regular expression pattern string representing the expected structure given naming convention. Defaults
         to r"training_data_.+_[0-9]+_*"
+    naming_convention_pattern_for_validation: str
+        Regular expression pattern string representing the expected structure given naming convention. Defaults
+        to r"validation_data_.+_[0-9]+_*"
     naming_convention: List[str]
         Strings to show expected naming convention (used in error printing). Defaults to:
         [
@@ -244,12 +249,20 @@ def cleaning_of_mask_files(mask_files_lower):
 def check_same_number_of_files_present(data_for, img_dir, mask_dir, validation_img_dir, validation_mask_dir):
     
     """
-    Checks if...
+    Checks if same number of imgs and mask files present - if not then warning
 
     Parameters
     ----------
-    data_for: character
-        
+    data_for: str
+        determines whether checked tile is for training or validation data
+    img_dir: pathlib
+        path for img directory for training data
+    mask_dir: pathlib
+        path for mask directory for training data
+    validation_img_dir: pathlib
+        path for img directory for validation data
+    validation_mask_dir: pathlib
+        path for mask directory for validation data
 
     Returns
     -------
@@ -292,17 +305,25 @@ def check_same_number_of_files_present(data_for, img_dir, mask_dir, validation_i
 def create_path_list_variables(data_for, img_dir, mask_dir, validation_img_dir, validation_mask_dir):
     
     """
-    Checks if...
+    Creates absolute paths for img and mask files for training or validation data
 
     Parameters
     ----------
-    data_for: character
+    data_for: str
+        determines whether checked tile is for training or validation data
+    img_dir: pathlib
+        path for img directory for training data
+    mask_dir: pathlib
+        path for mask directory for training data
+    validation_img_dir: pathlib
+        path for img directory for validation data
+    validation_mask_dir: pathlib
+        path for mask directory for validation data
         
 
     Returns
     -------
-    Warning message if number of validation/training img files doesn't 
-    match number of validation/training mask files
+    List of absolute paths for img and mask files
     """
     
     if data_for == "training":

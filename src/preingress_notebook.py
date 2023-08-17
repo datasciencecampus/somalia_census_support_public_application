@@ -131,13 +131,6 @@ mask_files_lower = change_to_lower_case(mask_files)
 # %% [markdown]
 # ##### Change all validation data file names to lower case
 
-# %%
-# Lower case img file names
-validation_img_files_lower = change_to_lower_case(validation_img_files)
-
-# Lower case mask file names
-validation_mask_files_lower = change_to_lower_case(validation_mask_files)
-
 # %% [markdown]
 # ###### Check each mask file has corresponding img file & each img file has corresponding mask file
 
@@ -152,29 +145,10 @@ vice_versa_check_mask_file_for_img_file(
 )
 
 # %% [markdown]
-# ###### Check each validation mask file has corresponding validation img file & each img validation file has corresponding validation mask file
-
-# %%
-vice_versa_check_mask_file_for_img_file(
-    validation_img_files_lower, validation_mask_files_lower, for_mask_or_img="mask"
-)
-
-# %%
-vice_versa_check_mask_file_for_img_file(
-    validation_img_files_lower, validation_mask_files_lower, for_mask_or_img="img"
-)
-
-# %% [markdown]
 # ##### Check to ensure naming convention held for masks and img files
 
 # %%
-check_naming_convention_upheld(img_files_lower, mask_files_lower, data_for = "training")
-
-# %% [markdown]
-# ##### Check to ensure naming convention held for validation mask and img files
-
-# %%
-check_naming_convention_upheld(validation_img_files_lower, validation_mask_files_lower, data_for = "validation")
+check_naming_convention_upheld(img_files_lower, mask_files_lower, data_for)
 
 # %% [markdown]
 # ## Mask file cleaning
@@ -185,12 +159,8 @@ check_naming_convention_upheld(validation_img_files_lower, validation_mask_files
 #    * check for na
 
 # %%
-# Clean training data mask file
+# Clean data mask file
 cleaning_of_mask_files(mask_files_lower)
-
-# %%
-# Clean validation data mask file
-cleaning_of_mask_files(validation_mask_files_lower)
 
 # %% [markdown]
 # # Checking complete remember to copy data files back into Sharepoint data ingest area once happy
