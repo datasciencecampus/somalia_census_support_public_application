@@ -19,6 +19,8 @@
 # > Notebook to be run before any files are transferred to the SharePoint GCP ingress folder
 #
 # > You will need to manually copy contents of GCP_ingress folder on Sharepoint to your local machine and vice-versa
+#
+# > Only do one pair of mask and img files at a time
 
 # %% [markdown]
 # ## Set-up
@@ -47,16 +49,28 @@ from preingress_functions import (
 # Note directories of interest
 data_dir = Path.cwd().parent.joinpath("data")
 training_data_dir = data_dir.joinpath("training_data")
+validation_data_dir = data_dir.joinpath("validation_data")
+
+# Sub directories for training data
 img_dir = setup_sub_dir(
     training_data_dir, "img"
 )  # Note setup_sub_dir creates these if not present
 mask_dir = setup_sub_dir(training_data_dir, "mask")
 
+# Sub directories for validation data
+validation_img_dir = setup_sub_dir(
+    validation_data_dir, "img"
+)  # Note setup_sub_dir creates these if not present
+validation_mask_dir = setup_sub_dir(validation_data_dir, "mask")
+
 # %% [markdown]
 # ## Explore files
 
+# %% [markdown]
+# ##### For img and mask files in training data folder
+
 # %%
-# Get all the img and mask files present
+# Get all the img and mask files present for training data
 
 # Absolute path for img files
 img_files = list(img_dir.glob("*.tif"))
@@ -68,6 +82,24 @@ mask_files = list(mask_dir.glob("*.geojson"))
 if len(img_files) != len(mask_files):
     warnings.warn(
         f"Number of image files {len(img_files)} doesn't match number of mask files {len(mask_files)}"
+    )
+
+# %% [markdown]
+# ##### For validation img and mask files in validation data folder
+
+# %%
+# Get all the img and mask files present for validation data
+
+# Absolute path for validation img files
+validation_img_files = list(validation_img_dir.glob("*.tif"))
+
+# Absolute path for validation mask files
+validation_mask_files = list(validation_mask_dir.glob("*.geojson"))
+
+# Check that same number of imgs and mask files present - if not then warning
+if len(validation_img_files) != len(validation_mask_files):
+    warnings.warn(
+        f"Number of validation image files {len(validation_img_files)} doesn't match number of validation mask files {len(validation_mask_files)}"
     )
 
 # %% [markdown]
@@ -85,6 +117,20 @@ mask_file_names = [file.name for file in mask_files]
 mask_file_names
 
 # %% [markdown]
+# ##### List validation img files in validation img folder
+
+# %%
+validation_img_file_names = [file.name for file in validation_img_files]
+validation_img_file_names
+
+# %% [markdown]
+# ##### List validation mask files in validation mask folder
+
+# %%
+validation_mask_file_names = [file.name for file in validation_mask_files]
+validation_mask_file_names
+
+# %% [markdown]
 # ## General file cleaning
 #
 # * change all file names to lower case (see [`Path.rename()`](https://docs.python.org/3/library/pathlib.html#pathlib.Path.rename) and [`str.lower()`](https://www.programiz.com/python-programming/methods/string/lower)
@@ -93,7 +139,7 @@ mask_file_names
 # * specific for img files! check banding? Check in with Laurence on this and see: https://github.com/datasciencecampus/somalia_unfpa_census_support/issues/173
 
 # %% [markdown]
-# ##### Change all file names to lower case
+# ##### Change all training data file names to lower case
 
 # %%
 # Lower case img file names
@@ -103,7 +149,17 @@ img_files_lower = change_to_lower_case(img_files)
 mask_files_lower = change_to_lower_case(mask_files)
 
 # %% [markdown]
-# ###### Check each mask file has corresponding img file & check each img file has corresponding mask file
+# ##### Change all validation data file names to lower case
+
+# %%
+# Lower case img file names
+validation_img_files_lower = change_to_lower_case(validation_img_files)
+
+# Lower case mask file names
+validation_mask_files_lower = change_to_lower_case(validation_mask_files)
+
+# %% [markdown]
+# ###### Check each mask file has corresponding img file & each img file has corresponding mask file
 
 # %%
 vice_versa_check_mask_file_for_img_file(
@@ -116,10 +172,29 @@ vice_versa_check_mask_file_for_img_file(
 )
 
 # %% [markdown]
+# ###### Check each validation mask file has corresponding validation img file & each img validation file has corresponding validation mask file
+
+# %%
+vice_versa_check_mask_file_for_img_file(
+    validation_img_files_lower, validation_mask_files_lower, for_mask_or_img="mask"
+)
+
+# %%
+vice_versa_check_mask_file_for_img_file(
+    validation_img_files_lower, validation_mask_files_lower, for_mask_or_img="img"
+)
+
+# %% [markdown]
 # ##### Check to ensure naming convention held for masks and img files
 
 # %%
-check_naming_convention_upheld(img_files_lower, mask_files_lower)
+check_naming_convention_upheld(img_files_lower, mask_files_lower, data_for = "training")
+
+# %% [markdown]
+# ##### Check to ensure naming convention held for validation mask and img files
+
+# %%
+check_naming_convention_upheld(validation_img_files_lower, validation_mask_files_lower, data_for = "validation")
 
 # %% [markdown]
 # ## Mask file cleaning
@@ -130,7 +205,12 @@ check_naming_convention_upheld(img_files_lower, mask_files_lower)
 #    * check for na
 
 # %%
+# Clean training data mask file
 cleaning_of_mask_files(mask_files_lower)
+
+# %%
+# Clean validation data mask file
+cleaning_of_mask_files(validation_mask_files_lower)
 
 # %% [markdown]
 # # Checking complete remember to copy data files back into Sharepoint data ingest area once happy

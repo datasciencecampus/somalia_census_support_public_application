@@ -113,10 +113,14 @@ def vice_versa_check_mask_file_for_img_file(img_files, mask_files, for_mask_or_i
 def check_naming_convention_upheld(
     img_files_lower,
     mask_files_lower,
-    naming_convention_pattern=r"training_data_.+_[0-9]+_*",
+    data_for,
+    naming_convention_pattern_for_training = r"training_data_.+_[0-9]+_*",
+    naming_convention_pattern_for_validation = r"validation_data_.+_[0-9]+_*",
     naming_convention=[
         "training_data_<area>_<tile no>_<initials>_<bgr>.tif",
         "training_data_<area>_<tile no>_<initials>.geojson",
+        "validation_data_<area>_<tile no>_<initials>_<bgr>.tif",
+        "validation_data_<area>_<tile no>_<initials>.geojson",
     ],
 ):
 
@@ -135,22 +139,33 @@ def check_naming_convention_upheld(
     naming_convention: List[str]
         Strings to show expected naming convention (used in error printing). Defaults to:
         [
-            "training_data_<area>_<tile no>_<initials>_<bgr>.tif", # <- images
+            "training_data_<area>_<tile no>_<initials>_<bgr>.tif", # <- training data images
             "training_data_<area>_<tile no>_<initials>.geojson" # <- training data masks
+            "validation_data_<area>_<tile no>_<initials>_<bgr>.tif", # <- validation data images
+            "validation_data_<area>_<tile no>_<initials>.geojson" # <- validation data masks
         ]
 
     Returns
     -------
     Warning if naming convention for mask or img file is incorrect and informs what to change to
     """
-
     for file in img_files_lower + mask_files_lower:
-
-        # checks if naming convention correct for mask and img files
-        if not re.match(naming_convention_pattern, file.name):
-            warnings.warn(
-                f"The naming convention for ({file.name}) is not correct. Please change to {naming_convention[0]} for imgs or {naming_convention[1]} for masks "
-            )
+    
+        if data_for == "training":
+        
+            # checks if naming convention correct for mask and img files in training data
+            if not re.match(naming_convention_pattern_for_training, file.name):
+                warnings.warn(
+                    f"The naming convention for ({file.name}) is not correct. Please change to {naming_convention[0]} for imgs or {naming_convention[1]} for masks "
+                )
+    
+        elif data_for == "validation":
+        
+            # checks if naming convention correct for mask and img files in validation data
+            if not re.match(naming_convention_pattern_for_validation, file.name):
+                 warnings.warn(
+                    f"The naming convention for ({file.name}) is not correct. Please change to {naming_convention[2]} for imgs or {naming_convention[3]} for masks "
+                )
 
 
 # %%
