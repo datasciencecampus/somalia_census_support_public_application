@@ -20,9 +20,11 @@
 #
 # > You will need to manually copy contents of GCP_ingress folder on Sharepoint to your local machine and vice-versa
 #
-# > Only do one pair of mask and img files at a time
+# > Do training and validation data **separately**
 #
-# > Do training and validation data separately
+# > Only do **one pair** of mask and img files at a time
+#
+# > Remember to change **data_for** variable depending on whether training or validation is being checked
 
 # %% [markdown]
 # ## Set-up
@@ -87,7 +89,7 @@ img_files, mask_files = create_path_list_variables(data_for,
                                                    validation_mask_dir = validation_mask_dir)
 
 # %% [markdown]
-# ##### List img files in img folder
+# ##### List img files in img folder 
 
 # %%
 img_file_names = [file.name for file in img_files]
