@@ -21,6 +21,8 @@
 # > You will need to manually copy contents of GCP_ingress folder on Sharepoint to your local machine and vice-versa
 #
 # > Only do one pair of mask and img files at a time
+#
+# > Do training and validation data separately
 
 # %% [markdown]
 # ## Set-up
