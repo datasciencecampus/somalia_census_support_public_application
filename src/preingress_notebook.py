@@ -50,8 +50,7 @@ from preingress_functions import (
     check_naming_convention_upheld, 
     cleaning_of_mask_files,
     check_same_number_of_files_present,
-    create_path_list_variables,
-    data_for_matches_file_names
+    create_path_list_variables
 )
 
 # %%
