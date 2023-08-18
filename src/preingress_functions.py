@@ -323,7 +323,10 @@ def create_path_list_variables(data_for, img_dir, mask_dir, validation_img_dir, 
 
     Returns
     -------
-    List of absolute paths for img and mask files
+    img_files: path
+        List of absolute paths for img files
+    mask_files: path
+        List of absolute paths for mask files
     """
     
     if data_for == "training":
