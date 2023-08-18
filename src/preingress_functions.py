@@ -240,8 +240,9 @@ def cleaning_of_mask_files(mask_files_lower):
                 f"Geometry column for ({mask_file.name}) has null values. File has not been saved! Check QGIS"
             )
             continue
-
-        # write back to geojson
+        
+            
+        # write back to geojson for training
         mask_gdf.to_file(mask_dir.joinpath(f"{(mask_file)}"), driver="GeoJSON")
 
 
@@ -336,8 +337,6 @@ def create_path_list_variables(data_for, img_dir, mask_dir, validation_img_dir, 
 
         # Absolute path for mask files
         mask_files = list(mask_dir.glob("*.geojson"))
-     
-        #return img_files, mask_files
     
     elif data_for == "validation":
     
@@ -348,5 +347,45 @@ def create_path_list_variables(data_for, img_dir, mask_dir, validation_img_dir, 
         mask_files = list(validation_mask_dir.glob("*.geojson"))
     
         return img_files, mask_files
+
+
+# %%
+def data_for_matches_file_names(data_for, img_files_lower, mask_files_lower):
+    
+    """
+    Checks variable for data_for (either "training" or "validation") matches the file names that are being
+    checked in the notebook to avoid saving of wrong files
+
+    Parameters
+    ----------
+    data_for: str
+        determines whether checked tile is for training or validation data
+    img_dir: pathlib
+        path for img directory for training data
+    mask_dir: pathlib
+        path for mask directory for training data
+        
+
+    Returns
+    -------
+    Warning if data_for = "training" but file names being checked have the format r"validation_data_.+_[0-9]+_*" 
+    or data_for = "validation" but file names being checked have the format r"training_data_.+_[0-9]+_*" 
+    """
+
+    naming_convention_pattern_for_training = r"training_data_.+_[0-9]+_*"
+    naming_convention_pattern_for_validation = r"validation_data_.+_[0-9]+_*"
+
+    for file in img_files_lower + mask_files_lower:
+     
+        if data_for == "validation" and re.match(naming_convention_pattern_for_training, file.name):
+             warnings.warn(
+                    f"The file ({file.name}) is for training data but validation has been selected. Please check files in the relevant folders are correct before progressing and then restart the kernel"
+            ) 
+            
+            
+        elif data_for == "training" and re.match(naming_convention_pattern_for_validation, file.name):
+             warnings.warn(
+                    f"The file ({file.name}) is for validation data but training has been selected. Please check files in the relevant folders are correct before progressing and then restart the kernel"
+            )
 
 # %%

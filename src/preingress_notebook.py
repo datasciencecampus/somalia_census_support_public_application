@@ -25,6 +25,8 @@
 # > Only do **one pair** of mask and img files at a time
 #
 # > Remember to change **data_for** variable depending on whether training or validation is being checked
+#
+# > Run one cell at a time
 
 # %% [markdown]
 # ## Set-up
@@ -48,7 +50,8 @@ from preingress_functions import (
     check_naming_convention_upheld, 
     cleaning_of_mask_files,
     check_same_number_of_files_present,
-    create_path_list_variables
+    create_path_list_variables,
+    data_for_matches_file_names
 )
 
 # %%
@@ -129,6 +132,11 @@ img_files_lower = change_to_lower_case(img_files)
 
 # Lower case mask file names
 mask_files_lower = change_to_lower_case(mask_files)
+
+# %%
+data_for_matches_file_names(data_for, 
+                            img_files_lower = img_files_lower, 
+                            mask_files_lower = mask_files_lower)
 
 # %% [markdown]
 # ###### Check each mask file has corresponding img file & each img file has corresponding mask file
