@@ -132,11 +132,6 @@ img_files_lower = change_to_lower_case(img_files)
 # Lower case mask file names
 mask_files_lower = change_to_lower_case(mask_files)
 
-# %%
-data_for_matches_file_names(data_for, 
-                            img_files_lower = img_files_lower, 
-                            mask_files_lower = mask_files_lower)
-
 # %% [markdown]
 # ###### Check each mask file has corresponding img file & each img file has corresponding mask file
 
