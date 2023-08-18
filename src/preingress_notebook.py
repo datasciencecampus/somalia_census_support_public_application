@@ -131,9 +131,6 @@ img_files_lower = change_to_lower_case(img_files)
 mask_files_lower = change_to_lower_case(mask_files)
 
 # %% [markdown]
-# ##### Change all validation data file names to lower case
-
-# %% [markdown]
 # ###### Check each mask file has corresponding img file & each img file has corresponding mask file
 
 # %%
