@@ -1,5 +1,7 @@
 img_dir: ../data/training_data/img
 mask_dir: ../data/training_data/mask
+validation_img_dir: ../data/validation_data/img
+validation_mask_dir: ..data/validation_data/mask
 models_dir: ../models
 outputs_dir: ../outputs
 wip_bucket: ons-net-zero-analysis-prod-somalia-wip
