@@ -5,12 +5,12 @@
 
 
 # %%
-from pathlib import Path 
-from functions_library import setup_sub_dir 
-import re 
-import warnings 
-import geopandas as gpd 
-import numpy as np 
+from pathlib import Path
+from functions_library import setup_sub_dir
+import re
+import warnings
+import geopandas as gpd
+
 
 # %%
 # Note directories of interest
@@ -109,13 +109,12 @@ def vice_versa_check_mask_file_for_img_file(img_files, mask_files, for_mask_or_i
             )
 
 
-# %%
 def check_naming_convention_upheld(
     img_files_lower,
     mask_files_lower,
     data_for,
-    naming_convention_pattern_for_training = r"training_data_.+_[0-9]+_*",
-    naming_convention_pattern_for_validation = r"validation_data_.+_[0-9]+_*",
+    naming_convention_pattern_for_training=r"training_data_.+_[0-9]+_*",
+    naming_convention_pattern_for_validation=r"validation_data_.+_[0-9]+_*",
     naming_convention=[
         "training_data_<area>_<tile no>_<initials>_<bgr>.tif",
         "training_data_<area>_<tile no>_<initials>.geojson",
@@ -123,54 +122,43 @@ def check_naming_convention_upheld(
         "validation_data_<area>_<tile no>_<initials>.geojson",
     ],
 ):
-
     """
-    Checks correct naming convention is being used for img and mask files in training data before ingress to GCP.
+    Checks if the correct naming convention is being used for image and mask files in training/validation data.
 
     Parameters
     ----------
     img_files_lower: list
-        List of img files in lower case
+        List of image filenames in lowercase.
     mask_files_lower: list
-        List of mask files in lower case
-    data_for: character
-        determines whether checked tile is for training or validation data
-    naming_convention_pattern_for_training: str
-        Regular expression pattern string representing the expected structure given naming convention. Defaults
-        to r"training_data_.+_[0-9]+_*"
-    naming_convention_pattern_for_validation: str
-        Regular expression pattern string representing the expected structure given naming convention. Defaults
-        to r"validation_data_.+_[0-9]+_*"
-    naming_convention: List[str]
-        Strings to show expected naming convention (used in error printing). Defaults to:
-        [
-            "training_data_<area>_<tile no>_<initials>_<bgr>.tif", # <- training data images
-            "training_data_<area>_<tile no>_<initials>.geojson" # <- training data masks
-            "validation_data_<area>_<tile no>_<initials>_<bgr>.tif", # <- validation data images
-            "validation_data_<area>_<tile no>_<initials>.geojson" # <- validation data masks
-        ]
+        List of mask filenames in lowercase.
+    data_for: str
+        Indicates whether the checked tiles are for "training" or "validation" data.
+    naming_convention_pattern_for_training: str, optional
+        Regular expression pattern representing the expected structure for training data filenames.
+    naming_convention_pattern_for_validation: str, optional
+        Regular expression pattern representing the expected structure for validation data filenames.
+    naming_convention: list of str
+        List of strings representing the expected naming conventions.
 
     Returns
     -------
-    Warning if naming convention for mask or img file is incorrect and informs what to change to
+    None
+        Generates a warning if naming convention for image or mask file is incorrect.
     """
+    naming_pattern = (
+        naming_convention_pattern_for_training
+        if data_for == "training"
+        else naming_convention_pattern_for_validation
+    )
+
     for file in img_files_lower + mask_files_lower:
-    
-        if data_for == "training":
-        
-            # checks if naming convention correct for mask and img files in training data
-            if not re.match(naming_convention_pattern_for_training, file.name):
-                warnings.warn(
-                    f"The naming convention for ({file.name}) is not correct. Please change to {naming_convention[0]} for imgs or {naming_convention[1]} for masks "
-                )
-    
-        elif data_for == "validation":
-        
-            # checks if naming convention correct for mask and img files in validation data
-            if not re.match(naming_convention_pattern_for_validation, file.name):
-                 warnings.warn(
-                    f"The naming convention for ({file.name}) is not correct. Please change to {naming_convention[2]} for imgs or {naming_convention[3]} for masks "
-                )
+        if not re.match(naming_pattern, file):
+            convention_type = "imgs" if data_for == "training" else "masks"
+            correct_convention = (
+                naming_convention[0] if data_for == "training" else naming_convention[2]
+            )
+            warning_message = f"The naming convention for ({file}) is not correct. Please change to {correct_convention} for {convention_type}."
+            warnings.warn(warning_message)
 
 
 # %%
@@ -219,7 +207,7 @@ def cleaning_of_mask_files(mask_files_lower):
                 Add types in QGIS to the drawn polygons. File has not been saved!"""
             )
             continue
-        
+
         # check building types in type column
         if len(mask_gdf.Type.unique()) == 1:
             warnings.warn(
@@ -233,22 +221,23 @@ def cleaning_of_mask_files(mask_files_lower):
                 f"Type column for ({mask_file.name}) has null values. File has not been saved!"
             )
             continue
-            
+
         # check any null values in geometry column - send error
         if mask_gdf["geometry"].isnull().values.any():
             warnings.warn(
                 f"Geometry column for ({mask_file.name}) has null values. File has not been saved! Check QGIS"
             )
             continue
-        
-            
+
         # write back to geojson for training
         mask_gdf.to_file(mask_dir.joinpath(f"{(mask_file)}"), driver="GeoJSON")
 
 
 # %%
-def check_same_number_of_files_present(data_for, img_dir, mask_dir, validation_img_dir, validation_mask_dir):
-    
+def check_same_number_of_files_present(
+    data_for, img_dir, mask_dir, validation_img_dir, validation_mask_dir
+):
+
     """
     Checks if same number of imgs and mask files present - if not then warning
 
@@ -267,12 +256,12 @@ def check_same_number_of_files_present(data_for, img_dir, mask_dir, validation_i
 
     Returns
     -------
-    Warning message if number of validation/training img files doesn't 
+    Warning message if number of validation/training img files doesn't
     match number of validation/training mask files
     """
 
     if data_for == "training":
-        
+
         # Absolute path for img files
         img_files = list(img_dir.glob("*.tif"))
 
@@ -283,10 +272,10 @@ def check_same_number_of_files_present(data_for, img_dir, mask_dir, validation_i
         if len(img_files) != len(mask_files):
             warnings.warn(
                 f"Number of image files {len(img_files)} doesn't match number of mask files {len(mask_files)}"
-        )
-        
+            )
+
     elif data_for == "validation":
-        
+
         # Absolute path for validation img files
         validation_img_files = list(validation_img_dir.glob("*.tif"))
 
@@ -297,14 +286,16 @@ def check_same_number_of_files_present(data_for, img_dir, mask_dir, validation_i
         if len(validation_img_files) != len(validation_mask_files):
             warnings.warn(
                 f"Number of validation image files {len(validation_img_files)} doesn't match number of validation mask files {len(validation_mask_files)}"
-        )
-        
+            )
+
     return
 
 
 # %%
-def create_path_list_variables(data_for, img_dir, mask_dir, validation_img_dir, validation_mask_dir):
-    
+def create_path_list_variables(
+    data_for, img_dir, mask_dir, validation_img_dir, validation_mask_dir
+):
+
     """
     Creates absolute paths for img and mask files for training or validation data
 
@@ -320,7 +311,7 @@ def create_path_list_variables(data_for, img_dir, mask_dir, validation_img_dir, 
         path for img directory for validation data
     validation_mask_dir: pathlib
         path for mask directory for validation data
-        
+
 
     Returns
     -------
@@ -329,23 +320,24 @@ def create_path_list_variables(data_for, img_dir, mask_dir, validation_img_dir, 
     mask_files: path
         List of absolute paths for mask files
     """
-    
+
     if data_for == "training":
-    
+
         # Absolute path for img files
         img_files = list(img_dir.glob("*.tif"))
 
         # Absolute path for mask files
         mask_files = list(mask_dir.glob("*.geojson"))
-    
+
     elif data_for == "validation":
-    
+
         # Absolute path for validation img files
         img_files = list(validation_img_dir.glob("*.tif"))
 
         # Absolute path for validation mask files
         mask_files = list(validation_mask_dir.glob("*.geojson"))
-    
+
         return img_files, mask_files
+
 
 # %%
