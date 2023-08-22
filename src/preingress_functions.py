@@ -6,7 +6,7 @@
 
 # %%
 from pathlib import Path
-from functions_library import setup_sub_dir
+from functions_library import get_folder_paths
 import re
 import warnings
 import geopandas as gpd
@@ -14,9 +14,12 @@ import geopandas as gpd
 
 # %%
 # Note directories of interest
-data_dir = Path.cwd().parent.joinpath("data")
-training_data_dir = data_dir.joinpath("training_data")
-mask_dir = setup_sub_dir(training_data_dir, "mask")
+folder_dict = get_folder_paths()
+
+training_img_dir = Path(folder_dict["training_img_dir"])
+training_mask_dir = Path(folder_dict["training_mask_dir"])
+validation_img_dir = Path(folder_dict["validation_img_dir"])
+validation_mask_dir = Path(folder_dict["validation_mask_dir"])
 
 
 # %%
@@ -109,6 +112,7 @@ def vice_versa_check_mask_file_for_img_file(img_files, mask_files, for_mask_or_i
             )
 
 
+# %%
 def check_naming_convention_upheld(
     img_files_lower,
     mask_files_lower,
@@ -152,7 +156,7 @@ def check_naming_convention_upheld(
     )
 
     for file in img_files_lower + mask_files_lower:
-        if not re.match(naming_pattern, file):
+        if not re.match(naming_pattern, file.name):
             convention_type = "imgs" if data_for == "training" else "masks"
             correct_convention = (
                 naming_convention[0] if data_for == "training" else naming_convention[2]
@@ -162,7 +166,7 @@ def check_naming_convention_upheld(
 
 
 # %%
-def cleaning_of_mask_files(mask_files_lower):
+def cleaning_of_mask_files(mask_files_lower, data_for):
 
     """
     Cleans geopandas dataframes of all mask files and then overwrites them in the mask folder. Checks for
@@ -172,12 +176,22 @@ def cleaning_of_mask_files(mask_files_lower):
     ----------
     mask_files_lower: list
         List of mask files in lower case
+    data_for: str
+        Indicates whether the checked tiles are for "training" or "validation" data.
 
     Returns
     -------
     Warning message if "Type" column not found along with creation of new column in geopandas dataframe,
     print message and lastly a GeoJSON file that has been cleaned.
     """
+
+    if data_for == "training":
+
+        mask_dir = training_mask_dir
+
+    elif data_for == "validation":
+
+        mask_dir = validation_mask_dir
 
     # Examine each mask file
     for mask_file in mask_files_lower:
@@ -234,25 +248,17 @@ def cleaning_of_mask_files(mask_files_lower):
 
 
 # %%
-def check_same_number_of_files_present(
-    data_for, img_dir, mask_dir, validation_img_dir, validation_mask_dir
-):
+def check_same_number_of_files_present(img_files, mask_files):
 
     """
     Checks if same number of imgs and mask files present - if not then warning
 
     Parameters
     ----------
-    data_for: str
-        determines whether checked tile is for training or validation data
-    img_dir: pathlib
-        path for img directory for training data
-    mask_dir: pathlib
-        path for mask directory for training data
-    validation_img_dir: pathlib
-        path for img directory for validation data
-    validation_mask_dir: pathlib
-        path for mask directory for validation data
+    img_files: pathlib
+        path for img directory for training or validation data
+    mask_files: pathlib
+        path for mask directory for training or validation data
 
     Returns
     -------
@@ -260,84 +266,13 @@ def check_same_number_of_files_present(
     match number of validation/training mask files
     """
 
-    if data_for == "training":
-
-        # Absolute path for img files
-        img_files = list(img_dir.glob("*.tif"))
-
-        # Absolute path for mask files
-        mask_files = list(mask_dir.glob("*.geojson"))
-
-        # Check that same number of imgs and mask files present - if not then warning
-        if len(img_files) != len(mask_files):
-            warnings.warn(
-                f"Number of image files {len(img_files)} doesn't match number of mask files {len(mask_files)}"
-            )
-
-    elif data_for == "validation":
-
-        # Absolute path for validation img files
-        validation_img_files = list(validation_img_dir.glob("*.tif"))
-
-        # Absolute path for validation mask files
-        validation_mask_files = list(validation_mask_dir.glob("*.geojson"))
-
-        # Check that same number of imgs and mask files present - if not then warning
-        if len(validation_img_files) != len(validation_mask_files):
-            warnings.warn(
-                f"Number of validation image files {len(validation_img_files)} doesn't match number of validation mask files {len(validation_mask_files)}"
-            )
+    # Check that same number of imgs and mask files present - if not then warning
+    if len(img_files) != len(mask_files):
+        warnings.warn(
+            f"Number of validation image files {len(img_files)} doesn't match number of validation mask files {len(mask_files)}"
+        )
 
     return
-
-
-# %%
-def create_path_list_variables(
-    data_for, img_dir, mask_dir, validation_img_dir, validation_mask_dir
-):
-
-    """
-    Creates absolute paths for img and mask files for training or validation data
-
-    Parameters
-    ----------
-    data_for: str
-        determines whether checked tile is for training or validation data
-    img_dir: pathlib
-        path for img directory for training data
-    mask_dir: pathlib
-        path for mask directory for training data
-    validation_img_dir: pathlib
-        path for img directory for validation data
-    validation_mask_dir: pathlib
-        path for mask directory for validation data
-
-
-    Returns
-    -------
-    img_files: path
-        List of absolute paths for img files
-    mask_files: path
-        List of absolute paths for mask files
-    """
-
-    if data_for == "training":
-
-        # Absolute path for img files
-        img_files = list(img_dir.glob("*.tif"))
-
-        # Absolute path for mask files
-        mask_files = list(mask_dir.glob("*.geojson"))
-
-    elif data_for == "validation":
-
-        # Absolute path for validation img files
-        img_files = list(validation_img_dir.glob("*.tif"))
-
-        # Absolute path for validation mask files
-        mask_files = list(validation_mask_dir.glob("*.geojson"))
-
-        return img_files, mask_files
 
 
 # %%

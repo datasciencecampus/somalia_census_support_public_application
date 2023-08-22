@@ -24,12 +24,20 @@
 #
 # > Only do **one pair** of mask and img files at a time
 #
-# > Remember to change **data_for** variable depending on whether training or validation is being checked
+# > Remember to change **[data_for](#datafor)** under **[Select Training or Validation](#selecttrainingorvalidation)** variable depending on whether training or validation is being checked
 #
 # > Run one cell at a time
+#
+# ## Contents
+#
+#
+# 1. ##### [Set-up](#setup)
+# 1. ##### [Select Training or Validation](#selecttrainingorvalidation)
+# 1. ##### [General file cleaning](#generalfilecleaning)
+# 1. ##### [Mask file cleaning](#maskfilecleaning)
 
 # %% [markdown]
-# ## Set-up
+# ## Set-up <a name="setup"></a>
 #
 # import re  # pattern matching
 # import warnings  # used for sending warnings
@@ -37,20 +45,15 @@
 # %%
 # Load required libraries
 from pathlib import Path  # working with file paths
-import re  # pattern matching
-import warnings  # used for sending warnings
-import geopandas as gpd  # working with geospatial files and data
-import numpy as np  # Used to ensure a training tile has more than one type
 
 # Local imports
 from functions_library import setup_sub_dir
 from preingress_functions import (
-    change_to_lower_case, 
-    vice_versa_check_mask_file_for_img_file, 
-    check_naming_convention_upheld, 
+    change_to_lower_case,
+    vice_versa_check_mask_file_for_img_file,
+    check_naming_convention_upheld,
     cleaning_of_mask_files,
     check_same_number_of_files_present,
-    create_path_list_variables
 )
 
 # %%
@@ -60,10 +63,10 @@ training_data_dir = data_dir.joinpath("training_data")
 validation_data_dir = data_dir.joinpath("validation_data")
 
 # Sub directories for training data
-img_dir = setup_sub_dir(
+training_img_dir = setup_sub_dir(
     training_data_dir, "img"
 )  # Note setup_sub_dir creates these if not present
-mask_dir = setup_sub_dir(training_data_dir, "mask")
+training_mask_dir = setup_sub_dir(training_data_dir, "mask")
 
 # Sub directories for validation data
 validation_img_dir = setup_sub_dir(
@@ -72,26 +75,38 @@ validation_img_dir = setup_sub_dir(
 validation_mask_dir = setup_sub_dir(validation_data_dir, "mask")
 
 # %% [markdown]
-# ## Select Training or Validation
+# ## Select Training or Validation <a name="selecttrainingorvalidation"></a>
+
+# %% [markdown]
+# ### Data_for <a name="datafor"></a>
 
 # %%
 # Choose which data you are checking "training" or "validation"
 data_for = "validation"
 
+# %%
+# Get paths for either training or validation data
+if data_for == "training":
+
+    # Absolute path for img files
+    img_files = list(training_img_dir.glob("*.tif"))
+
+    # Absolute path for mask files
+    mask_files = list(training_mask_dir.glob("*.geojson"))
+
+elif data_for == "validation":
+
+    # Absolute path for validation img files
+    img_files = list(validation_img_dir.glob("*.tif"))
+
+    # Absolute path for validation mask files
+    mask_files = list(validation_mask_dir.glob("*.geojson"))
+
 # %% [markdown]
 # ### Explore files
 
-# %%
-# Create path lists for img and mask files
-
-img_files, mask_files = create_path_list_variables(data_for, 
-                                                   img_dir = img_dir, 
-                                                   mask_dir = mask_dir, 
-                                                   validation_img_dir = validation_img_dir, 
-                                                   validation_mask_dir = validation_mask_dir)
-
 # %% [markdown]
-# ##### List img files in img folder 
+# ##### List img files in img folder
 
 # %%
 img_file_names = [file.name for file in img_files]
@@ -108,14 +123,10 @@ mask_file_names
 # ##### Check same number of img and mask files present
 
 # %%
-check_same_number_of_files_present(data_for, 
-                                   img_dir = img_dir, 
-                                   mask_dir = mask_dir, 
-                                   validation_img_dir = validation_img_dir, 
-                                   validation_mask_dir = validation_mask_dir)
+check_same_number_of_files_present(img_files, mask_files)
 
 # %% [markdown]
-# ## General file cleaning
+# ## General file cleaning <a name="generalfilecleaning"></a>
 #
 # * change all file names to lower case (see [`Path.rename()`](https://docs.python.org/3/library/pathlib.html#pathlib.Path.rename) and [`str.lower()`](https://www.programiz.com/python-programming/methods/string/lower)
 # * check there each img file has corresponding mask file and _vice versa_ - both img and mask files should have same name except suffix
@@ -152,7 +163,7 @@ vice_versa_check_mask_file_for_img_file(
 check_naming_convention_upheld(img_files_lower, mask_files_lower, data_for)
 
 # %% [markdown]
-# ## Mask file cleaning
+# ## Mask file cleaning <a name="maskfilecleaning"></a>
 #
 # * check data in each geojson (see [reading geojson](https://docs.astraea.earth/hc/en-us/articles/360043919911-Read-a-GeoJSON-File-into-a-GeoPandas-DataFrame)):
 #    * check there is a type column
@@ -161,7 +172,7 @@ check_naming_convention_upheld(img_files_lower, mask_files_lower, data_for)
 
 # %%
 # Clean data mask file
-cleaning_of_mask_files(mask_files_lower)
+cleaning_of_mask_files(mask_files_lower, data_for)
 
 # %% [markdown]
 # # Checking complete remember to copy data files back into Sharepoint data ingest area once happy
