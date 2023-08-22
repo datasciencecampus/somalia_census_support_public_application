@@ -55,8 +55,6 @@ models_dir = Path(folder_dict["models_dir"])
 outputs_dir = Path(folder_dict["outputs_dir"])
 img_dir = Path(folder_dict["img_dir"])
 mask_dir = Path(folder_dict["mask_dir"])
-validation_img_dir = Path(folder_dict["validation_img_dir"])
-validation_mask_dir = Path(folder_dict["validation_mask_dir"])
 
 # %% [markdown]
 # ## Import data
