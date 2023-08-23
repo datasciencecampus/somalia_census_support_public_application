@@ -18,15 +18,16 @@
 #
 # > Notebook to be run before any files are transferred to the SharePoint GCP ingress folder
 #
-# > You will need to manually copy contents of GCP_ingress folder on Sharepoint to your local machine and vice-versa
+# > You will need to manually copy contents of GCP_ingress folder on **Sharepoint** to your local machine and vice-versa
 #
 # > Do training and validation data **separately**
+#
+# > Only run **one cell** at a time
 #
 # > Only do **one pair** of mask and img files at a time
 #
 # > Remember to change **[data_for](#datafor)** under **[Select Training or Validation](#selecttrainingorvalidation)** variable depending on whether training or validation is being checked
 #
-# > Run one cell at a time
 #
 # ## Contents
 #
@@ -130,7 +131,7 @@ check_same_number_of_files_present(img_files, mask_files)
 # * specific for img files! check banding? Check in with Laurence on this and see: https://github.com/datasciencecampus/somalia_unfpa_census_support/issues/173
 
 # %% [markdown]
-# ##### Change all training data file names to lower case
+# ##### Change all file names to lower case
 
 # %%
 # Lower case img file names
@@ -143,11 +144,13 @@ mask_files_lower = change_to_lower_case(mask_files)
 # ###### Check each mask file has corresponding img file & each img file has corresponding mask file
 
 # %%
+# Check each mask file has corresponding img file
 vice_versa_check_mask_file_for_img_file(
     img_files_lower, mask_files_lower, for_mask_or_img="mask"
 )
 
 # %%
+# Check each img file has corresponding mask file
 vice_versa_check_mask_file_for_img_file(
     img_files_lower, mask_files_lower, for_mask_or_img="img"
 )
