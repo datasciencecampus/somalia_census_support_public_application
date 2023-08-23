@@ -5,9 +5,9 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.14.4
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -18,20 +18,26 @@ from pathlib import Path
 import pandas as pd
 import folium
 from folium.plugins import MarkerCluster
+import matplotlib.pyplot as plt
 from IPython.display import IFrame
 
 # %%
 data_dir = Path.cwd().parent.joinpath("data")
-
 file_path = data_dir.joinpath("somalia_idp_sites_march23.csv")
+shelter_file_path = data_dir.joinpath("SOM_IDP_Site_Monitoring_July2023.csv")
+
+# %% [markdown]
+# ## All camps
 
 # %%
+# camp location data
 data = pd.read_csv(file_path)
-data
-
-# %%
 data = data.dropna(subset=["Latitude", "Longitude"])
-data
+data.columns = data.columns.str.lower().str.replace(" ", "_")
+data.head()
+
+# %% [markdown]
+# ### All camps map
 
 # %%
 somalia_map = folium.Map(location=[5.152, 45.338], zoom_start=6)
@@ -56,7 +62,7 @@ original_locations2 = [
 
 for index, row in data.iterrows():
     folium.Marker(
-        location=[row["Latitude"], row["Longitude"]], popup=row["Neighbourhood"]
+        location=[row["latitude"], row["longitude"]], popup=row["idp_site"]
     ).add_to(marker_cluster)
 
 
@@ -81,9 +87,146 @@ for location in original_locations2:
 somalia_map
 
 # %%
+# saves map as html - saved in src folder because I haven't updated path
+
 map_file = "somalia_map.html"
 somalia_map.save(map_file)
 
 IFrame(src=map_file, width=800, height=600)
+
+# %% [markdown]
+# ## Shelter type
+
+# %%
+# shelter location data
+shelter_data = pd.read_csv(shelter_file_path)
+shelter_data.columns = shelter_data.columns.str.lower().str.replace(" ", "_")
+
+shelter_data.head()
+
+# %%
+# renaming column names
+shelter_data.rename(
+    columns={
+        "how_many_households_are_present_at_the_site?": "households",
+        "how_many_individuals_are_present_at_the_site?": "individuals",
+        "what_type_of_shelter_is_most_common_within_the_idp_site?": "shelter_type",
+        "settlement/cluster/umbrella/village/section": "settlement",
+    },
+    inplace=True,
+)
+
+shelter_mapping = {
+    "Emergency Shelters (Somali Traditional House/ Buul/ Tent/ Emergency Shelter Kits/ Timber and Plastic Sheet with CGI Roof)": "emergency",
+    "Transitional Shelters (Mundul/Baraako/Plywood wall with CGI roofing, CGI sheet wall and roof)": "transitional",
+    "Permanent Shelters (Stone brick wall with CGI roofing, Mud block shelter)": "permanent",
+}
+
+shelter_data["shelter_type"] = shelter_data["shelter_type"].replace(shelter_mapping)
+
+shelter_data.head()
+
+# %% [markdown]
+# #### Shelter map
+
+# %%
+shelter_colors = {"emergency": "orange", "transitional": "blue", "permanent": "green"}
+
+# %%
+# Create a base map centered on Somalia
+shelter_map = folium.Map(location=[5.152149, 46.199616], zoom_start=6)
+
+# Add data points to the map
+for index, row in shelter_data.iterrows():
+    folium.CircleMarker(
+        location=[row["latitude"], row["longitude"]],
+        radius=row["households"] / 300,
+        color=None,  # Let the color be determined by the 'shelter_type' column
+        fill=True,
+        fill_color=shelter_colors.get(row["shelter_type"], "gray"),
+        fill_opacity=0.7,
+        popup=row["idp_site"],
+    ).add_to(shelter_map)
+
+shelter_map
+
+
+# %%
+# Group by district and shelter type, and calculate sums
+grouped_data = (
+    shelter_data.groupby(["district", "shelter_type"])
+    .agg({"households": "sum", "individuals": "sum"})
+    .reset_index()
+)
+grouped_data
+
+# %%
+# Create pivot tables for households and individuals
+pivot_households = grouped_data.pivot(
+    index="district", columns="shelter_type", values="households"
+).fillna(0)
+pivot_individuals = grouped_data.pivot(
+    index="district", columns="shelter_type", values="individuals"
+).fillna(0)
+
+# Create bar plots for households and individuals
+pivot_households.plot(
+    kind="bar",
+    stacked=True,
+    figsize=(10, 6),
+    color=[shelter_colors[col] for col in pivot_households.columns],
+)
+plt.title("Households by Shelter Type")
+plt.ylabel("Number of Households")
+plt.xlabel("District")
+plt.legend(title="Shelter Type")
+plt.show()
+
+pivot_individuals.plot(
+    kind="bar",
+    stacked=True,
+    figsize=(10, 6),
+    color=[shelter_colors[col] for col in pivot_households.columns],
+)
+plt.title("Individuals by Shelter Type")
+plt.ylabel("Number of Individuals")
+plt.xlabel("District")
+plt.legend(title="Shelter Type")
+plt.show()
+
+# %%
+# Group by district and shelter type, and calculate sums
+all_grouped_data = (
+    shelter_data.groupby(["shelter_type"])
+    .agg({"households": "sum", "individuals": "sum"})
+    .reset_index()
+)
+all_grouped_data
+
+# %%
+# Set custom colors for pie chart
+colors = ["orange", "blue", "green"]
+
+# Create pie chart for households
+plt.figure(figsize=(8, 5))
+plt.pie(
+    all_grouped_data["households"],
+    labels=all_grouped_data["shelter_type"],
+    colors=colors,
+    autopct="%1.1f%%",
+)
+plt.title("Distribution of Shelter Types for Households")
+plt.show()
+
+# Create pie chart for individuals
+plt.figure(figsize=(8, 5))
+plt.pie(
+    all_grouped_data["individuals"],
+    labels=all_grouped_data["shelter_type"],
+    colors=colors,
+    autopct="%1.1f%%",
+)
+plt.title("Distribution of Shelter Types for Individuals")
+plt.show()
 
 # %%
