@@ -47,7 +47,8 @@
 from pathlib import Path  # working with file paths
 
 # Local imports
-from functions_library import setup_sub_dir
+from functions_library import get_folder_paths
+
 from preingress_functions import (
     change_to_lower_case,
     vice_versa_check_mask_file_for_img_file,
@@ -58,21 +59,12 @@ from preingress_functions import (
 
 # %%
 # Note directories of interest
-data_dir = Path.cwd().parent.joinpath("data")
-training_data_dir = data_dir.joinpath("training_data")
-validation_data_dir = data_dir.joinpath("validation_data")
+folder_dict = get_folder_paths()
 
-# Sub directories for training data
-training_img_dir = setup_sub_dir(
-    training_data_dir, "img"
-)  # Note setup_sub_dir creates these if not present
-training_mask_dir = setup_sub_dir(training_data_dir, "mask")
-
-# Sub directories for validation data
-validation_img_dir = setup_sub_dir(
-    validation_data_dir, "img"
-)  # Note setup_sub_dir creates these if not present
-validation_mask_dir = setup_sub_dir(validation_data_dir, "mask")
+training_img_dir = Path(folder_dict["training_img_dir"])
+training_mask_dir = Path(folder_dict["training_mask_dir"])
+validation_img_dir = Path(folder_dict["validation_img_dir"])
+validation_mask_dir = Path(folder_dict["validation_mask_dir"])
 
 # %% [markdown]
 # ## Select Training or Validation <a name="selecttrainingorvalidation"></a>
@@ -101,6 +93,10 @@ elif data_for == "validation":
 
     # Absolute path for validation mask files
     mask_files = list(validation_mask_dir.glob("*.geojson"))
+
+else:
+    raise ValueError("No file in one or both folders. Please check")
+
 
 # %% [markdown]
 # ### Explore files
