@@ -95,7 +95,7 @@ elif data_for == "validation":
     mask_files = list(validation_mask_dir.glob("*.geojson"))
 
 else:
-    raise ValueError("No file in one or both folders. Please check")
+    raise ValueError("No file in mask and/or img folder(s). Please check")
 
 
 # %% [markdown]
