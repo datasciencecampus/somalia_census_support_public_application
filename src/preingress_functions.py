@@ -26,7 +26,7 @@ validation_mask_dir = Path(folder_dict["validation_mask_dir"])
 def change_to_lower_case(files):
 
     """
-    Changes file names for img and mask files to lower case in training data before ingress to GCP.
+    Changes file names for img and mask files to lower case in training or validation data before ingress to GCP.
 
     Parameters
     ----------
@@ -53,7 +53,7 @@ def change_to_lower_case(files):
 def vice_versa_check_mask_file_for_img_file(img_files, mask_files, for_mask_or_img):
 
     """
-    Checks mask file names to see if they have a corresponding img file in training data before ingress to GCP.
+    Checks mask file names to see if they have a corresponding img file in training or validation data before ingress to GCP.
     Will also check if img file names to see if they have a corresponding mask file
 
     Parameters
@@ -127,7 +127,7 @@ def check_naming_convention_upheld(
     ],
 ):
     """
-    Checks if the correct naming convention is being used for image and mask files in training/validation data.
+    Checks if the correct naming convention is being used for image and mask files in training or validation data.
 
     Parameters
     ----------
