@@ -140,7 +140,7 @@ shelter_map = folium.Map(location=[5.152149, 46.199616], zoom_start=6)
 for index, row in shelter_data.iterrows():
     folium.CircleMarker(
         location=[row["latitude"], row["longitude"]],
-        radius=row["households"] / 300,
+        # radius=row["households"] / 300,
         color=None,  # Let the color be determined by the 'shelter_type' column
         fill=True,
         fill_color=shelter_colors.get(row["shelter_type"], "gray"),
@@ -228,5 +228,98 @@ plt.pie(
 )
 plt.title("Distribution of Shelter Types for Individuals")
 plt.show()
+
+# %% [markdown]
+# ## Camp extent modelling
+#
+
+# %%
+data.head()
+
+# %%
+data.rename(
+    columns={
+        "_hh_(q1-2023)_": "households",
+        "_individual_(q1-2023)_": "individuals",
+        "date_idp_site_established": "established",
+    },
+    inplace=True,
+)
+
+# %%
+extents_data = data[["region", "district", "latitude", "longitude", "households"]]
+
+extents_data.head()
+
+# %%
+extents_data["households"] = pd.to_numeric(extents_data["households"], errors="coerce")
+
+# %%
+# calculating area
+
+building_area = 14  # in square meters
+space_between_buildings = 2  # in meters
+
+extents_data["total_building_area"] = (
+    extents_data["households"] * (building_area + space_between_buildings)
+    - space_between_buildings
+)
+
+extents_data
+
+# %%
+from shapely.geometry import Point
+
+# %%
+extents_data["geometry"] = None
+
+
+# %%
+for index, row in extents_data.iterrows():
+    lon = row["longitude"]
+    lat = row["latitude"]
+    total_area = pd.to_numeric(row["total_building_area"])
+
+    # Create a rectangular polygon based on half the width and half the height
+    half_width = (total_area / (building_area + space_between_buildings)) / 2
+    half_height = (building_area + space_between_buildings) / 2
+
+    # Define the coordinates of the polygon's corners
+    coords = [
+        (lon - half_width, lat - half_height),
+        (lon + half_width, lat - half_height),
+        (lon + half_width, lat + half_height),
+        (lon - half_width, lat + half_height),
+    ]
+
+    # Create a Polygon object using the coordinates
+    polygon = Point(coords).envelope
+
+    # Assign the polygon to the 'geometry' column
+    extents_data.at[index, "geometry"] = polygon
+
+
+# %%
+from shapely.geometry import Polygon
+
+for index, row in extents_data.iterrows():
+    lon = row["longitude"]
+    lat = row["latitude"]
+    total_area = row["total_building_area"]
+
+    half_width = total_area / (building_area + space_between_buildings) / 2
+    half_height = (building_area + space_between_buildings) / 2
+
+    coords = [
+        (lon - half_width, lat - half_height),
+        (lon + half_width, lat - half_height),
+        (lon + half_width, lat + half_height),
+        (lon - half_width, lat + half_height),
+    ]
+
+    polygon = Polygon(coords)  # Create a Polygon object using the coordinates
+
+    extents_data.at[index, "geometry"] = polygon
+
 
 # %%
