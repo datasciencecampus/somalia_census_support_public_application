@@ -16,7 +16,9 @@
 # %% [markdown]
 # # Pre-Ingress Notebook
 #
-# The purpose of this notebook is to check training and validation files for any potential errors (`.geojson` and `.tif`) before being ingressed to GCP.
+# The purpose of this notebook is to check training and validation image (`.tif`) and mask files (`.geojson`) for any potential errors before being ingressed to GCP.
+#
+# This notebook should be ran until it returns no errors - files will be updated in GIS software.
 #
 # Before running this notebook, files should be saved locally with the below structure:
 #
@@ -34,7 +36,7 @@
 #  ┃ ┃ ┗ 📂mask
 #  ┃ ┃ ┃ ┣ 📜validation_data_<area>_<initial>.geojson
 #  ┣ 📂src
-#  ┃ ┣ 📜data_augmentation_functions.py
+#  ┃ ┣ 📜preingress_functions.py
 #  ┃ ┣ 📜preingress_notebook.py
 #  ┣ 📜.gitignore
 #  ┣ 📜requirements.txt
@@ -65,7 +67,7 @@
 from pathlib import Path  # working with file paths
 
 # Local imports
-from functions_library import get_folder_paths
+from functions_library import get_folder_paths, get_data_paths
 
 from preingress_functions import (
     change_to_lower_case,
@@ -99,34 +101,6 @@ training_img_dir, training_mask_dir, validation_img_dir, validation_mask_dir = [
 # %%
 # Choose which data you are checking "training" or "validation"
 data_type = "training"
-
-
-# %%
-def get_data_paths(data_type):
-    """
-    Get paths for image and mask files based on whether data is training or validation.
-
-    Args:
-    data_type (str): either 'training' or 'validation'
-
-    Returns:
-        img_files (list): list of paths to image files
-        mask_files (list): list of paths to mask files
-    """
-    if data_type == "training":
-        img_dir = training_img_dir
-        mask_dir = training_mask_dir
-    elif data_type == "validation":
-        img_dir = validation_img_dir
-        mask_dir = validation_mask_dir
-    else:
-        raise ValueError("Invalid data_type value")
-
-    img_files = list(img_dir.glob("*.tif"))
-    mask_files = list(mask_dir.glob("*.geojson"))
-
-    return img_files, mask_files
-
 
 # %%
 img_files, mask_files = get_data_paths(data_type)
