@@ -33,15 +33,26 @@ import keras
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+
 import h5py
 from pathlib import Path
 from keras.metrics import MeanIoU
-from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 
 from functions_library import get_folder_paths
 from loss_functions import get_combined_loss
 from multi_class_unet_model_build import jacard_coef
-from model_outputs_functions import compute_class_counts
+from model_outputs_functions import (
+    calculate_metrics,
+    calculate_tile_metrics,
+    plot_confusion_matrix,
+    remove_rows_by_index,
+    compute_predicted_counts,
+    compute_actual_counts,
+    compute_object_counts,
+    compute_pixel_counts,
+    make_pixel_stats,
+    make_computed_stats,
+)
 
 
 # %% [markdown]
@@ -64,19 +75,22 @@ mask_dir = Path(folder_dict["mask_dir"])
 
 # %%
 # Set runid for outputs
-runid = "outputs_alt_test"
+runid = "phase_1_gpu_1_28_06_23"
 
 
 # %% [markdown]
 # ### Model conditions
 
 # %%
-model_filename = f"{runid}.hdf5"
-model_phase = h5py.File(models_dir.joinpath(model_filename), "r")
+# set model input read depending on when model was run
+old_model = False
+if old_model:
+    model_filename = f"{runid}.hdf5"
+    model_phase = h5py.File(models_dir.joinpath(model_filename), "r")
+else:
+    model_filename = runid
+    model_phase = models_dir.joinpath(model_filename)
 
-# %%
-# check loaded in correctly
-model_phase.keys()
 
 # %% [markdown]
 # ### History (epochs)
@@ -96,17 +110,17 @@ history.head()
 X_test_filename = f"{runid}_xtest.npy"
 y_pred_filename = f"{runid}_ypred.npy"
 y_test_filename = f"{runid}_ytest.npy"
-filenames_test_filename = f"{runid}_filenamestest.npy"
+filenames_filename = f"{runid}_filenamestest.npy"
 
 X_test = np.load(outputs_dir.joinpath(X_test_filename))
 y_pred = np.load(outputs_dir.joinpath(y_pred_filename))
 y_test = np.load(outputs_dir.joinpath(y_test_filename))
-filenames_test = np.load(outputs_dir.joinpath(filenames_test_filename))
+filenames = np.load(outputs_dir.joinpath(filenames_filename))
 
 
 # %%
 # check arrays loaded in
-filenames_test[4]
+filenames[4]
 
 # %% [markdown]
 # ### Set loss
@@ -122,7 +136,8 @@ total_loss = get_combined_loss()
 model = keras.models.load_model(
     model_phase,
     custom_objects={
-        "dice_loss_plus_1focal_loss": total_loss[1],
+        "dice_loss_plus_1focal_loss": total_loss,
+        "dice_loss_plus_focal_loss": total_loss,
         "focal_loss": total_loss[0],
         "dice_loss": total_loss[1],
         "jacard_coef": jacard_coef,
@@ -137,7 +152,9 @@ model = keras.models.load_model(
 # create plot showing training and validation loss
 loss = history["loss"]
 val_loss = history["val_loss"]
+
 epochs = range(1, len(history.loss) + 1)
+
 plt.plot(epochs, history.loss, "y", label="Training loss")
 plt.plot(epochs, history.val_loss, "r", label="Validation loss")
 plt.title("Training and validation loss")
@@ -181,7 +198,7 @@ print("Mean IoU =", IOU_keras.result().numpy())
 
 # %%
 # test_img_number = random.randint(0, len(X_test))
-test_img_number = 2
+test_img_number = 119
 test_img = X_test[test_img_number]
 ground_truth = y_test_argmax[test_img_number]
 # test_img_norm=test_img[:,:,0][:,:,None]
@@ -189,7 +206,7 @@ test_img_input = np.expand_dims(test_img, 0)
 prediction = model.predict(test_img_input)
 predicted_img = np.argmax(prediction, axis=3)[0, :, :]
 
-# %%
+# argmax
 plt.figure(figsize=(12, 8))
 plt.subplot(231)
 plt.title("Testing Image")
@@ -203,79 +220,223 @@ plt.imshow(predicted_img)
 plt.show()
 
 # %%
+# not argmax
 plt.figure(figsize=(12, 8))
 plt.subplot(231)
 plt.title("Testing Image")
-plt.imshow(X_test[100][:, :, :3])
+plt.imshow(X_test[test_img_number][:, :, :3])
 plt.subplot(232)
 plt.title("Testing Label")
-plt.imshow(y_test[100])
+plt.imshow(y_test[test_img_number])
 plt.subplot(233)
 plt.title("Prediction on test image")
-plt.imshow(y_pred[100])
+plt.imshow(y_pred[test_img_number])
 plt.show()
 
 # %% [markdown]
-# ## Compute class outputs
-
-# %%
-class_counts_df = compute_class_counts(y_pred, y_test, filenames_test)
-# class_counts_df = class_counts_df.drop(columns="Background")
-class_counts_df
+# ## Confusion Matrix
 
 # %% [markdown]
-# ## Confusion Matrix
+# ### Whole run metrics
 
 # %%
 class_names = ["Background", "Building", "Tent"]
 
 y_true = y_test_argmax
 y_pred = model.predict(X_test)
-y_pred = np.argmax(y_pred, axis=-1)
+y_pred_arg = np.argmax(y_pred, axis=-1)
 
-# calculate the confusion matrix
-conf_mat = confusion_matrix(y_true.ravel(), y_pred.ravel())
+metrics_df = calculate_metrics(y_true, y_pred_arg, class_names)
+metrics_df = metrics_df.set_index("Class")
+metrics_df
 
-# calculate the precision, recall, and F1-score for each class
-num_classes = conf_mat.shape[0]
-precision = np.zeros(num_classes)
-recall = np.zeros(num_classes)
-f1_score = np.zeros(num_classes)
-
-for i in range(num_classes):
-    true_positives = conf_mat[i, i]
-    false_positives = np.sum(conf_mat[:, i]) - true_positives
-    false_negatives = np.sum(conf_mat[i, :]) - true_positives
-
-    precision[i] = true_positives / (true_positives + false_positives)
-    recall[i] = true_positives / (true_positives + false_negatives)
-    f1_score[i] = 2 * precision[i] * recall[i] / (precision[i] + recall[i])
-
-# calculate the accuracy for each class
-accuracy = np.zeros(num_classes)
-for i in range(num_classes):
-    accuracy[i] = conf_mat[i, i] / np.sum(conf_mat[i, :])
-
-# print the results
-for i in range(num_classes):
-    print(
-        f"{class_names[i]} - Precision: {precision[i]}, Recall: {recall[i]}, F1-score: {f1_score[i]}, Accuracy: {accuracy[i]}"
-    )
-
+# %% [markdown]
+# ### Tile metrics
 
 # %%
-labels = ["background", "building", "tent"]
+tile_metrics_df = calculate_tile_metrics(y_pred, y_test_argmax, class_names, filenames)
+tile_metrics_df = tile_metrics_df.set_index("tile")
+tile_metrics_df.to_csv(str(outputs_dir) + "/" + runid + "_tile_metrics.csv")
+tile_metrics_df
 
-# calculate the percentages
-row_sums = conf_mat.sum(axis=1)
-conf_mat_percent = conf_mat / row_sums[:, np.newaxis]
+# %% [markdown]
+# ### Confusion matrix plot
 
-display = ConfusionMatrixDisplay(
-    confusion_matrix=conf_mat_percent, display_labels=labels
+# %%
+plot_confusion_matrix(y_true, y_pred_arg)
+
+
+# %% [markdown]
+# ## Compute class outputs
+
+# %%
+# to remove background tiles
+words_to_remove = "background"
+
+# %% [markdown]
+# ### Actual class counts from JSON
+
+# %%
+df_json = compute_actual_counts(filenames)
+df_json_filtered = remove_rows_by_index(df_json, words_to_remove)
+df_json_filtered = df_json_filtered[~df_json_filtered.index.duplicated()]
+df_json_filtered
+
+# %% [markdown]
+# ### Connected components
+
+# %%
+df_connected = compute_predicted_counts(y_pred, filenames)
+
+df_connected_filtered = remove_rows_by_index(df_connected, words_to_remove)
+df_connected_final = df_connected_filtered.join(df_json_filtered)
+df_connected_final = df_connected_final[
+    ["tent_computed", "building_computed", "tent_actual", "building_actual"]
+]
+df_connected_final
+
+# %% [markdown]
+# #### Summary connected component stats
+
+# %%
+connected_stats_df = make_computed_stats(df_connected_final)
+connected_stats_df
+
+# %%
+orange = "#FFA500"
+paler_orange = "#FFD278"
+blue = "#1f77b4"
+paler_blue = "#aec7e8"
+
+df_sorted_tent = connected_stats_df.sort_values(by="tent_actual")
+df_sorted_build = connected_stats_df.sort_values(by="building_actual")
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+
+ax1.plot(
+    df_sorted_tent["tent_actual"],
+    df_sorted_tent["tent_actual"],
+    color="grey",
+    linestyle="dotted",
+)
+ax1.errorbar(
+    connected_stats_df["tent_actual"],
+    connected_stats_df["tent_computed_mean"],
+    xerr=None,
+    yerr=[
+        connected_stats_df["tent_computed_min"],
+        connected_stats_df["tent_computed_max"],
+    ],
+    fmt="o",
+    capsize=5,
+    color=orange,
+    ecolor=paler_orange,
+)
+ax1.set_xlabel("actual tent count")
+ax1.set_ylabel("computed tent count")
+# ax1.set_xlim(0, 900)
+# ax1.set_ylim(0,900)
+
+
+ax2.plot(
+    df_sorted_build["building_actual"],
+    df_sorted_build["building_actual"],
+    color="grey",
+    linestyle="dotted",
+)
+ax2.errorbar(
+    connected_stats_df["building_actual"],
+    connected_stats_df["building_computed_mean"],
+    xerr=None,
+    yerr=[
+        connected_stats_df["building_computed_min"],
+        connected_stats_df["building_computed_max"],
+    ],
+    fmt="o",
+    capsize=5,
+    color=blue,
+    ecolor=paler_blue,
+)
+ax2.set_xlabel("actual building count")
+ax2.set_ylabel("computed building count")
+# ax2.set_xlim(0, 300)
+# ax2.set_ylim(0,300)
+
+plt.tight_layout()
+
+plt.show()
+
+
+# %% [markdown]
+# ### Pixel counts
+
+# %%
+df_pixel = compute_pixel_counts(y_pred, filenames)
+df_pixel_filtered = remove_rows_by_index(df_pixel, words_to_remove)
+df_pixel_final = df_pixel_filtered.join(df_json_filtered)
+
+df_pixel_final["tent_calc"] = (
+    df_pixel_final["tent_area"] / df_pixel_final["tent_average"]
 )
 
-# plot the confusion matrix
-display.plot(cmap="cividis", values_format=".2%")
+df_pixel_final["build_calc"] = (
+    df_pixel_final["building_area"] / df_pixel_final["building_average"]
+)
 
-# show the plot
-plt.show()
+df_pixel_final
+
+# %%
+average_building_size = 100
+average_tent_size = 6
+
+df_pixelobj = compute_object_counts(
+    y_pred, filenames, average_building_size, average_tent_size
+)
+df_pixelobj_filtered = remove_rows_by_index(df_pixelobj, words_to_remove)
+df_pixelobj_final = df_pixelobj_filtered.join(df_json_filtered)
+df_pixelobj_final
+
+# %% [markdown]
+# #### Summary pixel stats
+
+# %% jupyter={"outputs_hidden": true}
+pixel_stats_final_df = make_pixel_stats(df_pixelobj_final)
+pixel_stats_final_df
+
+# %%
+test_pixels = compute_pixel_counts(y_test, filenames)
+pred_pixels = compute_pixel_counts(y_pred, filenames)
+
+# %%
+combined_pixels = pd.concat([test_pixels, pred_pixels], axis=1)
+new_column_names = [
+    "actual_building_area",
+    "actual_tent_area",
+    "actual_building_sum",
+    "actual_tent_sum",
+    " pred_building_area",
+    "pred_tent_area",
+    "pred_building_sum",
+    "pred_tent_sum",
+]
+combined_pixels.columns = new_column_names
+
+# %%
+from IPython.display import display, HTML
+
+## Jupyter settings to display rows of data nicely ##
+display(HTML("<style>.container { width:85% !important; }</style>"))
+display(
+    HTML(
+        "<style>.output_result { max-width:85% !important; flex-direction:row; }</style>"
+    )
+)
+pd.set_option("display.max_rows", 500)
+pd.set_option("display.max_columns", 504)
+pd.set_option("display.width", 1000)
+
+display(HTML(combined_pixels.to_html(index=True)))
+# or
+# display(HTML(combined_pixels.head().to_html(index=True)))
+
+# %%

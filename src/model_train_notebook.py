@@ -95,19 +95,20 @@ outputs_dir = Path.cwd().parent.joinpath("outputs")
 # Option to set specific tiles as validation for model. Currently works by using an area name (i.e. Baidoa). Should be set to 'none' if want to randomly generate training/validation split.
 
 # %%
-validation_area = None
+validation_area = "doolow"
 
 # %%
 # stacking validation images based on an area
 if validation_area is not None:
-    validation_images = stack_array_with_validation(img_dir, validation_area)
+    validation_images, validation_filenames = stack_array_with_validation(
+        img_dir, validation_area, expanded_outputs=True
+    )
     validation_images.shape
 
 # %%
 # stacking validation masks based on an area
 if validation_area is not None:
     validation_masks = stack_array_with_validation(mask_dir, validation_area)
-    validation_masks.shape
 
 # %% [markdown]
 # ## Data augmentation <a name="dataaug"></a>
@@ -333,6 +334,9 @@ if "validation_images" not in locals() or validation_images is None:
 if "validation_masks_cat" not in locals() or validation_masks_cat is None:
     validation_masks_cat = None
 
+if "validation_filenames" not in locals() or validation_filenames is None:
+    validation_filenames = None
+
 # %%
 X_train, X_test, y_train, y_test, filenames_train, filenames_test = split_data(
     all_stacked_images,
@@ -340,6 +344,7 @@ X_train, X_test, y_train, y_test, filenames_train, filenames_test = split_data(
     all_stacked_filenames,
     validation_images,
     validation_masks_cat,
+    validation_filenames,
 )
 
 # %%
@@ -457,7 +462,7 @@ model.compile(
 #
 
 # %%
-runid = "outputs_alt_test"
+runid = "val_zone_test"
 
 # %%
 conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_img_num = {all_stacked_masks.shape[0]},\nhue_shift = {hue_shift_value},\nbrightness = {brightness_factor},\ncontrast = {contrast_factor},\nloss_function = {loss_function}"

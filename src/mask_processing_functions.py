@@ -168,6 +168,23 @@ def count_unique_features(geojson_file):
     return feature_counts
 
 
+def calculate_average_feature_size(geojson_file_df):
+    tent_size = []
+    building_size = []
+
+    for idx, row in geojson_file_df.iterrows():
+        size = row.geometry.area
+        if row["Type"] == "Tent":
+            tent_size.append(size)
+        elif row["Type"] == "Building":
+            building_size.append(size)
+
+    average_tent = sum(tent_size) / len(tent_size) if tent_size else 0
+    average_building = sum(building_size) / len(building_size) if building_size else 0
+
+    return average_tent, average_building
+
+
 def process_geojson_files(mask_dir, img_dir, building_class_list, img_size):
     """
     Process GeoJSON files in the given directory.
@@ -220,9 +237,17 @@ def process_geojson_files(mask_dir, img_dir, building_class_list, img_size):
 
         # Add Feature counts for this tiles into features dictionary
         if mask_path.name.endswith("background.geojson"):
-            unique_features = {"Building": 0, "Tent": 0}
+            unique_features = {
+                "Building": 0,
+                "Tent": 0,
+                "Avg_building_size": 0,
+                "Avg_tent_size": 0,
+            }
         else:
             unique_features = count_unique_features(mask_gdf)
+            tent_avg, building_avg = calculate_average_feature_size(mask_gdf)
+            unique_features["tent_average"] = tent_avg
+            unique_features["building_average"] = building_avg
 
         features_dict[mask_filename] = unique_features
 
