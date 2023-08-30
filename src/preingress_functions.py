@@ -185,13 +185,7 @@ def cleaning_of_mask_files(mask_files_lower, data_for):
     print message and lastly a GeoJSON file that has been cleaned.
     """
 
-    if data_for == "training":
-
-        mask_dir = training_mask_dir
-
-    elif data_for == "validation":
-
-        mask_dir = validation_mask_dir
+    mask_dir = training_mask_dir if data_for == "training" else validation_mask_dir
 
     # Examine each mask file
     for mask_file in mask_files_lower:
@@ -209,7 +203,7 @@ def cleaning_of_mask_files(mask_files_lower, data_for):
         # check if type column not present and send warning
         if "Type" not in column_names and len(mask_gdf.geometry) == 0:
             warnings.warn(
-                f"""{(mask_file.name)} contains no Type or geometry.
+                f"""{(mask_file)} contains no Type or geometry.
                 Ensure this mask is for a background tile. File has not been saved!"""
             )
             continue
@@ -217,7 +211,7 @@ def cleaning_of_mask_files(mask_files_lower, data_for):
         # check if type column not present and geometry column is - send error
         elif "Type" not in column_names and "geometry" in column_names:
             warnings.warn(
-                f"""{(mask_file.name)} contains no type but has geometry.
+                f"""{(mask_file)} contains no type but has geometry.
                 Add types in QGIS to the drawn polygons. File has not been saved!"""
             )
             continue
@@ -225,21 +219,21 @@ def cleaning_of_mask_files(mask_files_lower, data_for):
         # check building types in type column
         if len(mask_gdf.Type.unique()) == 1:
             warnings.warn(
-                f"""{(mask_file.name)} contains only 1 type of building!
+                f"""{(mask_file)} contains only 1 type of building!
                 Ensure this is correct before uploading to the ingress folder."""
             )
 
         # check any null values in type column - send error
         if mask_gdf["Type"].isnull().values.any():
             warnings.warn(
-                f"Type column for ({mask_file.name}) has null values. File has not been saved!"
+                f"Type column for ({mask_file}) has null values. File has not been saved!"
             )
             continue
 
         # check any null values in geometry column - send error
         if mask_gdf["geometry"].isnull().values.any():
             warnings.warn(
-                f"Geometry column for ({mask_file.name}) has null values. File has not been saved! Check QGIS"
+                f"Geometry column for ({mask_file}) has null values. File has not been saved! Check QGIS"
             )
             continue
 
