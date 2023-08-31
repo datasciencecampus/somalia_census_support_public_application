@@ -116,7 +116,7 @@ def vice_versa_check_mask_file_for_img_file(img_files, mask_files, for_mask_or_i
 def check_naming_convention_upheld(
     img_files_lower,
     mask_files_lower,
-    data_for,
+    data_type,
     naming_convention_pattern_for_training=r"training_data_.+_[0-9]+_*",
     naming_convention_pattern_for_validation=r"validation_data_.+_[0-9]+_*",
     naming_convention=[
@@ -135,7 +135,7 @@ def check_naming_convention_upheld(
         List of image filenames in lowercase.
     mask_files_lower: list
         List of mask filenames in lowercase.
-    data_for: str
+    data_type: str
         Indicates whether the checked tiles are for "training" or "validation" data.
     naming_convention_pattern_for_training: str, optional
         Regular expression pattern representing the expected structure for training data filenames.
@@ -151,22 +151,24 @@ def check_naming_convention_upheld(
     """
     naming_pattern = (
         naming_convention_pattern_for_training
-        if data_for == "training"
+        if data_type == "training"
         else naming_convention_pattern_for_validation
     )
 
     for file in img_files_lower + mask_files_lower:
         if not re.match(naming_pattern, file.name):
-            convention_type = "imgs" if data_for == "training" else "masks"
+            convention_type = "imgs" if data_type == "training" else "masks"
             correct_convention = (
-                naming_convention[0] if data_for == "training" else naming_convention[2]
+                naming_convention[0]
+                if data_type == "training"
+                else naming_convention[2]
             )
             warning_message = f"The naming convention for ({file}) is not correct. Please change to {correct_convention} for {convention_type}."
             warnings.warn(warning_message)
 
 
 # %%
-def cleaning_of_mask_files(mask_files_lower, data_for):
+def cleaning_of_mask_files(mask_files_lower, data_type):
 
     """
     Cleans geopandas dataframes of all mask files and then overwrites them in the mask folder. Checks for
@@ -176,7 +178,7 @@ def cleaning_of_mask_files(mask_files_lower, data_for):
     ----------
     mask_files_lower: list
         List of mask files in lower case
-    data_for: str
+    data_type: str
         Indicates whether the checked tiles are for "training" or "validation" data.
 
     Returns
@@ -185,7 +187,7 @@ def cleaning_of_mask_files(mask_files_lower, data_for):
     print message and lastly a GeoJSON file that has been cleaned.
     """
 
-    mask_dir = training_mask_dir if data_for == "training" else validation_mask_dir
+    mask_dir = training_mask_dir if data_type == "training" else validation_mask_dir
 
     # Examine each mask file
     for mask_file in mask_files_lower:
@@ -238,7 +240,7 @@ def cleaning_of_mask_files(mask_files_lower, data_for):
             continue
 
         # write back to geojson for training
-        mask_gdf.to_file(mask_dir.joinpath(f"{(mask_file)}"), driver="GeoJSON")
+        mask_gdf.to_file(mask_dir.joinpath(f"{(mask_file.name)}"), driver="GeoJSON")
 
 
 # %%
