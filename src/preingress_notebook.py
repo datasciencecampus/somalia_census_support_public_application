@@ -14,83 +14,122 @@
 # ---
 
 # %% [markdown]
-# # Pre GCP Ingress Notebook
+# # Pre-Ingress Notebook
 #
-# > Notebook to be run before any files are transferred to the SharePoint GCP ingress folder
+# The purpose of this notebook is to check training and validation image (`.tif`) and mask files (`.geojson`) for any potential errors before being ingressed to GCP.
 #
-# > You will need to manually copy contents of GCP_ingress folder on Sharepoint to your local machine and vice-versa
+# This notebook should be ran until it returns no errors - files will be updated in GIS software.
+#
+# Before running this notebook, files should be saved locally with the below structure:
+#
+# ```
+# 📦somalia_unfpa_census_support
+#  ┣ 📂data
+#  ┃ ┣ 📂training_data
+#  ┃ ┃ ┗ 📂img
+#  ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.tif
+#  ┃ ┃ ┗ 📂mask
+#  ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.geojson
+#  ┃ ┣ 📂validation_data
+#  ┃ ┃ ┗ 📂img
+#  ┃ ┃ ┃ ┣ 📜validation_data_<area>_<initial>.tif
+#  ┃ ┃ ┗ 📂mask
+#  ┃ ┃ ┃ ┣ 📜validation_data_<area>_<initial>.geojson
+#  ┣ 📂src
+#  ┃ ┣ 📜preingress_functions.py
+#  ┃ ┣ 📜preingress_notebook.py
+#  ┣ 📜.gitignore
+#  ┣ 📜requirements.txt
+#  ┣ 📜config.yaml
+#  ┗ 📜README.md
+# ```
+#
+#
+# > **NOTE** files should not be saved to the Sharepoint GCP ingress folder until they have been through the below process
 
 # %% [markdown]
-# ## Set-up
+# ## Contents
 #
-# import re  # pattern matching
-# import warnings  # used for sending warnings
+#
+# 1. ##### [Set-up](#setup)
+# 1. ##### [Explore](#explore)
+# 1. ##### [General file cleaning](#filecleaning)
+# 1. ##### [Mask file cleaning](#maskfilecleaning)
+
+# %% [markdown]
+# ## Set-up <a name="setup"></a>
+
+# %% [markdown]
+# ### Import libraries & functions
 
 # %%
 # Load required libraries
 from pathlib import Path  # working with file paths
-import re  # pattern matching
-import warnings  # used for sending warnings
-import geopandas as gpd  # working with geospatial files and data
-import numpy as np  # Used to ensure a training tile has more than one type
 
 # Local imports
-from functions_library import setup_sub_dir
+from functions_library import get_folder_paths, get_data_paths
+
 from preingress_functions import (
-    change_to_lower_case, 
-    vice_versa_check_mask_file_for_img_file, 
-    check_naming_convention_upheld, 
-    cleaning_of_mask_files
+    change_to_lower_case,
+    vice_versa_check_mask_file_for_img_file,
+    check_naming_convention_upheld,
+    cleaning_of_mask_files,
+    check_same_number_of_files_present,
 )
 
-# %%
-# Note directories of interest
-data_dir = Path.cwd().parent.joinpath("data")
-training_data_dir = data_dir.joinpath("training_data")
-img_dir = setup_sub_dir(
-    training_data_dir, "img"
-)  # Note setup_sub_dir creates these if not present
-mask_dir = setup_sub_dir(training_data_dir, "mask")
-
 # %% [markdown]
-# ## Explore files
+# ### Set-up directories
 
 # %%
-# Get all the img and mask files present
-
-# Absolute path for img files
-img_files = list(img_dir.glob("*.tif"))
-
-# Absolute path for mask files
-mask_files = list(mask_dir.glob("*.geojson"))
-
-# Check that same number of imgs and mask files present - if not then warning
-if len(img_files) != len(mask_files):
-    warnings.warn(
-        f"Number of image files {len(img_files)} doesn't match number of mask files {len(mask_files)}"
-    )
+# get folder paths from config.yaml
+folder_dict = get_folder_paths()
+# list of folder names
+folder_name = [
+    "training_img_dir",
+    "training_mask_dir",
+    "validation_img_dir",
+    "validation_mask_dir",
+]
+# set folder paths
+training_img_dir, training_mask_dir, validation_img_dir, validation_mask_dir = [
+    Path(folder_dict[folder]) for folder in folder_name
+]
 
 # %% [markdown]
-# ##### List img files in img folder
+# ### Select Training or Validation
+
+# %%
+# Choose which data you are checking "training" or "validation"
+data_type = "training"
+
+# %%
+img_files, mask_files = get_data_paths(data_type)
+
+# %% [markdown]
+# ## Explore files <a name="explore"></a>
+
+# %% [markdown]
+# ##### List img files in img_dir
 
 # %%
 img_file_names = [file.name for file in img_files]
 img_file_names
 
 # %% [markdown]
-# ##### List mask files in mask folder
+# ##### List mask files in mask_dir
 
 # %%
 mask_file_names = [file.name for file in mask_files]
 mask_file_names
 
 # %% [markdown]
-# ## General file cleaning
-#
-# * change all file names to lower case (see [`Path.rename()`](https://docs.python.org/3/library/pathlib.html#pathlib.Path.rename) and [`str.lower()`](https://www.programiz.com/python-programming/methods/string/lower)
-# * check there each img file has corresponding mask file and _vice versa_ - both img and mask files should have same name except suffix
-# * ensure naming convention upheld for tif and geojson? Should be: `training_data_<area>_<tile no>_<initials>_<bgr>.tif`
-# * specific for img files! check banding? Check in with Laurence on this and see: https://github.com/datasciencecampus/somalia_unfpa_census_support/issues/173
+# ##### Check same number of img and mask files present
+
+# %%
+check_same_number_of_files_present(img_files, mask_files)
+
+# %% [markdown]
+# ## File cleaning <a name="filecleaning"></a>
 
 # %% [markdown]
 # ##### Change all file names to lower case
@@ -103,14 +142,16 @@ img_files_lower = change_to_lower_case(img_files)
 mask_files_lower = change_to_lower_case(mask_files)
 
 # %% [markdown]
-# ###### Check each mask file has corresponding img file & check each img file has corresponding mask file
+# ###### Check each mask file has corresponding img file & each img file has corresponding mask file
 
 # %%
+# Check each mask file has corresponding img file
 vice_versa_check_mask_file_for_img_file(
     img_files_lower, mask_files_lower, for_mask_or_img="mask"
 )
 
 # %%
+# Check each img file has corresponding mask file
 vice_versa_check_mask_file_for_img_file(
     img_files_lower, mask_files_lower, for_mask_or_img="img"
 )
@@ -119,20 +160,16 @@ vice_versa_check_mask_file_for_img_file(
 # ##### Check to ensure naming convention held for masks and img files
 
 # %%
-check_naming_convention_upheld(img_files_lower, mask_files_lower)
+check_naming_convention_upheld(img_files_lower, mask_files_lower, data_type)
 
 # %% [markdown]
-# ## Mask file cleaning
-#
-# * check data in each geojson (see [reading geojson](https://docs.astraea.earth/hc/en-us/articles/360043919911-Read-a-GeoJSON-File-into-a-GeoPandas-DataFrame)):
-#    * check there is a type column
-#    * remove fid or id column
-#    * check for na
+# ## Mask file cleaning <a name="maskfilecleaning"></a>
 
 # %%
-cleaning_of_mask_files(mask_files_lower)
+# Clean data mask file
+cleaning_of_mask_files(mask_files_lower, data_type)
 
 # %% [markdown]
-# # Checking complete remember to copy data files back into Sharepoint data ingest area once happy
+# # Checking complete. Now you can copy data files into Sharepoint GCP data ingest area
 
 # %%

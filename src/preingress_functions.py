@@ -5,25 +5,29 @@
 
 
 # %%
-from pathlib import Path 
-from functions_library import setup_sub_dir 
-import re 
-import warnings 
-import geopandas as gpd 
-import numpy as np 
+from pathlib import Path
+from functions_library import get_folder_paths
+import re
+import warnings
+import geopandas as gpd
+from colorama import Fore
+
 
 # %%
 # Note directories of interest
-data_dir = Path.cwd().parent.joinpath("data")
-training_data_dir = data_dir.joinpath("training_data")
-mask_dir = setup_sub_dir(training_data_dir, "mask")
+folder_dict = get_folder_paths()
+
+training_img_dir = Path(folder_dict["training_img_dir"])
+training_mask_dir = Path(folder_dict["training_mask_dir"])
+validation_img_dir = Path(folder_dict["validation_img_dir"])
+validation_mask_dir = Path(folder_dict["validation_mask_dir"])
 
 
 # %%
 def change_to_lower_case(files):
 
     """
-    Changes file names for img and mask files to lower case in training data before ingress to GCP.
+    Changes file names for img and mask files to lower case in training or validation data before ingress to GCP.
 
     Parameters
     ----------
@@ -50,7 +54,7 @@ def change_to_lower_case(files):
 def vice_versa_check_mask_file_for_img_file(img_files, mask_files, for_mask_or_img):
 
     """
-    Checks mask file names to see if they have a corresponding img file in training data before ingress to GCP.
+    Checks mask file names to see if they have a corresponding img file in training or validation data before ingress to GCP.
     Will also check if img file names to see if they have a corresponding mask file
 
     Parameters
@@ -113,48 +117,59 @@ def vice_versa_check_mask_file_for_img_file(img_files, mask_files, for_mask_or_i
 def check_naming_convention_upheld(
     img_files_lower,
     mask_files_lower,
-    naming_convention_pattern=r"training_data_.+_[0-9]+_*",
+    data_type,
+    naming_convention_pattern_for_training=r"training_data_.+_[0-9]+_*",
+    naming_convention_pattern_for_validation=r"validation_data_.+_[0-9]+_*",
     naming_convention=[
         "training_data_<area>_<tile no>_<initials>_<bgr>.tif",
         "training_data_<area>_<tile no>_<initials>.geojson",
+        "validation_data_<area>_<tile no>_<initials>_<bgr>.tif",
+        "validation_data_<area>_<tile no>_<initials>.geojson",
     ],
 ):
-
     """
-    Checks correct naming convention is being used for img and mask files in training data before ingress to GCP.
+    Checks if the correct naming convention is being used for image and mask files in training or validation data.
 
     Parameters
     ----------
     img_files_lower: list
-        List of img files in lower case
+        List of image filenames in lowercase.
     mask_files_lower: list
-        List of mask files in lower case
-    naming_convention_pattern: str
-        Regular expression pattern string representing the expected structure given naming convention. Defaults
-        to r"training_data_.+_[0-9]+_*"
-    naming_convention: List[str]
-        Strings to show expected naming convention (used in error printing). Defaults to:
-        [
-            "training_data_<area>_<tile no>_<initials>_<bgr>.tif", # <- images
-            "training_data_<area>_<tile no>_<initials>.geojson" # <- training data masks
-        ]
+        List of mask filenames in lowercase.
+    data_type: str
+        Indicates whether the checked tiles are for "training" or "validation" data.
+    naming_convention_pattern_for_training: str, optional
+        Regular expression pattern representing the expected structure for training data filenames.
+    naming_convention_pattern_for_validation: str, optional
+        Regular expression pattern representing the expected structure for validation data filenames.
+    naming_convention: list of str
+        List of strings representing the expected naming conventions.
 
     Returns
     -------
-    Warning if naming convention for mask or img file is incorrect and informs what to change to
+    None
+        Generates a warning if naming convention for image or mask file is incorrect.
     """
+    naming_pattern = (
+        naming_convention_pattern_for_training
+        if data_type == "training"
+        else naming_convention_pattern_for_validation
+    )
 
     for file in img_files_lower + mask_files_lower:
-
-        # checks if naming convention correct for mask and img files
-        if not re.match(naming_convention_pattern, file.name):
-            warnings.warn(
-                f"The naming convention for ({file.name}) is not correct. Please change to {naming_convention[0]} for imgs or {naming_convention[1]} for masks "
+        if not re.match(naming_pattern, file.name):
+            convention_type = "imgs" if data_type == "training" else "masks"
+            correct_convention = (
+                naming_convention[0]
+                if data_type == "training"
+                else naming_convention[2]
             )
+            warning_message = f"The naming convention for ({file}) is not correct. Please change to {correct_convention} for {convention_type}."
+            warnings.warn(warning_message)
 
 
 # %%
-def cleaning_of_mask_files(mask_files_lower):
+def cleaning_of_mask_files(mask_files_lower, data_type):
 
     """
     Cleans geopandas dataframes of all mask files and then overwrites them in the mask folder. Checks for
@@ -164,12 +179,16 @@ def cleaning_of_mask_files(mask_files_lower):
     ----------
     mask_files_lower: list
         List of mask files in lower case
+    data_type: str
+        Indicates whether the checked tiles are for "training" or "validation" data.
 
     Returns
     -------
     Warning message if "Type" column not found along with creation of new column in geopandas dataframe,
     print message and lastly a GeoJSON file that has been cleaned.
     """
+
+    mask_dir = training_mask_dir if data_type == "training" else validation_mask_dir
 
     # Examine each mask file
     for mask_file in mask_files_lower:
@@ -187,7 +206,8 @@ def cleaning_of_mask_files(mask_files_lower):
         # check if type column not present and send warning
         if "Type" not in column_names and len(mask_gdf.geometry) == 0:
             warnings.warn(
-                f"""{(mask_file.name)} contains no Type or geometry.
+                Fore.GREEN
+                + f"""{(mask_file)} contains no Type or geometry.
                 Ensure this mask is for a background tile. File has not been saved!"""
             )
             continue
@@ -195,31 +215,66 @@ def cleaning_of_mask_files(mask_files_lower):
         # check if type column not present and geometry column is - send error
         elif "Type" not in column_names and "geometry" in column_names:
             warnings.warn(
-                f"""{(mask_file.name)} contains no type but has geometry.
+                Fore.GREEN
+                + f"""{(mask_file)} contains no type but has geometry.
                 Add types in QGIS to the drawn polygons. File has not been saved!"""
             )
             continue
-        
+
         # check building types in type column
         if len(mask_gdf.Type.unique()) == 1:
             warnings.warn(
-                f"""{(mask_file.name)} contains only 1 type of building!
+                Fore.GREEN
+                + f"""{(mask_file)} contains only 1 type of building!
                 Ensure this is correct before uploading to the ingress folder."""
             )
 
         # check any null values in type column - send error
         if mask_gdf["Type"].isnull().values.any():
             warnings.warn(
-                f"Type column for ({mask_file.name}) has null values. File has not been saved!"
-            )
-            continue
-            
-        # check any null values in geometry column - send error
-        if mask_gdf["geometry"].isnull().values.any():
-            warnings.warn(
-                f"Geometry column for ({mask_file.name}) has null values. File has not been saved! Check QGIS"
+                Fore.GREEN
+                + f"Type column for ({mask_file}) has null values. File has not been saved!"
             )
             continue
 
-        # write back to geojson
-        mask_gdf.to_file(mask_dir.joinpath(f"{(mask_file)}"), driver="GeoJSON")
+        # check any null values in geometry column - send error
+        if mask_gdf["geometry"].isnull().values.any():
+            warnings.warn(
+                Fore.GREEN
+                + f"Geometry column for ({mask_file}) has null values. File has not been saved! Check QGIS"
+            )
+            continue
+
+        # write back to geojson for training
+        mask_gdf.to_file(mask_dir.joinpath(f"{(mask_file.name)}"), driver="GeoJSON")
+
+
+# %%
+def check_same_number_of_files_present(img_files, mask_files):
+
+    """
+    Checks if same number of imgs and mask files present - if not then warning
+
+    Parameters
+    ----------
+    img_files: pathlib
+        path for img directory for training or validation data
+    mask_files: pathlib
+        path for mask directory for training or validation data
+
+    Returns
+    -------
+    Warning message if number of validation/training img files doesn't
+    match number of validation/training mask files
+    """
+
+    # Check that same number of imgs and mask files present - if not then warning
+    if len(img_files) != len(mask_files):
+        warnings.warn(
+            f"Number of validation image files {len(img_files)} doesn't match number of validation mask files {len(mask_files)}"
+        )
+
+    return
+
+
+# %%
