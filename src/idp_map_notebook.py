@@ -5,15 +5,23 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.4
+#       jupytext_version: 1.14.5
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
+#     display_name: Python 3
 #     language: python
 #     name: python3
 # ---
 
+# %% [markdown]
+# # Mapping IDP camps & structures
+#
+# This notebook is to be run outwith GCP with the CCCM data to map the locations of IDP camps and for analysis on the types of shelters in IDP camps.
+
+# %% [markdown]
+# ## Set-up
+
 # %%
-# import standard and third party libraries
+# import libraries
 from pathlib import Path
 import pandas as pd
 import folium
@@ -23,7 +31,7 @@ from IPython.display import IFrame
 
 # %%
 data_dir = Path.cwd().parent.joinpath("data")
-file_path = data_dir.joinpath("somalia_idp_sites_march23.csv")
+idp_site_path = data_dir.joinpath("somalia_idp_sites_march23.csv")
 shelter_file_path = data_dir.joinpath("SOM_IDP_Site_Monitoring_July2023.csv")
 
 # %% [markdown]
@@ -31,10 +39,10 @@ shelter_file_path = data_dir.joinpath("SOM_IDP_Site_Monitoring_July2023.csv")
 
 # %%
 # camp location data
-data = pd.read_csv(file_path)
-data = data.dropna(subset=["Latitude", "Longitude"])
-data.columns = data.columns.str.lower().str.replace(" ", "_")
-data.head()
+idp_data = pd.read_csv(idp_site_path)
+idp_data = idp_data.dropna(subset=["Latitude", "Longitude"])
+idp_data.columns = idp_data.columns.str.lower().str.replace(" ", "_")
+idp_data.head()
 
 # %% [markdown]
 # ### All camps map
@@ -44,6 +52,7 @@ somalia_map = folium.Map(location=[5.152, 45.338], zoom_start=6)
 
 marker_cluster = MarkerCluster().add_to(somalia_map)
 
+# TODO: NEEDS IMPROVED
 original_locations = [
     {"name": "Baidoa", "lat": 3.11442, "lon": 43.65199},
     {"name": "Beledweyne", "lat": 4.74441, "lon": 45.19848},
@@ -60,7 +69,7 @@ original_locations2 = [
     {"name": "Burao", "lat": 9.53164, "lon": 45.54605},
 ]
 
-for index, row in data.iterrows():
+for index, row in idp_data.iterrows():
     folium.Marker(
         location=[row["latitude"], row["longitude"]], popup=row["idp_site"]
     ).add_to(marker_cluster)
@@ -87,7 +96,8 @@ for location in original_locations2:
 somalia_map
 
 # %%
-# saves map as html - saved in src folder because I haven't updated path
+# saves map as html -
+# TODO saved in src folder because I haven't updated path
 
 map_file = "somalia_map.html"
 somalia_map.save(map_file)
@@ -116,6 +126,7 @@ shelter_data.rename(
     inplace=True,
 )
 
+# renaming shelter-type
 shelter_mapping = {
     "Emergency Shelters (Somali Traditional House/ Buul/ Tent/ Emergency Shelter Kits/ Timber and Plastic Sheet with CGI Roof)": "emergency",
     "Transitional Shelters (Mundul/Baraako/Plywood wall with CGI roofing, CGI sheet wall and roof)": "transitional",
@@ -228,98 +239,5 @@ plt.pie(
 )
 plt.title("Distribution of Shelter Types for Individuals")
 plt.show()
-
-# %% [markdown]
-# ## Camp extent modelling
-#
-
-# %%
-data.head()
-
-# %%
-data.rename(
-    columns={
-        "_hh_(q1-2023)_": "households",
-        "_individual_(q1-2023)_": "individuals",
-        "date_idp_site_established": "established",
-    },
-    inplace=True,
-)
-
-# %%
-extents_data = data[["region", "district", "latitude", "longitude", "households"]]
-
-extents_data.head()
-
-# %%
-extents_data["households"] = pd.to_numeric(extents_data["households"], errors="coerce")
-
-# %%
-# calculating area
-
-building_area = 14  # in square meters
-space_between_buildings = 2  # in meters
-
-extents_data["total_building_area"] = (
-    extents_data["households"] * (building_area + space_between_buildings)
-    - space_between_buildings
-)
-
-extents_data
-
-# %%
-from shapely.geometry import Point
-
-# %%
-extents_data["geometry"] = None
-
-
-# %%
-for index, row in extents_data.iterrows():
-    lon = row["longitude"]
-    lat = row["latitude"]
-    total_area = pd.to_numeric(row["total_building_area"])
-
-    # Create a rectangular polygon based on half the width and half the height
-    half_width = (total_area / (building_area + space_between_buildings)) / 2
-    half_height = (building_area + space_between_buildings) / 2
-
-    # Define the coordinates of the polygon's corners
-    coords = [
-        (lon - half_width, lat - half_height),
-        (lon + half_width, lat - half_height),
-        (lon + half_width, lat + half_height),
-        (lon - half_width, lat + half_height),
-    ]
-
-    # Create a Polygon object using the coordinates
-    polygon = Point(coords).envelope
-
-    # Assign the polygon to the 'geometry' column
-    extents_data.at[index, "geometry"] = polygon
-
-
-# %%
-from shapely.geometry import Polygon
-
-for index, row in extents_data.iterrows():
-    lon = row["longitude"]
-    lat = row["latitude"]
-    total_area = row["total_building_area"]
-
-    half_width = total_area / (building_area + space_between_buildings) / 2
-    half_height = (building_area + space_between_buildings) / 2
-
-    coords = [
-        (lon - half_width, lat - half_height),
-        (lon + half_width, lat - half_height),
-        (lon + half_width, lat + half_height),
-        (lon - half_width, lat + half_height),
-    ]
-
-    polygon = Polygon(coords)  # Create a Polygon object using the coordinates
-
-    extents_data.at[index, "geometry"] = polygon
-
 
 # %%
