@@ -31,6 +31,8 @@ from google.cloud import storage  # interact with data buckets
 from pathlib import Path  # handling file paths
 from pytz import timezone
 import datetime
+import ipywidgets as widgets
+from IPython.display import display
 
 # Initialise client and note bucket location
 client = storage.Client()
@@ -40,6 +42,14 @@ bucket_prefix = "ons-des-prod-net-zero-somalia-ingress/"
 # Note local data folder path - We always want it to end up in training_data,
 # rather than the specific timestamp.
 data_dir = Path.cwd().parent.joinpath("data/training_data/")
+
+# %% [markdown]
+# ### Select whether you want to download the latest Training/Validation/Any data
+
+# %%
+folders = ["validation_data", "training_data"]
+folder_dropdown = widgets.Dropdown(options=folders, description="select folder:")
+display(folder_dropdown)
 
 # %% [markdown]
 # ### Download from last modified date <a name="moddate"></a>
@@ -56,11 +66,14 @@ latest_modified_time = timezone("UTC").localize(latest_modified_time)
 
 # Iterate through all blobs in ingress/
 for blob in bucket.list_blobs(prefix=bucket_prefix):
-    # Check each files modified_time
     modified_time = blob.updated
     if modified_time > latest_modified_time:
-        latest_object = blob.name
-        latest_modified_time = modified_time
+        folder_name = blob.name.split("/")
+        folder_name = folder_name[1]
+
+        if folder_name.startswith(folder_dropdown.value):
+            latest_object = blob.name
+            latest_modified_time = modified_time
 
 # Split string down, take only 2nd part (ons-des-prod-net-zero-somalia-ingress/<target_folder>/...)
 path_components = latest_object.split("/")
