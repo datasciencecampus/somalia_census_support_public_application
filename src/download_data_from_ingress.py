@@ -66,11 +66,14 @@ latest_modified_time = timezone("UTC").localize(latest_modified_time)
 
 # Iterate through all blobs in ingress/
 for blob in bucket.list_blobs(prefix=bucket_prefix):
+    # Check each files modified_time
     modified_time = blob.updated
     if modified_time > latest_modified_time:
+        # Get base ingest folder name - ie. training_data_20230927
         folder_name = blob.name.split("/")
         folder_name = folder_name[1]
 
+        # Check if Folder name matches selected drop_down widget
         if folder_name.startswith(folder_dropdown.value):
             latest_object = blob.name
             latest_modified_time = modified_time
