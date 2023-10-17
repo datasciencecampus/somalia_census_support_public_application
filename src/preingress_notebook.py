@@ -67,7 +67,7 @@
 from pathlib import Path  # working with file paths
 
 # Local imports
-from functions_library import get_folder_paths, get_data_paths
+from functions_library import get_folder_paths
 
 from preingress_functions import (
     change_to_lower_case,
@@ -75,6 +75,7 @@ from preingress_functions import (
     check_naming_convention_upheld,
     cleaning_of_mask_files,
     check_same_number_of_files_present,
+    get_file_paths,
 )
 
 # %% [markdown]
@@ -103,7 +104,7 @@ training_img_dir, training_mask_dir, validation_img_dir, validation_mask_dir = [
 data_type = "training"
 
 # %%
-img_files, mask_files = get_data_paths(data_type)
+img_files, mask_files = get_file_paths(data_type)
 
 # %% [markdown]
 # ## Explore files <a name="explore"></a>

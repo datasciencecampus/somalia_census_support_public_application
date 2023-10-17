@@ -278,3 +278,41 @@ def check_same_number_of_files_present(img_files, mask_files):
 
 
 # %%
+
+folder_name = [
+    "training_img_dir",
+    "training_mask_dir",
+    "validation_img_dir",
+    "validation_mask_dir",
+]
+
+# set folder paths
+training_img_dir, training_mask_dir, validation_img_dir, validation_mask_dir = [
+    Path(folder_dict[folder]) for folder in folder_name
+]
+
+
+def get_file_paths(data_type):
+    """
+    Get paths for image and mask files based on whether data is training or validation.
+
+    Args:
+    data_type (str): either 'training' or 'validation'
+
+    Returns:
+        img_files (list): list of paths to image files
+        mask_files (list): list of paths to mask files
+    """
+    if data_type == "training":
+        img_dir = training_img_dir
+        mask_dir = training_mask_dir
+    elif data_type == "validation":
+        img_dir = validation_img_dir
+        mask_dir = validation_mask_dir
+    else:
+        raise ValueError("Invalid data_type value")
+
+    img_files = list(img_dir.glob("*.tif"))
+    mask_files = list(mask_dir.glob("*.geojson"))
+
+    return img_files, mask_files
