@@ -47,7 +47,6 @@
 # import libraries
 from pathlib import Path
 
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 import ipywidgets as widgets
@@ -56,16 +55,13 @@ from IPython.display import display
 from functions_library import get_data_paths
 
 from image_processing_functions import (
-    change_band_order,
+    remove_bgr_from_filename,
     check_img_files,
-    clip_and_normalize_raster,
-    reorder_array,
-    return_array_from_tiff,
+    process_image,
 )
 from mask_processing_functions import (
-    check_mask_files,
+    rasterize_training_data,
     training_data_summary,
-    process_geojson_files,
 )
 
 # %% [markdown]
@@ -88,6 +84,8 @@ display(folder_dropdown)
 # %%
 # set img and mask directories based on seelcted folder above
 img_dir, mask_dir = get_data_paths(folder_dropdown.value)
+print(img_dir)
+print(mask_dir)
 
 # %% [markdown]
 # ### Set image size
@@ -96,7 +94,7 @@ img_dir, mask_dir = get_data_paths(folder_dropdown.value)
 # Training data tiles created in QGIS as ~200m x 200m (which equates to ~400 x 400 pixels as resolution is 0.5m/px). Tiles are cropped to 384 pixels (or 192m) as it is easier to crop than be completely accurate in QGIS.
 
 # %%
-img_size = 384
+img_size = 256
 
 # %% [markdown]
 # ## Image files <a name="images"></a>
@@ -107,31 +105,18 @@ img_size = 384
 # list all .tif files in directoy
 img_files = list(img_dir.glob("*.tif"))
 
+# %%
+# process .geotiff and save as .npy
 for img_file in img_files:
-    # reading in file with rasterio
-    img_array = return_array_from_tiff(img_file)
-
-    # reorder bands
-    arr_reordered = change_band_order(img_array)
-
-    # clip to percentile
-    arr_normalised = clip_and_normalize_raster(arr_reordered, 99)
-
-    # reorder into height, width, band order
-    arr_normalised = reorder_array(arr_normalised, 1, 2, 0)
-
-    # re-sizing to img_size (defined above as 384)
-    arr_normalised = arr_normalised[0:img_size, 0:img_size, :]
-
-    # create a new filename without bgr
-    img_filename = Path(img_file).stem.replace("_bgr", "").replace("_rgb", "")
-
-    # save the NumPy array
-    np.save(img_dir.joinpath(f"{img_filename}.npy"), arr_normalised)
+    process_image(img_file, img_size, img_dir)
 
 # %%
 # checking shape of .npy files matches
-check_img_files(img_dir)
+check_img_files(img_dir, (256, 256, 4))
+
+# %%
+# remove _bgr from file names if present
+remove_bgr_from_filename(img_dir, img_files)
 
 # %% [markdown]
 # ## Mask files <a name="masks"></a>
@@ -141,20 +126,17 @@ check_img_files(img_dir)
 # Currently only using 'building' and 'tent' as classes - but may incorporate 'service' at a later stage, which is in the commented out code.
 
 # %%
-building_class_list = ["Building", "Tent"]
+building_class_list = ["building", "tent"]
 
 # %%
-features_dict = process_geojson_files(mask_dir, img_dir, building_class_list, img_size)
+features_dict = {}
 
 # %%
-# Output the completed features dictionary to a JSON for use in outputs notebook
-output_file = mask_dir.joinpath("feature_dict.json")
-with open(output_file, "w") as f:
-    json.dump(features_dict, f, indent=4)
-
-# %%
-# checking shape of .npy files matches
-check_mask_files(mask_dir)
+# loop through the GeoJSON files
+for mask_path in mask_dir.glob("*.geojson"):
+    rasterize_training_data(
+        mask_path, mask_dir, img_dir, building_class_list, img_size, features_dict
+    )
 
 # %% [markdown]
 # ## Training data summary<a name="trainingsummary"></a>
