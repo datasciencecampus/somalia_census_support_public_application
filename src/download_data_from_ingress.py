@@ -15,7 +15,14 @@
 # %% [markdown]
 # # Download data from ingress
 #
-# This notebook connects to the ingress bucket that data has been ingressed into, removes old files, and downloads data locally. As we cannot overwrite or delete files in the ingress bucket this notebook uses the logic of downloading folders with the latest date (added to ingressed folder path name).
+# #### Purpose
+# To download data from the ingress bucket to local GCP storage.
+#
+# #### Things to note
+# * We do not have necessary permissions to overwrite or delete files in the ingress bucket, therefore, this ingress process uses the logic of downloading folders with the latest date (`training/validation_data_YY/MM/DD`), deleting all old files in the local folders stoarage (including `.npy`), and downloading data into either `training` or `validation` local folders (with no date prefix).
+# * The kernel should be `Python 3` unlike other notebooks in this workflow.
+# * This notebook only needs run when new training or validation data has been ingressed. If this notebook has been run then `premodelling_notebook.py` must be run next to create the `.npy` files.
+#
 #
 # ### Contents
 #
@@ -38,18 +45,26 @@ import datetime
 import ipywidgets as widgets
 from IPython.display import display
 
+# load functions library
+from functions_library import get_folder_paths
+
+# %%
+# for reading in config.yaml directories
+folder_dict = get_folder_paths()
+
+# Note local data folder path - We always want it to end up in training_data or validation_data
+# rather than the specific timestamp.
+training_data_dir = Path(folder_dict["training_dir"])
+validation_data_dir = Path(folder_dict["validation_dir"])
+
+# %%
 # Initialise client and note bucket location
 client = storage.Client()
 bucket = client.bucket("ons-net-zero-data-prod-net-zero-somalia-des-ingress")
 bucket_prefix = "ons-des-prod-net-zero-somalia-ingress/"
 
-# Note local data folder path - We always want it to end up in training_data or validation_data
-# rather than the specific timestamp.
-training_data_dir = Path.cwd().parent.joinpath("data/training_data/")
-validation_data_dir = Path.cwd().parent.joinpath("data/validation_data/")
-
 # %% [markdown]
-# ### Select whether you want to download the latest Training/Validation/Any data
+# ### Select whether you want to download the latest training/validation
 
 # %%
 folders = ["validation_data", "training_data"]
@@ -100,8 +115,7 @@ blobs = [blob for blob in blobs if ingress_dir_of_interest in blob.name]
 out = [print(blob.name) for blob in blobs]
 
 # %% [markdown]
-# ### Remove existing files from the training_data folders <a name="remove"></a>
-# This will remove all .npy files as well!
+# ### Remove existing files from local folders <a name="remove"></a>
 
 # %%
 if folder_dropdown.value == "training_data":
@@ -113,12 +127,13 @@ elif folder_dropdown.value == "validation_data":
 # %%
 def rm_tree(pth):
     pth = Path(pth)
-    for child in pth.glob("*"):
-        if child.is_file():
-            child.unlink()
-        else:
-            rm_tree(child)
-    pth.rmdir()
+    if pth.exists():
+        for child in pth.glob("*"):
+            if child.is_file():
+                child.unlink()
+            else:
+                rm_tree(child)
+        pth.rmdir()
 
 
 rm_tree(data_dir)
@@ -153,5 +168,3 @@ for blob in blobs:
 # %%
 # Check files are present
 list(data_dir.iterdir())
-
-# %%
