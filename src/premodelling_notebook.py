@@ -13,14 +13,18 @@
 # ---
 
 # %% [markdown]
-# # Feasibility study - Pre-processing training data
-#
-# This notebook performs the geospatial processing of training images and masks and outputs as `.npy` arrays for input into the modelling notebook. This notebook only has to be run when new data is ingressed to GCP.
+# # Pre-modelling processing
 #
 # <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #31708f; background-color: #d9edf7; border-color: #bce8f1;">
 # Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
 # </div>
 #
+# #### Purpose
+# Processes locally stored img and mask files and outputs as `.npy`, which are saved in the same folder location.
+#
+# #### Things to note
+# * Only has to be run if `download_data_from_ingress` has been run - as `.npy` files are saved
+# * Check kernel
 #
 #
 # ## Contents
@@ -41,12 +45,15 @@
 
 # %%
 # import libraries
-
 from pathlib import Path
 
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+import ipywidgets as widgets
+from IPython.display import display
+
+from functions_library import get_data_paths
 
 from image_processing_functions import (
     change_band_order,
@@ -68,12 +75,19 @@ from mask_processing_functions import (
 # set data directory
 data_dir = Path.cwd().parent.joinpath("data")
 
-# set training_data directory within data folder
-training_data_dir = data_dir.joinpath("training_data")
+# get all sub directories within data forlder
+sub_dir = [subdir.name for subdir in data_dir.iterdir() if subdir.is_dir()]
 
-# set img and mask directories within training_data directory
-img_dir = training_data_dir.joinpath("img")
-mask_dir = training_data_dir.joinpath("mask")
+# %% [markdown]
+# ### Select sub directory
+
+# %%
+folder_dropdown = widgets.Dropdown(options=sub_dir, description="select folder:")
+display(folder_dropdown)
+
+# %%
+# set img and mask directories based on seelcted folder above
+img_dir, mask_dir = get_data_paths(folder_dropdown.value)
 
 # %% [markdown]
 # ### Set image size
