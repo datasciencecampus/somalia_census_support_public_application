@@ -49,6 +49,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import random
 import ipywidgets as widgets
 from IPython.display import display
 
@@ -61,7 +62,8 @@ from image_processing_functions import (
 )
 from mask_processing_functions import (
     rasterize_training_data,
-    training_data_summary,
+    process_geojson_file,
+    data_summary,
 )
 
 # %% [markdown]
@@ -139,13 +141,14 @@ for mask_path in mask_dir.glob("*.geojson"):
     )
 
 # %% [markdown]
-# ## Training data summary<a name="trainingsummary"></a>
+# ## Data summary<a name="trainingsummary"></a>
 #
-# This section is duplicating work from above but it joins all mask files together into a geopandas data frame to quickly overview data.
 
 # %%
 # joining masks together to count building types
-training_data, value_counts, structure_stats = training_data_summary(mask_dir)
+for mask_path in mask_dir.glob("*.geojson"):
+    mask_gdf = process_geojson_file(mask_path)
+    training_data, value_counts, structure_stats = data_summary(mask_gdf)
 
 # %%
 # building types
@@ -156,67 +159,40 @@ value_counts
 structure_stats
 
 # %%
-# check pre-ingress worked - if type = true then workflow won't work
-
-area_empty = training_data["Area"].isna().any()
-type_empty = training_data["Type"].isna().any()
-
-print("Is area column empty?", area_empty)
-print("Is type column empty?", type_empty)
+training_data
 
 # %% [markdown]
-# ## Visual checking - images <a name="imagevisual"></a>
-#
-#
+# ### Visual checking
 
 # %%
-# finding all .npy files - those converted above
-file_list = [f for f in img_dir.glob("*.npy") if np.load(f).shape[-1] == 4]
-
+# finding all img .npy files - those converted above
+img_file_list = [f for f in img_dir.glob("*.npy") if np.load(f).shape[-1] == 4]
 # read in .npy files
-image_list = [np.load(f) for f in file_list]
+img_list = [np.load(f) for f in img_file_list]
 
-# plot the images
-# display a maximum of 16 images
-for i in range(min(16, len(image_list))):
-    img = image_list[i]
-
-    # create a 4 x 4 grid
-    plt.subplot(4, 4, i + 1)
-
-    # normalise the data to the range of 0 to 1
-    img_normalised = img.astype(np.float32) / np.max(img)
-
-    # show the first 3 channels (RGB)
-    plt.imshow(img_normalised[..., :3])
-
-    # plt.title(file_list[i].name) # use file name as title
-    plt.axis("off")
-plt.show()
-
-# %% [markdown]
-# ## Visual checking - masks <a name="maskvisual"></a>
-
-# %%
-# finding all .npy files - those converted above
-file_list = [f for f in mask_dir.glob("*.npy")]
-
+# finding all mask .npy files - those converted above
+mask_file_list = [f for f in mask_dir.glob("*.npy")]
 # read in .npy files
-mask_list = [np.load(f) for f in file_list]
+mask_list = [np.load(f) for f in mask_file_list]
 
-# plot the masks
-# display a maximum of 16 images
-for i in range(min(16, len(mask_list))):
-    mask = mask_list[i]
-
-    # create a 4 x 4 grid
-    plt.subplot(4, 4, i + 1)
-
-    # plot the mask
-    plt.imshow(mask)
-
-    # plt.title(file_list[i].name) # use file name as title
-    plt.axis("off")
-plt.show()
 
 # %%
+# create random number to check both image and mask
+image_number = random.randint(0, len(img_list) - 1)
+img_plot = img_list[image_number]
+# normalise the data to the range of 0 to 1
+img_normalised = img_plot.astype(np.float32) / np.max(img_plot)
+
+# file name
+file_name = img_file_list[image_number].name
+
+# %%
+# plot image and mask
+plt.figure(figsize=(12, 6))
+plt.subplot(121)
+plt.title(file_name)
+plt.imshow(img_normalised[..., :3])
+plt.subplot(122)
+plt.imshow(mask_list[image_number])
+
+plt.show()

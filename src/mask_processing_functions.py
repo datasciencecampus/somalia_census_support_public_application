@@ -112,7 +112,7 @@ def add_features_to_dict(mask_path, mask_filename, mask_gdf, features_dict):
     return features_dict
 
 
-def training_data_summary(mask_dir):
+def data_summary(training_data):
     """
     Reads in all .geojson files in directory 'mask_dir', checks for 'Type' column,
     replaces the values 'House' and 'Service' with 'Building', and returns the
@@ -130,31 +130,12 @@ def training_data_summary(mask_dir):
         A dataframe containing the count of unqiue values in the 'Type' column
         and the size stats for each structure type.
     """
-    # empty dataframe
-    training_data = None
-
-    for file in mask_dir.glob("*.geojson"):
-
-        # read GeoJSON into GeoDataFrame
-        df = gpd.read_file(file)
-
-        # check for 'type' column
-        if "Type" not in df.columns:
-            df["Type"] = ""
-
-        # replace values in 'Type' column
-        df["Type"].replace({"House": "Building", "Service": "Building"}, inplace=True)
-
-        if training_data is None:
-            training_data = df
-        else:
-            training_data = training_data.append(df)
 
     # return value counts
     value_counts = training_data["Type"].value_counts()
 
     # calculate structure size
-    training_data["structure_size"] = training_data.geometry.apply(
+    training_data["structure_area"] = training_data.geometry.apply(
         lambda geom: geom.area
     )
 
@@ -166,7 +147,6 @@ def training_data_summary(mask_dir):
     return training_data, value_counts, structure_stats
 
 
-# Takes in an open geoJSON file, assigns counts to each feature
 def count_unique_features(geojson_file):
     feature_counts = {}
     for feature in geojson_file["Type"]:
@@ -192,72 +172,3 @@ def calculate_average_feature_size(geojson_file_df):
     average_building = sum(building_size) / len(building_size) if building_size else 0
 
     return average_tent, average_building
-
-
-def process_geojson_files(mask_dir, img_dir, building_class_list, img_size):
-    """
-    Process GeoJSON files in the given directory.
-
-    Args:
-        mask_dir (str): Directory containing GeoJSON files.
-        img_dir (str): Directory containing image files.
-        building_class_list (list): List of building classes.
-        img_size (int): Size of the images.
-
-    Returns:
-        dict: Dictionary containing features information for each tile.
-
-    """
-
-    # create features dictionary
-    features_dict = {}
-
-    # loop through the GeoJSON files
-    for mask_path in mask_dir.glob("*.geojson"):
-        mask_filename = Path(mask_path).stem
-
-        # load the GeoJSON into a GeoPandas dataframe
-        mask_gdf = gpd.read_file(mask_path)
-
-        # add a 'Type' column if it doesn't exist (should be background tiles only)
-        mask_gdf["Type"] = mask_gdf.get("Type", "")
-
-        # replace values in 'Type' column
-        mask_gdf["Type"].replace(
-            {"House": "Building", "Service": "Building"}, inplace=True
-        )
-
-        # define corresponding image filename
-        image_filename = f"{mask_filename}_bgr.tif"
-        image_file = img_dir.joinpath(image_filename)
-
-        # create rasterized training image
-        segmented_training_arr = rasterize_training_data(
-            mask_gdf,
-            image_file,
-            building_class_list,
-        )
-
-        # re-sizing to img_size (defined above as 384)
-        normalised_training_arr = segmented_training_arr[0:img_size, 0:img_size]
-
-        # save the NumPy array
-        np.save(mask_dir.joinpath(f"{mask_filename}.npy"), normalised_training_arr)
-
-        # Add Feature counts for this tiles into features dictionary
-        if mask_path.name.endswith("background.geojson"):
-            unique_features = {
-                "Building": 0,
-                "Tent": 0,
-                "Avg_building_size": 0,
-                "Avg_tent_size": 0,
-            }
-        else:
-            unique_features = count_unique_features(mask_gdf)
-            tent_avg, building_avg = calculate_average_feature_size(mask_gdf)
-            unique_features["tent_average"] = tent_avg
-            unique_features["building_average"] = building_avg
-
-        features_dict[mask_filename] = unique_features
-
-    return features_dict
