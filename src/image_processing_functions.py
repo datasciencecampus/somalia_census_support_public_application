@@ -6,6 +6,7 @@ import warnings
 import numpy as np
 import rasterio as rio
 from sklearn.preprocessing import MinMaxScaler
+from pathlib import Path
 
 
 def return_array_from_tiff(img_path):
@@ -94,7 +95,8 @@ def clip_and_normalize_raster(img_arr, clipping_percentile_range):
             min_max_scaler.fit_transform(
                 clip_to_soft_min_max(ascolumns, clipping_percentile_range)
             )
-        ]
+        ],
+        dtype="float32",
     )
     normalised_img = norm_ascolumns.reshape(img_arr.shape)
     return normalised_img
@@ -104,6 +106,35 @@ def reorder_array(img_arr, height_index, width_index, bands_index):
     # Re-order the array into height, width, bands order.
     arr = np.transpose(img_arr, axes=[height_index, width_index, bands_index])
     return arr
+
+
+def process_image(img_file, img_size, img_dir):
+    """
+    Process a geotiff image for inputting into unet model
+
+    Parameters:
+    img_file (Path): The input image file path.
+    img_size (int): Target size for image processing
+    img_dir (Path): Directory to save processed npy file
+
+    """
+    # reading in file with rasterio
+    img_array = return_array_from_tiff(img_file)
+
+    # clip to percentile
+    arr_normalised = clip_and_normalize_raster(img_array, 99)
+
+    # reorder into height, width, band order
+    arr_normalised = reorder_array(arr_normalised, 1, 2, 0)
+
+    # re-sizing to img_size (defined above as 384)
+    arr_normalised = arr_normalised[0:img_size, 0:img_size, :]
+
+    # create a new filename without bgr
+    img_filename = Path(img_file).stem.replace("_bgr", "").replace("_rgb", "")
+
+    # save the NumPy array
+    np.save(img_dir.joinpath(f"{img_filename}.npy"), arr_normalised)
 
 
 def check_img_files(img_dir, ref_shape=(384, 384, 4)):
@@ -123,3 +154,28 @@ def check_img_files(img_dir, ref_shape=(384, 384, 4)):
         img_array = np.load(file)
         if img_array.shape != ref_shape:
             warnings.warn(f"{file} has a different shape than the reference shape")
+
+
+def remove_bgr_from_filename(img_dir, img_files):
+    """
+    Rename all .tiff files in a img_dir by removing '_bgr' from the file name
+
+    Args:
+    img_dir (str): Path to directory containing the img_files to rename
+
+    """
+    # removing _bgr from file name
+    for img_file in img_files:
+        # file name without extension
+        file_name = img_file.stem
+
+        # check if file name contains '_bgr'
+        if "_bgr" in file_name:
+            # replace '_bgr' with empty string to remove
+            new_name = file_name.replace("_bgr", "")
+
+            # create the new file name with .tiff extension
+            new_name += ".tif"
+
+            # rename the file with the new name
+            img_file.rename(img_dir / new_name)

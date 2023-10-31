@@ -6,7 +6,7 @@ import numpy as np
 import colorsys
 
 
-def stack_array(directory, validation_area=None, expanded_outputs=False):
+def stack_array(directory, expanded_outputs=False):
     """
 
     Stack all .npy files in the specified directory (excluding files ending with "background.npy"),
@@ -26,7 +26,6 @@ def stack_array(directory, validation_area=None, expanded_outputs=False):
         file
         for file in Path(directory).glob("*npy")
         if not file.name.endswith("background.npy")
-        and (validation_area is None or validation_area not in file.name)
     ]
 
     # sort the file names alphabetically

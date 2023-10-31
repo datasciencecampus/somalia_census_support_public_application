@@ -4,6 +4,9 @@ from pathlib import Path
 from typing import List
 import yaml
 
+# set data directory
+data_dir = Path.cwd().parent.joinpath("data")
+
 
 def setup_sub_dir(data_dir: Path, sub_dir_name: str) -> Path:
     """
@@ -94,27 +97,19 @@ training_img_dir, training_mask_dir, validation_img_dir, validation_mask_dir = [
 ]
 
 
-def get_data_paths(data_type):
+def get_data_paths(selected_folder):
     """
-    Get paths for image and mask files based on whether data is training or validation.
+    Get paths for img and mask files sub_dir based on selected folder
 
     Args:
-    data_type (str): either 'training' or 'validation'
+    selected_folder (str): selected folder name
+
 
     Returns:
         img_files (list): list of paths to image files
         mask_files (list): list of paths to mask files
     """
-    if data_type == "training":
-        img_dir = training_img_dir
-        mask_dir = training_mask_dir
-    elif data_type == "validation":
-        img_dir = validation_img_dir
-        mask_dir = validation_mask_dir
-    else:
-        raise ValueError("Invalid data_type value")
+    img_dir = data_dir / selected_folder / "img"
+    mask_dir = data_dir / selected_folder / "mask"
 
-    img_files = list(img_dir.glob("*.tif"))
-    mask_files = list(mask_dir.glob("*.geojson"))
-
-    return img_files, mask_files
+    return img_dir, mask_dir

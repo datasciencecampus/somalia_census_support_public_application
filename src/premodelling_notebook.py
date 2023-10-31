@@ -13,14 +13,18 @@
 # ---
 
 # %% [markdown]
-# # Feasibility study - Pre-processing training data
-#
-# This notebook performs the geospatial processing of training images and masks and outputs as `.npy` arrays for input into the modelling notebook. This notebook only has to be run when new data is ingressed to GCP.
+# # Pre-modelling processing
 #
 # <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #31708f; background-color: #d9edf7; border-color: #bce8f1;">
 # Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
 # </div>
 #
+# #### Purpose
+# Processes locally stored img and mask files and outputs as `.npy`, which are saved in the same folder location.
+#
+# #### Things to note
+# * Only has to be run if `download_data_from_ingress` has been run - as `.npy` files are saved
+# * Check kernel
 #
 #
 # ## Contents
@@ -41,24 +45,25 @@
 
 # %%
 # import libraries
-
 from pathlib import Path
 
-import json
 import matplotlib.pyplot as plt
 import numpy as np
+import random
+import ipywidgets as widgets
+from IPython.display import display
+
+from functions_library import get_data_paths
 
 from image_processing_functions import (
-    change_band_order,
+    remove_bgr_from_filename,
     check_img_files,
-    clip_and_normalize_raster,
-    reorder_array,
-    return_array_from_tiff,
+    process_image,
 )
 from mask_processing_functions import (
-    check_mask_files,
-    training_data_summary,
-    process_geojson_files,
+    rasterize_training_data,
+    process_geojson_file,
+    data_summary,
 )
 
 # %% [markdown]
@@ -68,12 +73,21 @@ from mask_processing_functions import (
 # set data directory
 data_dir = Path.cwd().parent.joinpath("data")
 
-# set training_data directory within data folder
-training_data_dir = data_dir.joinpath("training_data")
+# get all sub directories within data forlder
+sub_dir = [subdir.name for subdir in data_dir.iterdir() if subdir.is_dir()]
 
-# set img and mask directories within training_data directory
-img_dir = training_data_dir.joinpath("img")
-mask_dir = training_data_dir.joinpath("mask")
+# %% [markdown]
+# ### Select sub directory
+
+# %%
+folder_dropdown = widgets.Dropdown(options=sub_dir, description="select folder:")
+display(folder_dropdown)
+
+# %%
+# set img and mask directories based on seelcted folder above
+img_dir, mask_dir = get_data_paths(folder_dropdown.value)
+print(img_dir)
+print(mask_dir)
 
 # %% [markdown]
 # ### Set image size
@@ -89,35 +103,47 @@ img_size = 384
 #
 # Reading in all `.tif` files in the `img_dir` then performing geospatial processing on them using functions from the `image_processing_functions.py` and saving outputted files as `.npy` arrays into the same folder.
 
+# %% [markdown]
+# ### Image band testing
+
+# %%
+import rasterio as rio
+
+# %%
+min_band_values = [float("inf")] * 3
+max_band_values = [float("-inf")] * 3
+
 # %%
 # list all .tif files in directoy
 img_files = list(img_dir.glob("*.tif"))
 
+# %%
 for img_file in img_files:
-    # reading in file with rasterio
-    img_array = return_array_from_tiff(img_file)
+    with rio.open(img_file) as src:
+        for band_index in range(1, 4):
+            band = src.read(band_index)
+            min_band_values[band_index - 1] = min(
+                min_band_values[band_index - 1], band.min()
+            )
+            max_band_values[band_index - 1] = max(
+                max_band_values[band_index - 1], band.max()
+            )
+for band_index, (min_val, max_val) in enumerate(zip(min_band_values, max_band_values)):
+    print(f"band {band_index + 1}: min = {min_val}, max = {max_val}")
 
-    # reorder bands
-    arr_reordered = change_band_order(img_array)
-
-    # clip to percentile
-    arr_normalised = clip_and_normalize_raster(arr_reordered, 99)
-
-    # reorder into height, width, band order
-    arr_normalised = reorder_array(arr_normalised, 1, 2, 0)
-
-    # re-sizing to img_size (defined above as 384)
-    arr_normalised = arr_normalised[0:img_size, 0:img_size, :]
-
-    # create a new filename without bgr
-    img_filename = Path(img_file).stem.replace("_bgr", "").replace("_rgb", "")
-
-    # save the NumPy array
-    np.save(img_dir.joinpath(f"{img_filename}.npy"), arr_normalised)
 
 # %%
+# process .geotiff and save as .npy
+for img_file in img_files:
+    process_image(img_file, img_size, img_dir)
+
+# %% jupyter={"outputs_hidden": true}
 # checking shape of .npy files matches
-check_img_files(img_dir)
+check_img_files(img_dir, (256, 256, 4))
+
+# %%
+# remove _bgr from file names if present
+remove_bgr_from_filename(img_dir, img_files)
 
 # %% [markdown]
 # ## Mask files <a name="masks"></a>
@@ -127,29 +153,27 @@ check_img_files(img_dir)
 # Currently only using 'building' and 'tent' as classes - but may incorporate 'service' at a later stage, which is in the commented out code.
 
 # %%
-building_class_list = ["Building", "Tent"]
+building_class_list = ["building", "tent"]
 
 # %%
-features_dict = process_geojson_files(mask_dir, img_dir, building_class_list, img_size)
+features_dict = {}
 
 # %%
-# Output the completed features dictionary to a JSON for use in outputs notebook
-output_file = mask_dir.joinpath("feature_dict.json")
-with open(output_file, "w") as f:
-    json.dump(features_dict, f, indent=4)
-
-# %%
-# checking shape of .npy files matches
-check_mask_files(mask_dir)
+# loop through the GeoJSON files
+for mask_path in mask_dir.glob("*.geojson"):
+    rasterize_training_data(
+        mask_path, mask_dir, img_dir, building_class_list, img_size, features_dict
+    )
 
 # %% [markdown]
-# ## Training data summary<a name="trainingsummary"></a>
+# ## Data summary<a name="trainingsummary"></a>
 #
-# This section is duplicating work from above but it joins all mask files together into a geopandas data frame to quickly overview data.
 
-# %%
+# %% jupyter={"outputs_hidden": true}
 # joining masks together to count building types
-training_data, value_counts, structure_stats = training_data_summary(mask_dir)
+for mask_path in mask_dir.glob("*.geojson"):
+    mask_gdf = process_geojson_file(mask_path)
+    training_data, value_counts, structure_stats = data_summary(mask_gdf)
 
 # %%
 # building types
@@ -160,67 +184,40 @@ value_counts
 structure_stats
 
 # %%
-# check pre-ingress worked - if type = true then workflow won't work
-
-area_empty = training_data["Area"].isna().any()
-type_empty = training_data["Type"].isna().any()
-
-print("Is area column empty?", area_empty)
-print("Is type column empty?", type_empty)
+training_data
 
 # %% [markdown]
-# ## Visual checking - images <a name="imagevisual"></a>
-#
-#
+# ### Visual checking
 
 # %%
-# finding all .npy files - those converted above
-file_list = [f for f in img_dir.glob("*.npy") if np.load(f).shape[-1] == 4]
-
+# finding all img .npy files - those converted above
+img_file_list = [f for f in img_dir.glob("*.npy") if np.load(f).shape[-1] == 4]
 # read in .npy files
-image_list = [np.load(f) for f in file_list]
+img_list = [np.load(f) for f in img_file_list]
 
-# plot the images
-# display a maximum of 16 images
-for i in range(min(16, len(image_list))):
-    img = image_list[i]
-
-    # create a 4 x 4 grid
-    plt.subplot(4, 4, i + 1)
-
-    # normalise the data to the range of 0 to 1
-    img_normalised = img.astype(np.float32) / np.max(img)
-
-    # show the first 3 channels (RGB)
-    plt.imshow(img_normalised[..., :3])
-
-    # plt.title(file_list[i].name) # use file name as title
-    plt.axis("off")
-plt.show()
-
-# %% [markdown]
-# ## Visual checking - masks <a name="maskvisual"></a>
-
-# %%
-# finding all .npy files - those converted above
-file_list = [f for f in mask_dir.glob("*.npy")]
-
+# finding all mask .npy files - those converted above
+mask_file_list = [f for f in mask_dir.glob("*.npy")]
 # read in .npy files
-mask_list = [np.load(f) for f in file_list]
+mask_list = [np.load(f) for f in mask_file_list]
 
-# plot the masks
-# display a maximum of 16 images
-for i in range(min(16, len(mask_list))):
-    mask = mask_list[i]
-
-    # create a 4 x 4 grid
-    plt.subplot(4, 4, i + 1)
-
-    # plot the mask
-    plt.imshow(mask)
-
-    # plt.title(file_list[i].name) # use file name as title
-    plt.axis("off")
-plt.show()
 
 # %%
+# create random number to check both image and mask
+image_number = random.randint(0, len(img_list) - 1)
+img_plot = img_list[image_number]
+# normalise the data to the range of 0 to 1
+img_normalised = img_plot.astype(np.float32) / np.max(img_plot)
+
+# file name
+file_name = img_file_list[image_number].name
+
+# %%
+# plot image and mask
+plt.figure(figsize=(12, 6))
+plt.subplot(121)
+plt.title(file_name)
+plt.imshow(img_normalised[..., :3])
+plt.subplot(122)
+plt.imshow(mask_list[image_number])
+
+plt.show()
