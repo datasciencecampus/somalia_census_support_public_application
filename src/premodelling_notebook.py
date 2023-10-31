@@ -96,23 +96,48 @@ print(mask_dir)
 # Training data tiles created in QGIS as ~200m x 200m (which equates to ~400 x 400 pixels as resolution is 0.5m/px). Tiles are cropped to 384 pixels (or 192m) as it is easier to crop than be completely accurate in QGIS.
 
 # %%
-img_size = 256
+img_size = 384
 
 # %% [markdown]
 # ## Image files <a name="images"></a>
 #
 # Reading in all `.tif` files in the `img_dir` then performing geospatial processing on them using functions from the `image_processing_functions.py` and saving outputted files as `.npy` arrays into the same folder.
 
+# %% [markdown]
+# ### Image band testing
+
+# %%
+import rasterio as rio
+
+# %%
+min_band_values = [float("inf")] * 3
+max_band_values = [float("-inf")] * 3
+
 # %%
 # list all .tif files in directoy
 img_files = list(img_dir.glob("*.tif"))
+
+# %%
+for img_file in img_files:
+    with rio.open(img_file) as src:
+        for band_index in range(1, 4):
+            band = src.read(band_index)
+            min_band_values[band_index - 1] = min(
+                min_band_values[band_index - 1], band.min()
+            )
+            max_band_values[band_index - 1] = max(
+                max_band_values[band_index - 1], band.max()
+            )
+for band_index, (min_val, max_val) in enumerate(zip(min_band_values, max_band_values)):
+    print(f"band {band_index + 1}: min = {min_val}, max = {max_val}")
+
 
 # %%
 # process .geotiff and save as .npy
 for img_file in img_files:
     process_image(img_file, img_size, img_dir)
 
-# %%
+# %% jupyter={"outputs_hidden": true}
 # checking shape of .npy files matches
 check_img_files(img_dir, (256, 256, 4))
 
@@ -144,7 +169,7 @@ for mask_path in mask_dir.glob("*.geojson"):
 # ## Data summary<a name="trainingsummary"></a>
 #
 
-# %%
+# %% jupyter={"outputs_hidden": true}
 # joining masks together to count building types
 for mask_path in mask_dir.glob("*.geojson"):
     mask_gdf = process_geojson_file(mask_path)
