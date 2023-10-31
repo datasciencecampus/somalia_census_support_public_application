@@ -1,38 +1,90 @@
-# ## Notebook for exporting data to WIP bucket
+# ## Notebook for exporting data to WiP bucket
 #
-# > More functions including how to delete files are in `bucket_access_functions.py`
+# <div class="alert alert-block altert-danger">
+#     <i class="fa fa-exclamation-triangle"></i> check the kernel in the above right is `python3` <b>not</b> `venv-somalia-gcp`
+# </div>
+#
+# **Purpose**
+#
+# To export files or folders from local GCP storage to the WiP bucket.
+#
+# **Things to note**
+#
+# - Do not run all cells in this notebook, instead choose the function you want to perform (export a file or folder) and run only that action
+#
+# #### Jump to:
+# 1. ##### [Read files in bucket](#read)
+# 1. ##### [Delete files in bucket](#delete)
+# 1. ##### [Exporting individual files](#exportfiles)
+# 1. ##### [Exporting folders](#exportfolders)
 
-from pathlib import Path
-from bucket_access_functions import move_file_to_bucket
+# ### Set-up
+
+from bucket_access_functions import (
+    move_file_to_bucket,
+    move_folder_to_bucket,
+    delete_folder_from_bucket,
+    read_files_in_bucket,
+)
 from functions_library import get_folder_paths
 
 # +
+# local folders
 folder_dict = get_folder_paths()
+folders = [
+    "training_img_dir",
+    "training_mask_dir",
+    "validation_img_dir",
+    "validation_mask_dir",
+    "ramp_mask",
+    "ramp_img",
+    "models_dir",
+    "outputs_dir",
+]
 
-# Set directories to pull run files from
-model_dir = Path(folder_dict["models_dir"])
-output_dir = Path(folder_dict["outputs_dir"])
+(
+    training_img,
+    training_mask,
+    validation_img,
+    validation_mask,
+    ramp_mask,
+    ramp_img,
+    models,
+    outputs,
+) = [folder_dict[folder] for folder in folders]
+
 
 # work-in-progress bucket
 bucket_name = folder_dict["wip_bucket"]
 # -
 
-run_id = "outputs_alt_test"
+# ### Read files in bucket <a name="read"></a>
 
-# ### Upload the model to the WIP bucket
+read_files_in_bucket(bucket_name)
 
-for file in model_dir.iterdir():
+# ### Delete folder from bucket <a name="delete"></a>
+
+folder_name = "ramp_bentiu_south_sudan"
+delete_folder_from_bucket(bucket_name, folder_name)
+
+# ### Exporting individual files <a name="exportfiles"></a>
+
+run_id = "ramp_1_np_18_10_2023"
+
+# #### Export model file to WiP bucket
+
+for file in models.iterdir():
     if file.name.startswith(run_id):
         move_file_to_bucket(file, bucket_name)
 
-# ### Upload the model outputs to the WIP bucket
+# #### Export model outputs to WiP bucket
 
-for file in output_dir.iterdir():
+for file in outputs.iterdir():
     if file.name.startswith(run_id):
         move_file_to_bucket(file, bucket_name)
 
-# ### Upload the additional config files to the WIP bucket
+# ### Exporting folders <a name="exportfolders"></a>
 
-for file in output_dir.iterdir():
-    if file.name.startswith(run_id):
-        move_file_to_bucket(file, bucket_name)
+destination_folder_name = "ramp_bentiu_south_sudan/mask"
+source_folder = ramp_mask
+move_folder_to_bucket(source_folder, bucket_name, destination_folder_name)
