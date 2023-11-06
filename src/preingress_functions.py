@@ -316,3 +316,70 @@ def get_file_paths(data_type):
     mask_files = list(mask_dir.glob("*.geojson"))
 
     return img_files, mask_files
+
+
+# %%
+def check_data_type_in_folder(data_type, img_file_names, mask_file_names):
+
+    """
+    Checks file name lists for img and mask folders to make sure they match that of the selected data_type
+
+    Parameters
+    ----------
+    data_type: str
+        Indicates whether the checked tiles are for "training" or "validation" data.
+    img_file_names: list
+        list of image file names in img dir
+    mask_file_names: list
+        list of image file names in mask dir
+
+    Returns
+    -------
+    Warning message if part of file name doesn't match that of data_type
+    """
+
+    # for f-strings
+    if data_type == "validation":
+        other_data_type = "training"
+
+    elif data_type == "training":
+        other_data_type = "validation"
+
+    # checks if files in img and mask folders match that of selected data_type and if so a warning is generated
+    if data_type + "_data_" in str(img_file_names) and data_type in str(
+        mask_file_names
+    ):
+        print("")
+
+    else:
+        warnings.warn(
+            Fore.GREEN
+            + f"""
+                    Data type chosen is ({data_type}).
+                    There are ({other_data_type}) data files in this folder.
+                    Please move these files to the ({other_data_type}) folder, reset kernel then run again"""
+        )
+
+    # checks if validation and training geotifs are in the same folder and if so a warning is generated
+    for data_type_name in img_file_names:
+        if "validation_data_" in str(img_file_names) and "training_data_" in str(
+            img_file_names
+        ):
+            warnings.warn(
+                Fore.BLUE
+                + f"""
+                        The ({data_type}) data img folder contains both ({data_type}) and ({other_data_type}) tifs.
+                        Please move files to the ({other_data_type}) data img folder, reset kernel then run the notebook again"""
+            )
+
+    # checks if validation and training geojsons are in the same folder and if so a warning is generated
+    for data_type_name in mask_file_names:
+        if "validation_data_" in str(mask_file_names) and "training_data_" in str(
+            mask_file_names
+        ):
+            warnings.warn(
+                Fore.BLUE
+                + f"""
+                        The ({data_type}) data mask folder contains both ({data_type}) and ({other_data_type}) geojsons.
+                        Please move files to the ({other_data_type}) data mask folder, reset kernel then run the notebook again"""
+            )
