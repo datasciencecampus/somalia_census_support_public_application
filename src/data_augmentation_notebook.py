@@ -29,6 +29,14 @@
 # * This notebook assumes the `premodelling_notebook` has already been run and all the training data has been converted into `.npy` arrays.
 # * Run final cell to clear variables and outputs
 #
+# <div class="alert alert-block altert-danger">
+#     <i class="fa fa-exclamation-triangle"></i> make sure there are no `stacked_arrays` in your `img_dir
+# </div>
+#
+# <div class="alert alert-block altert-danger">
+#     <i class="fa fa-exclamation-triangle"></i> don't run `hue` on `ramp` data as it uses the 4th channel and so won't work
+# </div>
+#
 # ### Contents
 # 1. ##### [Set-up](#setup)
 # 1. ##### [Data augmentation](#imageaug)
@@ -49,7 +57,7 @@ import ipywidgets as widgets
 from IPython.display import display
 
 # %%
-from functions_library import get_data_paths
+from functions_library import get_data_paths, get_folder_paths
 
 from data_augmentation_functions import (
     stack_array,
@@ -61,6 +69,12 @@ from data_augmentation_functions import (
 
 # %% [markdown]
 # ### Set-up directories
+
+# %%
+# for saving stacked arrays at the end
+folder_dict = get_folder_paths()
+stacked_img = Path(folder_dict["stacked_img_dir"])
+stacked_mask = Path(folder_dict["stacked_mask_dir"])
 
 # %%
 # set data directory
@@ -169,11 +183,11 @@ hue = image_adjustments["hue_shift"]["shift_value"]
 brightness = image_adjustments["brightness"]["factor"]
 contrast = image_adjustments["contrast"]["factor"]
 img_filename = (
-    f"all_stacked_images_{folder_dropdown.value}_{hue}_{brightness}_{contrast}.npy"
+    f"{folder_dropdown.value}_all_stacked_images_{hue}_{brightness}_{contrast}.npy"
 )
 
 # %%
-np.save(img_dir / img_filename, all_stacked_images)
+np.save(stacked_img / img_filename, all_stacked_images)
 
 # %% [markdown]
 # ### Mask augmentation
@@ -195,7 +209,10 @@ mask_hue, mask_brightness, mask_contrast = [np.copy(stacked_masks) for _ in rang
 
 # %%
 all_stacked_masks = np.concatenate(
-    [stacked_masks] + [mask_hue] + [mask_brightness] + [mask_contrast], axis=0
+    [stacked_masks] +
+    # [mask_hue] +
+    [mask_brightness] + [mask_contrast],
+    axis=0,
 )
 all_stacked_masks.shape
 
@@ -206,12 +223,10 @@ all_stacked_masks.shape
 hue = image_adjustments["hue_shift"]["shift_value"]
 brightness = image_adjustments["brightness"]["factor"]
 contrast = image_adjustments["contrast"]["factor"]
-mask_filename = (
-    f"all_stacked_masks_{folder_dropdown.value}_{hue}_{brightness}_{contrast}.npy"
-)
+mask_filename = f"{folder_dropdown.value}_all_stacked_masks_{brightness}_{contrast}.npy"
 
 # %%
-np.save(mask_dir / mask_filename, all_stacked_masks)
+np.save(stacked_mask / mask_filename, all_stacked_masks)
 
 # %% [markdown]
 # ## Clear outputs and remove variables<a name="clear"></a>

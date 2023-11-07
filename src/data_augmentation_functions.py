@@ -57,6 +57,7 @@ def stack_array(directory, expanded_outputs=False):
 
     # stack the original arrays, rotated versions and mirror versions
     stacked_images = np.concatenate([array_list] + rotations + mirrors, axis=0)
+    stacked_images = stacked_images.astype(np.float32)  # Convert to float32
     # Tile repeats the pattern, repeat would order them incorrectly.
     stacked_filenames = np.tile(filenames, 8)
 
