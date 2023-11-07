@@ -14,3 +14,7 @@ wip_bucket: ons-net-zero-analysis-prod-somalia-wip
 ramp_dir: ../data/ramp_bentiu_south_sudan
 ramp_mask: ../data/ramp_bentiu_south_sudan/mask
 ramp_img: ../data/ramp_bentiu_south_sudan/img
+
+stacked_dir: ../data/stacked_arrays
+stacked_img: ../data/stacked_arrays/img
+stacked_mask: ../data/stacked_arrays/mask
