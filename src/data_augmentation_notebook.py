@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.14.6
 #   kernelspec:
 #     display_name: venv-somalia-gcp
 #     language: python
@@ -26,11 +26,13 @@
 #
 # **Things to note**
 #
-# This notebook assumes the `premodelling_notebook` has already been run and all the training data has been converted into `.npy` arrays.
+# * This notebook assumes the `premodelling_notebook` has already been run and all the training data has been converted into `.npy` arrays.
+# * Run final cell to clear variables and outputs
 #
 # ### Contents
 # 1. ##### [Set-up](#setup)
 # 1. ##### [Data augmentation](#imageaug)
+# 1. ##### [Clear outputs & variables](#clear)
 
 # %% [markdown]
 # ## Set-up <a name="setup"></a>
@@ -210,3 +212,12 @@ mask_filename = (
 
 # %%
 np.save(mask_dir / mask_filename, all_stacked_masks)
+
+# %% [markdown]
+# ## Clear outputs and remove variables<a name="clear"></a>
+
+# %%
+# %reset -f
+
+
+# %%
