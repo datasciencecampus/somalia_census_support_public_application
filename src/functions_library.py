@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import List
 import yaml
+import numpy as np
 
 # set data directory
 data_dir = Path.cwd().parent.joinpath("data")
@@ -113,3 +114,23 @@ def get_data_paths(selected_folder):
     mask_dir = data_dir / selected_folder / "mask"
 
     return img_dir, mask_dir
+
+
+def check_directory_images(directory):
+    """
+    Check the shape of .npy files in the specified directory and highlight those with incorrect shapes.
+
+    Args:
+        directory (str or Path): The directory containing the .npy files to check.
+    """
+
+    def check_array_shape(file):
+        np_array = np.load(file)
+        if np_array.shape != (256, 256, 4):
+            print(f"File {file} has shape {np_array.shape}, which is incorrect.")
+
+    # Get all .npy files in the directory
+    array_files = list(Path(directory).glob("*.npy"))
+
+    for file in array_files:
+        check_array_shape(file)
