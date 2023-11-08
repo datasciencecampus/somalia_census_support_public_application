@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.14.6
 #   kernelspec:
 #     display_name: venv-somalia-gcp
 #     language: python
@@ -25,6 +25,7 @@
 # #### Things to note
 # * Only has to be run if `download_data_from_ingress` has been run - as `.npy` files are saved
 # * Check kernel
+# * Run final cell to clear variables and outputs
 #
 #
 # ## Contents
@@ -36,6 +37,7 @@
 # 1. ##### [Training data summary](#trainingsummary)
 # 1. ##### [Visual checking - images](#imagevisual)
 # 1. ##### [Visual checking - masks](#maskvisual)
+# 1. ##### [Clear outputs & variables](#clear)
 
 # %% [markdown]
 # ## Set up <a name="setup"></a>
@@ -52,6 +54,7 @@ import numpy as np
 import random
 import ipywidgets as widgets
 from IPython.display import display
+import json
 
 from functions_library import get_data_paths
 
@@ -103,6 +106,10 @@ img_size = 384
 #
 # Reading in all `.tif` files in the `img_dir` then performing geospatial processing on them using functions from the `image_processing_functions.py` and saving outputted files as `.npy` arrays into the same folder.
 
+# %%
+# list all .tif files in directoy
+img_files = list(img_dir.glob("*.tif"))
+
 # %% [markdown]
 # ### Image band testing
 
@@ -112,10 +119,6 @@ import rasterio as rio
 # %%
 min_band_values = [float("inf")] * 3
 max_band_values = [float("-inf")] * 3
-
-# %%
-# list all .tif files in directoy
-img_files = list(img_dir.glob("*.tif"))
 
 # %%
 for img_file in img_files:
@@ -132,14 +135,17 @@ for band_index, (min_val, max_val) in enumerate(zip(min_band_values, max_band_va
     print(f"band {band_index + 1}: min = {min_val}, max = {max_val}")
 
 
+# %% [markdown]
+# ### Image processing
+
 # %%
 # process .geotiff and save as .npy
 for img_file in img_files:
     process_image(img_file, img_size, img_dir)
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 # checking shape of .npy files matches
-check_img_files(img_dir, (256, 256, 4))
+check_img_files(img_dir, (384, 384, 4))
 
 # %%
 # remove _bgr from file names if present
@@ -165,22 +171,30 @@ for mask_path in mask_dir.glob("*.geojson"):
         mask_path, mask_dir, img_dir, building_class_list, img_size, features_dict
     )
 
+# %%
+# save json file
+folder_name = folder_dropdown.value
+file_path = mask_dir / f"{folder_name}_features_dict.json"
+with open(file_path, "w") as json_file:
+    json.dump(features_dict, json_file)
+
 # %% [markdown]
 # ## Data summary<a name="trainingsummary"></a>
 #
 
-# %% jupyter={"outputs_hidden": true}
+# %%
+results = []
 # joining masks together to count building types
 for mask_path in mask_dir.glob("*.geojson"):
     mask_gdf = process_geojson_file(mask_path)
+    structure_stats, value_counts = data_summary(mask_gdf)
     training_data, value_counts, structure_stats = data_summary(mask_gdf)
 
 # %%
-# building types
+# TODO - ONLY RETURNING RESULTS FOR ONE ARRAY
 value_counts
 
 # %%
-# structure stats
 structure_stats
 
 # %%
@@ -191,7 +205,7 @@ training_data
 
 # %%
 # finding all img .npy files - those converted above
-img_file_list = [f for f in img_dir.glob("*.npy") if np.load(f).shape[-1] == 4]
+img_file_list = [f for f in img_dir.glob("*.npy")]
 # read in .npy files
 img_list = [np.load(f) for f in img_file_list]
 
@@ -221,3 +235,11 @@ plt.subplot(122)
 plt.imshow(mask_list[image_number])
 
 plt.show()
+
+# %% [markdown]
+# ## Clear outputs and remove variables<a name="clear"></a>
+
+# %%
+# %reset -f
+
+# %%
