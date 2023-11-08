@@ -354,8 +354,9 @@ def check_data_type_in_folder(data_type, img_file_names, mask_file_names):
         ):
             warnings.warn(
                 Fore.BLUE
-                + f"""Data type chosen is ({data_type}). There are ({other_data_type}) data files in this img folder.
-                Please move these files to the ({other_data_type}) folder, reset kernel then run the notebook again"""
+                + f"""
+                Data type chosen is ({data_type}). There are ({other_data_type}) data files in this img folder.
+                Please move these files to the ({other_data_type}) data folder, reset kernel then run the notebook again"""
             )
 
     # checks mask folder to see if it contains the same data as the data_type - if not a warning is generated
@@ -366,8 +367,9 @@ def check_data_type_in_folder(data_type, img_file_names, mask_file_names):
         ):
             warnings.warn(
                 Fore.BLUE
-                + f"""Data type chosen is ({data_type}). There are ({other_data_type}) data files in this mask folder.
-                Please move these files to the ({other_data_type}) folder, reset kernel then run the notebook again"""
+                + f"""
+                Data type chosen is ({data_type}). There are ({other_data_type}) data files in this mask folder.
+                Please move these files to the ({other_data_type}) data folder, reset kernel then run the notebook again"""
             )
 
     # checks for tif files in the mask folder
@@ -375,7 +377,8 @@ def check_data_type_in_folder(data_type, img_file_names, mask_file_names):
         if ".tif" in file_type:
             warnings.warn(
                 Fore.BLUE
-                + f"""The ({data_type}) data mask folder contains tif files.
+                + f"""
+                The ({data_type}) data mask folder contains tif files.
                 Please move these files to the ({data_type}) data img folder, reset kernel then run the notebook again"""
             )
 
@@ -384,9 +387,7 @@ def check_data_type_in_folder(data_type, img_file_names, mask_file_names):
         if ".geojson" in file_type:
             warnings.warn(
                 Fore.BLUE
-                + f"""The ({data_type}) data img folder contains geojsons.
+                + f"""
+                The ({data_type}) data img folder contains geojsons.
                 Please move files to the ({data_type}) data mask folder, reset kernel then run the notebook again"""
             )
-
-
-# %%
