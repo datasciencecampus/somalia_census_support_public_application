@@ -43,6 +43,26 @@
 # 1. ##### [Clear outputs & variables](#clear)
 
 # %% [markdown]
+# ### Checking memory usage of notebook
+
+# %%
+import os
+import psutil
+
+# Get the process ID (PID) of the current Jupyter notebook process
+current_pid = os.getpid()
+
+# Get the process memory usage
+process = psutil.Process(current_pid)
+memory_info = process.memory_info()
+
+# Convert memory usage to gigabytes
+memory_usage_gb = memory_info.rss / (1024 * 1024 * 1024)
+
+# Print the memory usage in gigabytes
+print("Memory usage (gb):", memory_usage_gb)
+
+# %% [markdown]
 # ## Set-up <a name="setup"></a>
 
 # %% [markdown]
@@ -71,7 +91,7 @@ from data_augmentation_functions import (
 # ### Set-up directories
 
 # %%
-# for saving stacked arrays at the end
+# directories for saving stacked arrays at the end
 folder_dict = get_folder_paths()
 stacked_img = Path(folder_dict["stacked_img_dir"])
 stacked_mask = Path(folder_dict["stacked_mask_dir"])
@@ -106,6 +126,10 @@ print(mask_dir)
 # creating stack of img arrays that are rotated and horizontally flipped
 stacked_images, stacked_filenames = stack_array(img_dir, expanded_outputs=True)
 stacked_images.shape
+
+# %%
+# for ramp
+# stacked_images = stacked_images.astype(np.float16)
 
 # %% [markdown]
 # #### Set augmentation
@@ -189,6 +213,13 @@ img_filename = (
 # %%
 np.save(stacked_img / img_filename, all_stacked_images)
 
+# %%
+# clearing memory
+adjusted_hue = []
+adjusted_brightness = []
+adjusted_contrast = []
+stacked_images = []
+
 # %% [markdown]
 # ### Mask augmentation
 
@@ -209,12 +240,13 @@ mask_hue, mask_brightness, mask_contrast = [np.copy(stacked_masks) for _ in rang
 
 # %%
 all_stacked_masks = np.concatenate(
-    [stacked_masks] +
-    # [mask_hue] +
-    [mask_brightness] + [mask_contrast],
-    axis=0,
+    [stacked_masks] + [mask_hue] + [mask_brightness] + [mask_contrast], axis=0
 )
 all_stacked_masks.shape
+
+# %%
+all_stacked_masks = all_stacked_masks.astype(np.int32)
+all_stacked_masks.nbytes
 
 # %% [markdown]
 # #### Saving mask array
