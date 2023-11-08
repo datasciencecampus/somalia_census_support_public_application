@@ -271,7 +271,7 @@ def check_same_number_of_files_present(img_files, mask_files):
     # Check that same number of imgs and mask files present - if not then warning
     if len(img_files) != len(mask_files):
         warnings.warn(
-            f"Number of validation image files {len(img_files)} doesn't match number of validation mask files {len(mask_files)}"
+            f"Number of image files {len(img_files)} doesn't match number of mask files {len(mask_files)}"
         )
 
     return
