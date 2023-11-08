@@ -33,10 +33,7 @@
 #
 
 # %% [markdown]
-# ## Set-up <a name="setup"></a>
-
-# %% [markdown]
-# ### Import libraries & custom functions
+# ### Checking memory usage
 
 # %%
 import os
@@ -53,10 +50,16 @@ memory_info = process.memory_info()
 memory_usage_gb = memory_info.rss / (1024 * 1024 * 1024)
 
 # Print the memory usage in gigabytes
-print("Memory usage (GB):", memory_usage_gb)
+print("Memory usage (gb):", memory_usage_gb)
+
+# %% [markdown]
+# ## Set-up <a name="setup"></a>
 
 # %%
-os.environ["TF_GPU_ALLOCATOR"] = "cuda_malloc_async"
+# %env TF_GPU_ALLOCATOR=cuda_malloc_async
+
+# %% [markdown]
+# ### Import libraries & custom functions
 
 # %%
 import random
@@ -71,6 +74,11 @@ from keras.utils import to_categorical
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import Sequence
+
+# %%
+from functions_library import get_folder_paths
+from multi_class_unet_model_build import jacard_coef, get_model
+from loss_functions import get_sm_loss, get_combined_loss, get_focal_tversky_loss
 
 # %% [markdown]
 # #### GPU Availability check
@@ -98,16 +106,11 @@ except OSError:
     )
 print("Num GPUs Available: ", len(tf.config.list_physical_devices("GPU")))
 
-# %%
-from functions_library import get_folder_paths
-from multi_class_unet_model_build import jacard_coef, multi_unet_model
-from loss_functions import get_sm_loss, get_combined_loss, get_focal_tversky_loss
-
 # %% [markdown]
 # ### Set-up filepaths
 
 # %%
-# for saving stacked arrays at the end
+# for importing stacked arrays
 folder_dict = get_folder_paths()
 stacked_img = Path(folder_dict["stacked_img_dir"])
 stacked_mask = Path(folder_dict["stacked_mask_dir"])
@@ -123,22 +126,32 @@ outputs_dir = Path(folder_dict["outputs_dir"])
 # #### Masks
 
 # %%
-ramp_masks = np.load(stacked_mask / "ramp_bentiu_south_sudan_stacked_masks_1.5_2.npy")
-ramp_masks.shape
+ramp = True
+if ramp:
+    ramp_masks = np.load(
+        stacked_mask / "ramp_bentiu_south_sudan_stacked_masks_1.5_2.npy"
+    )
+else:
+    ramp_masks = None
 
 # %%
 training_masks = np.load(stacked_mask / "training_data_all_stacked_masks_1.5_2.npy")
 training_masks.shape
 
 # %%
+validation_masks = np.load(stacked_mask / "validation_data_all_stacked_masks_1.5_2.npy")
+validation_masks.shape
+
+# %%
 # joining ramp and training together
-stacked_masks = np.concatenate([ramp_masks, training_masks], axis=0)
+stacked_masks = np.concatenate([training_masks, validation_masks], axis=0)
 stacked_masks.shape
 
 # %%
 # clearing out some memory
 ramp_masks = []
 training_masks = []
+validation_masks = []
 
 # %% [markdown]
 # #### Number of classes
@@ -148,8 +161,6 @@ training_masks = []
 # n_classes = len(np.unique(stacked_masks))
 
 # n_classes
-
-# %%
 n_classes = 3
 
 # %% [markdown]
@@ -164,10 +175,12 @@ stacked_masks_cat.shape
 # #### Images
 
 # %%
-ramp_images = np.load(
-    stacked_img / "ramp_bentiu_south_sudan_stacked_images_0.5_1.5_2.npy"
-)
-ramp_images.shape
+if ramp:
+    ramp_images = np.load(
+        stacked_img / "ramp_bentiu_south_sudan_stacked_images_0.5_1.5_2.npy"
+    )
+else:
+    ramp_images = None
 
 # %%
 training_images = np.load(
@@ -176,12 +189,18 @@ training_images = np.load(
 training_images.shape
 
 # %%
+validation_images = np.load(
+    stacked_img / "validation_data_all_stacked_images_0.5_1.5_2.npy"
+)
+validation_images.shape
+
+# %%
 # dropping 4 th channel to join with ramp
-training_images = training_images[:, :, :, :3]
+# training_images = training_images[:, :, :, :3]
 
 # %%
 # joining ramp and training together
-stacked_images = np.concatenate([ramp_images, training_images], axis=0)
+stacked_images = np.concatenate([training_images, validation_images], axis=0)
 
 # %%
 stacked_images.shape
@@ -190,21 +209,34 @@ stacked_images.shape
 # clearing out some memory
 ramp_images = []
 training_images = []
+validation_images = []
 
 # %% [markdown]
 # ### Sense checking images and masks correspond
 
 # %%
-# # create random number to check both image and mask
+# Create a random number to check both image and mask
 image_number = random.randint(0, len(stacked_images) - 1)
 
-# plot image and mask
+# Get the BGR image data
+bgr_image = stacked_images[image_number, :, :, :3]
+
+# Convert BGR to RGB
+rgb_image = bgr_image[:, :, ::-1]
+
+# Normalize the data to the [0.0, 1.0] range
+min_value = rgb_image.min()
+max_value = rgb_image.max()
+image_to_display_normalized = (rgb_image - min_value) / (max_value - min_value)
+
+# Plot the RGB image and mask
 plt.figure(figsize=(12, 6))
 plt.subplot(121)
-plt.imshow(stacked_images[image_number, :, :, :3])
+plt.imshow(image_to_display_normalized)
 plt.subplot(122)
 plt.imshow(stacked_masks_cat[image_number])
 plt.show()
+
 
 # %% [markdown]
 # ## Training parameters <a name="trainingparameters"></a>
@@ -217,9 +249,6 @@ X_train, X_test, y_train, y_test = train_test_split(
     random_state=42,
 )
 
-# %%
-img_height, img_width, num_channels = (256, 256, 4)
-
 # %% [markdown]
 # ## Weights <a name="weights"></a>
 
@@ -231,19 +260,21 @@ frequency_weights = compute_class_weight(
 )
 print(frequency_weights)
 
-
 # %% [markdown]
 # ## Model parameters <a name="modelparameters"></a>
 
 # %%
-def get_model():
-    return multi_unet_model(
-        n_classes=n_classes,
-        IMG_HEIGHT=img_height,
-        IMG_WIDTH=img_width,
-        IMG_CHANNELS=num_channels,
-    )
+# Extract img_height, img_width, and num_channels
+img_height, img_width, num_channels = (
+    stacked_images.shape[1],
+    stacked_images.shape[2],
+    stacked_images.shape[3],
+)
+print(img_height, img_width, num_channels)
 
+# %%
+# defined under training parameters
+model = get_model(n_classes, img_height, img_width, num_channels)
 
 # %% [markdown]
 # ### Epochs
@@ -272,10 +303,6 @@ callbacks = [
 # ### Loss functions
 
 # %%
-# defined under training parameters
-model = get_model()
-
-# %%
 # choose loss function
 loss_function = "segmentation_models"  # specify the loss function you want to use: "combined", "segmentation_models, focal_tversky"
 
@@ -284,7 +311,7 @@ optimizer = "adam"  # specify the optimizer you want to use
 metrics = ["accuracy", jacard_coef]  # specific the metrics
 
 # %%
-loss_weights = None
+loss_weights = frequency_weights
 
 if loss_function == "segmentation_models":
     loss = get_sm_loss(frequency_weights)
@@ -306,10 +333,20 @@ model.compile(
 #
 
 # %%
-runid = "ramp_training_2_07_11_23"
+import datetime
+
+# Get the current date and time
+current_datetime = datetime.datetime.now()
+
+# Format the date and time as a string (e.g., "2023-11-07_145623" for November 7, 2023, 14:56:23)
+formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H%M")
 
 # %%
-conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_img_num = {stacked_masks.shape[0]},\nloss_function = {loss_function}"
+runid = f"ramp_training_{formatted_datetime}"
+runid
+
+# %%
+conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_array_num = {stacked_masks.shape[0]},\nloss_function = {loss_function},\nweight = {loss_weights}"
 print(conditions)
 
 # %%
@@ -344,30 +381,30 @@ test_gen = DataGenerator(X_test, y_test, 32)
 # ## Model <a name="model"></a>
 
 # %%
-model.summary()
-history1 = model.fit(
-    train_gen,
-    batch_size=batch_size,
-    verbose=1,
-    epochs=num_epochs,
-    validation_data=test_gen,
-    shuffle=False,
-    callbacks=callbacks,
-)
-
-# %%
 # model.summary()
-
 # history1 = model.fit(
-#     X_train,
-#     y_train,
+#     train_gen,
 #     batch_size=batch_size,
 #     verbose=1,
 #     epochs=num_epochs,
-#     validation_data=(X_test, y_test),
+#     validation_data=test_gen,
 #     shuffle=False,
 #     callbacks=callbacks,
 # )
+
+# %%
+model.summary()
+
+history1 = model.fit(
+    X_train,
+    y_train,
+    batch_size=batch_size,
+    verbose=1,
+    epochs=num_epochs,
+    validation_data=(X_test, y_test),
+    shuffle=False,
+    # callbacks=callbacks,
+)
 
 # %%
 # optional
