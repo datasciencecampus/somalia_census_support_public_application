@@ -271,7 +271,7 @@ def check_same_number_of_files_present(img_files, mask_files):
     # Check that same number of imgs and mask files present - if not then warning
     if len(img_files) != len(mask_files):
         warnings.warn(
-            f"Number of validation image files {len(img_files)} doesn't match number of validation mask files {len(mask_files)}"
+            f"Number of image files {len(img_files)} doesn't match number of mask files {len(mask_files)}"
         )
 
     return
@@ -316,3 +316,80 @@ def get_file_paths(data_type):
     mask_files = list(mask_dir.glob("*.geojson"))
 
     return img_files, mask_files
+
+
+# %%
+def check_data_type_in_folder(data_type, img_file_names, mask_file_names):
+
+    """
+    Checks file name lists for img and mask folders to make sure they match that of the selected data_type
+
+    Parameters
+    ----------
+    data_type: str
+        Indicates whether the checked tiles are for "training" or "validation" data.
+    img_file_names: list
+        list of image file names in img dir
+    mask_file_names: list
+        list of image file names in mask dir
+
+    Returns
+    -------
+    Warning message if part of file name doesn't match that of data_type
+    and if .tif or .geojson files are in the wrong folder
+    """
+
+    # for f-strings
+    if data_type == "validation":
+        other_data_type = "training"
+
+    elif data_type == "training":
+        other_data_type = "validation"
+
+    # checks img folder to see if it contains the same data as the data_type - if not a warning is generated
+    for img_name in img_file_names:
+        if (
+            data_type + "_data_" not in img_name
+            or other_data_type + "_data_" in img_name
+        ):
+            warnings.warn(
+                Fore.BLUE
+                + f"""
+                Data type chosen is ({data_type}). There are files in the wrong folder!
+                Please move ({img_name}) to the ({other_data_type}) data img folder or delete if file unrelated.
+                Then reset kernel and run the notebook again"""
+            )
+
+    # checks mask folder to see if it contains the same data as the data_type - if not a warning is generated
+    for mask_name in mask_file_names:
+        if (
+            data_type + "_data_" not in mask_name
+            or other_data_type + "_data_" in mask_name
+        ):
+            warnings.warn(
+                Fore.BLUE
+                + f"""
+                Data type chosen is ({data_type}). There are files in the wrong folder!
+                Please move ({mask_name}) to the ({other_data_type}) data mask folder or delete if file unrelated.
+                Then reset kernel and run the notebook again"""
+            )
+
+    # checks for tif files in the mask folder
+    for file_type in mask_file_names:
+        if ".tif" in file_type:
+            warnings.warn(
+                Fore.BLUE
+                + f"""
+                The ({data_type}) data mask folder contains ({file_type}).
+                Please move these files to the ({data_type}) data img folder, reset kernel then run the notebook again"""
+            )
+
+    # checks for geojson files in the img folder
+    for file_type in img_file_names:
+        if ".geojson" in file_type:
+            warnings.warn(
+                Fore.BLUE
+                + f"""
+                The ({data_type}) data img folder contains ({file_type}).
+                Please move files to the ({data_type}) data mask folder, reset kernel then run the notebook again"""
+            )
