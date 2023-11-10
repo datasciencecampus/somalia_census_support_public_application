@@ -105,7 +105,8 @@ print(mask_dir)
 # %%
 # creating stack of img arrays that are rotated and horizontally flipped
 stacked_images, stacked_filenames = stack_array(img_dir, expanded_outputs=True)
-stacked_images.shape
+print(stacked_images.shape)
+stacked_filenames.shape
 
 # %% [markdown]
 # #### Set augmentation
@@ -155,13 +156,7 @@ adjusted_contrast = adjust_contrast(
 # %%
 all_stacked_filenames = []
 # Order of Final image array needs to be followed
-all_stacked_filenames = np.concatenate(
-    [stacked_filenames]
-    + [stacked_filenames]
-    + [stacked_filenames]
-    + [stacked_filenames],
-    axis=0,
-)
+all_stacked_filenames = np.tile(stacked_filenames, 4)
 
 all_stacked_filenames.shape
 
@@ -187,7 +182,13 @@ img_filename = (
 )
 
 # %%
+# Checks whether the directory exists, creates if necessary
+stacked_img.mkdir(parents=True, exist_ok=True)
+
 np.save(stacked_img / img_filename, all_stacked_images)
+
+# %%
+np.save(stacked_img / f"{folder_dropdown.value}_filenames", all_stacked_filenames)
 
 # %% [markdown]
 # ### Mask augmentation
@@ -209,9 +210,7 @@ mask_hue, mask_brightness, mask_contrast = [np.copy(stacked_masks) for _ in rang
 
 # %%
 all_stacked_masks = np.concatenate(
-    [stacked_masks] +
-    # [mask_hue] +
-    [mask_brightness] + [mask_contrast],
+    [stacked_masks] + [mask_hue] + [mask_brightness] + [mask_contrast],
     axis=0,
 )
 all_stacked_masks.shape
@@ -226,6 +225,9 @@ contrast = image_adjustments["contrast"]["factor"]
 mask_filename = f"{folder_dropdown.value}_all_stacked_masks_{brightness}_{contrast}.npy"
 
 # %%
+# Checks whether the directory exists, creates if necessary
+stacked_mask.mkdir(parents=True, exist_ok=True)
+
 np.save(stacked_mask / mask_filename, all_stacked_masks)
 
 # %% [markdown]

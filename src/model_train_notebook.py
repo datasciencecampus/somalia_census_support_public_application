@@ -192,6 +192,18 @@ ramp_images = []
 training_images = []
 
 # %% [markdown]
+# ### Import filenames
+
+# %%
+ramp_filenames = np.load(
+    stacked_img / "ramp_bentiu_south_sudan_all_stacked_filenames.npy"
+)
+training_filenames = np.load(stacked_img / "training_data_all_stacked_filenames.npy")
+
+# %%
+stacked_filenames = np.concatenate([ramp_filenames, training_filenames], axis=0)
+
+# %% [markdown]
 # ### Sense checking images and masks correspond
 
 # %%
@@ -210,9 +222,10 @@ plt.show()
 # ## Training parameters <a name="trainingparameters"></a>
 
 # %%
-X_train, X_test, y_train, y_test = train_test_split(
+X_train, X_test, y_train, y_test, filenames_train, filenames_test = train_test_split(
     stacked_images,
     stacked_masks_cat,
+    stacked_filenames,
     test_size=0.20,
     random_state=42,
 )
