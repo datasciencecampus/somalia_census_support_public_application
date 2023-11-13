@@ -208,7 +208,7 @@ def cleaning_of_mask_files(mask_files_lower, data_type):
             warnings.warn(
                 Fore.GREEN
                 + f"""{(mask_file)} contains no Type or geometry.
-                Ensure this mask is for a background tile. File has not been saved!"""
+                Ensure this mask is for a background tile. File has not been modified!"""
             )
             continue
 
@@ -217,7 +217,7 @@ def cleaning_of_mask_files(mask_files_lower, data_type):
             warnings.warn(
                 Fore.GREEN
                 + f"""{(mask_file)} contains no type but has geometry.
-                Add types in the GIS software that is used to the draw polygons. File has not been saved!"""
+                Add type information to each polygon using your GIS software. File has not been saved!"""
             )
             continue
 
@@ -241,7 +241,7 @@ def cleaning_of_mask_files(mask_files_lower, data_type):
         if mask_gdf["geometry"].isnull().values.any():
             warnings.warn(
                 Fore.GREEN
-                + f"Geometry column for ({mask_file}) has null values. File has not been saved! Check the GIS software that is used"
+                + f"Geometry column for ({mask_file}) has null values. File has not been saved! Check the file in your GIS software."
             )
             continue
 
