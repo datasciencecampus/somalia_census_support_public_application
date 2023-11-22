@@ -53,7 +53,7 @@ Follow the [wiki guide](https://github.com/datasciencecampus/somalia_unfpa_censu
 
 >For validation data replace `training` with `validation`.
 
-The training data needs to be processed and outputted as `.npy` files when first uploaded to GCP. This is done in the `premodelling_notebook.py`.
+The training data needs to be processed and outputted as `.npy` files when first uploaded to GCP. This is done in the `(2) premodelling_notebook.py`.
 
 ## Getting set-up (GCP):
 
@@ -139,22 +139,23 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  ┃ ┃ ┃ ┣ 📜validation_data_<area>_<initial>.geojson
  ┃ ┃ ┃ ┣ 📜validation_data_<area>_<initial>.npy
  ┣ 📂src
+ ┃ ┣ 📜(1) download_data_from_ingress.py
+ ┃ ┣ 📜(2) premodelling_notebook.py
+ ┃ ┣ 📜(3) data_augmentation_notebook.py
+ ┃ ┣ 📜(4) model_train_notebook.py
+ ┃ ┣ 📜(5) model_outputs_notebook.py
  ┃ ┣ 📜bucket_access_functions.py
  ┃ ┣ 📜bucket_export_notebook.py
  ┃ ┣ 📜bucket_eimport_notebook.py
  ┃ ┣ 📜data_augmentation_functions.py
- ┃ ┣ 📜download_data_from_ingress.py
  ┃ ┣ 📜functions_library.py
  ┃ ┣ 📜loss_functions.py
  ┃ ┣ 📜idp_map_notebook.py
  ┃ ┣ 📜image_processing_functions.py
  ┃ ┣ 📜mask_processing_functions.py
  ┃ ┣ 📜model_outputs_functions.py
- ┃ ┣ 📜model_outputs_notebook.py
- ┃ ┣ 📜model_train_notebook.py
  ┃ ┣ 📜multi_class_unet_model_build.py
  ┃ ┣ 📜preingress_notebook.py
- ┃ ┣ 📜premodelling_notebook.py
  ┃ ┣ 📜weight_functions.py
  ┣ 📜config.yaml
  ┣ 📜.gitignore
