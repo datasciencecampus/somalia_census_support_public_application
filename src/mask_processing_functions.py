@@ -140,7 +140,7 @@ def data_summary(training_data):
     )
 
     # calculate statistics for each type
-    structure_stats = training_data.groupby("Type")["structure_size"].agg(
+    structure_stats = training_data.groupby("Type")["structure_area"].agg(
         ["min", "max", "mean"]
     )
 
