@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# # Pre-modelling processing
+# # (2) Pre-modelling processing
 #
 # <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #31708f; background-color: #d9edf7; border-color: #bce8f1;">
 # Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
@@ -23,7 +23,7 @@
 # Processes locally stored img and mask files and outputs as `.npy`, which are saved in the same folder location.
 #
 # #### Things to note
-# * Only has to be run if `download_data_from_ingress` has been run - as `.npy` files are saved
+# * Only has to be run if `(1) download_data_from_ingress` has been run - as `.npy` files are saved
 # * Check kernel
 #
 #

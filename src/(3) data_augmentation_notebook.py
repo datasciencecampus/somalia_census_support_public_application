@@ -14,7 +14,7 @@
 # ---
 
 # %% [markdown]
-# # Data augmentation
+# # (3) Data augmentation
 #
 # <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #31708f; background-color: #d9edf7; border-color: #bce8f1;">
 # Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
@@ -26,7 +26,7 @@
 #
 # **Things to note**
 #
-# This notebook assumes the `premodelling_notebook` has already been run and all the training data has been converted into `.npy` arrays.
+# This notebook assumes the `(2) premodelling_notebook` has already been run and all the training data has been converted into `.npy` arrays.
 #
 # ### Contents
 # 1. ##### [Set-up](#setup)
