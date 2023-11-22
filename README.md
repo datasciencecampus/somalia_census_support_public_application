@@ -37,7 +37,12 @@ flowchart LR
     download-->|img file|local
     local{Local<br>GCP<br>Env.}-->|mask file|processing[/pre-modelling<br>notebook\]
     local{Local<br>GCP<br>Env.}-->|img file|processing[/pre-modelling<br>notebook\]
-    processing-->|numpy<br>arrays|train[/model<br>train<br>notebook\]
+    processing-->|numpy<br>arrays|dataaug[/data<br>augmentation<br>notebook\]
+    dataaug-->|numpy<br>arrays|train[/model<br>train<br>notebook\]
+    train-->|numpy arrays|outputs
+    train-->|history|outputs
+    train-->|hdf5|outputs
+    outputs[model<br>outputs<br>notebook]
 
 ```
 ## Training data
