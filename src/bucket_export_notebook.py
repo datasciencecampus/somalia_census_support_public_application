@@ -27,6 +27,7 @@ from bucket_access_functions import (
     read_files_in_bucket,
 )
 from functions_library import get_folder_paths
+from pathlib import Path
 
 # +
 # local folders
@@ -51,7 +52,7 @@ folders = [
     ramp_img,
     models,
     outputs,
-) = [folder_dict[folder] for folder in folders]
+) = [Path(folder_dict[folder]) for folder in folders]
 
 
 # work-in-progress bucket
@@ -69,7 +70,7 @@ delete_folder_from_bucket(bucket_name, folder_name)
 
 # ### Exporting individual files <a name="exportfiles"></a>
 
-run_id = "ramp_1_np_18_10_2023"
+run_id = "training_2_23_11_23"
 
 # #### Export model file to WiP bucket
 
