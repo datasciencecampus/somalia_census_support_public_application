@@ -50,6 +50,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import json
 import ipywidgets as widgets
 from IPython.display import display
 
@@ -137,9 +138,9 @@ for band_index, (min_val, max_val) in enumerate(zip(min_band_values, max_band_va
 for img_file in img_files:
     process_image(img_file, img_size, img_dir)
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 # checking shape of .npy files matches
-check_img_files(img_dir, (256, 256, 4))
+check_img_files(img_dir, (384, 384, 4))
 
 # %%
 # remove _bgr from file names if present
@@ -158,6 +159,7 @@ building_class_list = ["building", "tent"]
 # %%
 features_dict = {}
 
+
 # %%
 # loop through the GeoJSON files
 for mask_path in mask_dir.glob("*.geojson"):
@@ -165,11 +167,16 @@ for mask_path in mask_dir.glob("*.geojson"):
         mask_path, mask_dir, img_dir, building_class_list, img_size, features_dict
     )
 
+# %%
+output_file = mask_dir.joinpath("feature_dict.json")
+with open(output_file, "w") as f:
+    json.dump(features_dict, f, indent=4)
+
 # %% [markdown]
 # ## Data summary<a name="trainingsummary"></a>
 #
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 # joining masks together to count building types
 for mask_path in mask_dir.glob("*.geojson"):
     mask_gdf = process_geojson_file(mask_path)

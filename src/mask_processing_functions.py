@@ -163,9 +163,9 @@ def calculate_average_feature_size(geojson_file_df):
 
     for idx, row in geojson_file_df.iterrows():
         size = row.geometry.area
-        if row["Type"] == "Tent":
+        if row["Type"] == "tent":
             tent_size.append(size)
-        elif row["Type"] == "Building":
+        elif row["Type"] == "building":
             building_size.append(size)
 
     average_tent = sum(tent_size) / len(tent_size) if tent_size else 0
