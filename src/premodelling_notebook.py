@@ -114,28 +114,6 @@ img_files = list(img_dir.glob("*.tif"))
 # %% [markdown]
 # ### Image band testing
 
-# %%
-import rasterio as rio
-
-# %%
-min_band_values = [float("inf")] * 3
-max_band_values = [float("-inf")] * 3
-
-# %%
-for img_file in img_files:
-    with rio.open(img_file) as src:
-        for band_index in range(1, 4):
-            band = src.read(band_index)
-            min_band_values[band_index - 1] = min(
-                min_band_values[band_index - 1], band.min()
-            )
-            max_band_values[band_index - 1] = max(
-                max_band_values[band_index - 1], band.max()
-            )
-for band_index, (min_val, max_val) in enumerate(zip(min_band_values, max_band_values)):
-    print(f"band {band_index + 1}: min = {min_val}, max = {max_val}")
-
-
 # %% [markdown]
 # ### Image processing
 
@@ -175,9 +153,17 @@ for mask_path in mask_dir.glob("*.geojson"):
 
 # %%
 
-output_file = mask_dir.joinpath("feature_dict.json")
-with open(output_file, "w") as f:
-    json.dump(features_dict, f, indent=4)
+# output_file = mask_dir.joinpath("feature_dict.json")
+# with open(output_file, "w") as f:
+#     json.dump(features_dict, f, indent=4)
+
+
+# %%
+# save json file
+folder_name = folder_dropdown.value
+file_path = mask_dir / f"{folder_name}_features_dict.json"
+with open(file_path, "w") as json_file:
+    json.dump(features_dict, json_file)
 
 
 # %% [markdown]
@@ -185,11 +171,9 @@ with open(output_file, "w") as f:
 #
 
 # %%
-
 # joining masks together to count building types
 for mask_path in mask_dir.glob("*.geojson"):
     mask_gdf = process_geojson_file(mask_path)
-    structure_stats, value_counts = data_summary(mask_gdf)
     training_data, value_counts, structure_stats = data_summary(mask_gdf)
 
 # %%
