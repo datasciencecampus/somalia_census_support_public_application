@@ -13,7 +13,7 @@
 # ---
 
 # %% [markdown]
-# # (2) Pre-modelling processing
+# # Pre-modelling processing
 #
 # <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #31708f; background-color: #d9edf7; border-color: #bce8f1;">
 # Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
@@ -23,7 +23,7 @@
 # Processes locally stored img and mask files and outputs as `.npy`, which are saved in the same folder location.
 #
 # #### Things to note
-# * Only has to be run if `(1) download_data_from_ingress` has been run - as `.npy` files are saved
+# * Only has to be run if `download_data_from_ingress` has been run - as `.npy` files are saved
 # * Check kernel
 #
 #
@@ -137,7 +137,7 @@ for band_index, (min_val, max_val) in enumerate(zip(min_band_values, max_band_va
 for img_file in img_files:
     process_image(img_file, img_size, img_dir)
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 # checking shape of .npy files matches
 check_img_files(img_dir, (256, 256, 4))
 
@@ -169,7 +169,7 @@ for mask_path in mask_dir.glob("*.geojson"):
 # ## Data summary<a name="trainingsummary"></a>
 #
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 # joining masks together to count building types
 for mask_path in mask_dir.glob("*.geojson"):
     mask_gdf = process_geojson_file(mask_path)
