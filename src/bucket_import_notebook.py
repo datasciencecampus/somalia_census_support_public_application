@@ -28,6 +28,7 @@ from bucket_access_functions import (
     delete_folder_from_bucket,
 )
 from functions_library import get_folder_paths
+from pathlib import Path
 
 # +
 # local folders
@@ -52,7 +53,7 @@ folders = [
     ramp_img,
     models,
     outputs,
-) = [folder_dict[folder] for folder in folders]
+) = [Path(folder_dict[folder]) for folder in folders]
 
 
 # work-in-progress bucket

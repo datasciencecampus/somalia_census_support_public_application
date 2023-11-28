@@ -52,9 +52,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import json
 import ipywidgets as widgets
 from IPython.display import display
-import json
+
 
 from functions_library import get_data_paths
 
@@ -164,6 +165,7 @@ building_class_list = ["building", "tent"]
 # %%
 features_dict = {}
 
+
 # %%
 # loop through the GeoJSON files
 for mask_path in mask_dir.glob("*.geojson"):
@@ -172,18 +174,18 @@ for mask_path in mask_dir.glob("*.geojson"):
     )
 
 # %%
-# save json file
-folder_name = folder_dropdown.value
-file_path = mask_dir / f"{folder_name}_features_dict.json"
-with open(file_path, "w") as json_file:
-    json.dump(features_dict, json_file)
+
+output_file = mask_dir.joinpath("feature_dict.json")
+with open(output_file, "w") as f:
+    json.dump(features_dict, f, indent=4)
+
 
 # %% [markdown]
 # ## Data summary<a name="trainingsummary"></a>
 #
 
 # %%
-results = []
+
 # joining masks together to count building types
 for mask_path in mask_dir.glob("*.geojson"):
     mask_gdf = process_geojson_file(mask_path)
