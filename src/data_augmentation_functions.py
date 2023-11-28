@@ -43,10 +43,8 @@ def stack_array(directory, expanded_outputs=False):
         filenames.append(file.stem)
     # create a rotated version of each array and stack along the same axis
     rotations = []
-    for i in range(4):
-        rotated = np.rot90(array_list, k=1, axes=(1, 2))
-        if i > 0:
-            rotated = np.fliplr(rotated)
+    for i in range(1, 4):  # Create 3 rotated versions (90, 180, 270 degrees)
+        rotated = np.rot90(array_list, k=i, axes=(1, 2))
         rotations.append(rotated)
 
     # create a horizontal mirror of each image and stack along the same axis
@@ -59,8 +57,9 @@ def stack_array(directory, expanded_outputs=False):
 
     # stack the original arrays, rotated versions and mirror versions
     stacked_images = np.concatenate([array_list] + rotations + mirrors, axis=0)
+    stacked_images = stacked_images.astype(np.float32)  # Convert to float32
     # Tile repeats the pattern, repeat would order them incorrectly.
-    stacked_filenames = np.tile(filenames, 9)
+    stacked_filenames = np.tile(filenames, 8)
 
     if expanded_outputs:
         return stacked_images, stacked_filenames

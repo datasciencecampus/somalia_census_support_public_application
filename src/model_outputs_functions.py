@@ -254,19 +254,18 @@ def compute_actual_counts(filenames_test):
     df = pd.DataFrame(
         columns=[
             "Tile",
-            "Tent_actual",
-            "Building_actual",
+            "tent_actual",
+            "building_actual",
             "tent_average",
             "building_average",
         ]
     )
-
     # Populate the DataFrame with the actual counts for each class in each tile
     for tile_index in range(len(filenames_test)):
         tile_counts_actual = class_counts_actual[tile_index]
         row_data = {"Tile": filenames_test[tile_index]}
 
-        for class_label in ["Tent", "Building"]:
+        for class_label in ["tent", "building"]:
             actual_count = tile_counts_actual.get(class_label, 0)
             row_data[class_label + "_actual"] = actual_count
 
@@ -279,8 +278,6 @@ def compute_actual_counts(filenames_test):
 
         df = df.append(row_data, ignore_index=True)
     df.set_index("Tile", inplace=True)
-
-    df.rename(columns=lambda x: x.lower(), inplace=True)
 
     df = df.reindex(
         columns=["tent_actual", "building_actual", "tent_average", "building_average"]
