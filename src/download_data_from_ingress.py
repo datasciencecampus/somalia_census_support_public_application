@@ -48,6 +48,9 @@ from IPython.display import display
 # load functions library
 from functions_library import get_folder_paths
 
+# load download data from ingress functions
+from download_data_from_ingress_functions import rm_tree
+
 # %%
 # for reading in config.yaml directories
 folder_dict = get_folder_paths()
@@ -123,19 +126,8 @@ if folder_dropdown.value == "training_data":
 elif folder_dropdown.value == "validation_data":
     data_dir = validation_data_dir
 
-
 # %%
-def rm_tree(pth):
-    pth = Path(pth)
-    if pth.exists():
-        for child in pth.glob("*"):
-            if child.is_file():
-                child.unlink()
-            else:
-                rm_tree(child)
-        pth.rmdir()
-
-
+# removes folder and its contents from directory
 rm_tree(data_dir)
 
 # %% [markdown]

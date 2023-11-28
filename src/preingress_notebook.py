@@ -75,6 +75,7 @@ from preingress_functions import (
     check_naming_convention_upheld,
     cleaning_of_mask_files,
     check_same_number_of_files_present,
+    check_data_type_in_folder,
     get_file_paths,
 )
 
@@ -128,6 +129,12 @@ mask_file_names
 
 # %%
 check_same_number_of_files_present(img_files, mask_files)
+
+# %% [markdown]
+# ##### Check no validation data in training folder and vice versa
+
+# %%
+check_data_type_in_folder(data_type, img_file_names, mask_file_names)
 
 # %% [markdown]
 # ## File cleaning <a name="filecleaning"></a>
