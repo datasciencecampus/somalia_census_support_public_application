@@ -139,15 +139,15 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  ┃ ┃ ┃ ┣ 📜validation_data_<area>_<initial>.geojson
  ┃ ┃ ┃ ┣ 📜validation_data_<area>_<initial>.npy
  ┣ 📂src
- ┃ ┣ 📜(1) download_data_from_ingress.py
- ┃ ┣ 📜(2) premodelling_notebook.py
- ┃ ┣ 📜(3) data_augmentation_notebook.py
- ┃ ┣ 📜(4) model_train_notebook.py
- ┃ ┣ 📜(5) model_outputs_notebook.py
+ ┃ ┣ 📜1_premodelling_notebook.py
+ ┃ ┣ 📜2_data_augmentation_notebook.py
+ ┃ ┣ 📜3_model_train_notebook.py
+ ┃ ┣ 📜4_model_outputs_notebook.py
  ┃ ┣ 📜bucket_access_functions.py
  ┃ ┣ 📜bucket_export_notebook.py
  ┃ ┣ 📜bucket_eimport_notebook.py
  ┃ ┣ 📜data_augmentation_functions.py
+ ┃ ┣ 📜download_data_from_ingress.py
  ┃ ┣ 📜functions_library.py
  ┃ ┣ 📜loss_functions.py
  ┃ ┣ 📜idp_map_notebook.py
