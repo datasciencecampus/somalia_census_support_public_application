@@ -53,7 +53,7 @@ Follow the [wiki guide](https://github.com/datasciencecampus/somalia_unfpa_censu
 
 >For validation data replace `training` with `validation`.
 
-The training data needs to be processed and outputted as `.npy` files when first uploaded to GCP. This is done in the `(2) premodelling_notebook.py`.
+The training data needs to be processed and outputted as `.npy` files when first uploaded to GCP. This is done in the `1_premodelling_notebook.py`.
 
 ## Getting set-up (GCP):
 
