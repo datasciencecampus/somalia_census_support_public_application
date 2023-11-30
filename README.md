@@ -37,7 +37,12 @@ flowchart LR
     download-->|img file|local
     local{Local<br>GCP<br>Env.}-->|mask file|processing[/pre-modelling<br>notebook\]
     local{Local<br>GCP<br>Env.}-->|img file|processing[/pre-modelling<br>notebook\]
-    processing-->|numpy<br>arrays|train[/model<br>train<br>notebook\]
+    processing-->|numpy<br>arrays|dataaug[/data<br>augmentation<br>notebook\]
+    dataaug-->|numpy<br>arrays|train[/model<br>train<br>notebook\]
+    train-->|numpy arrays|outputs
+    train-->|history|outputs
+    train-->|hdf5|outputs
+    outputs[model<br>outputs<br>notebook]
 
 ```
 ## Training data
@@ -48,7 +53,7 @@ Follow the [wiki guide](https://github.com/datasciencecampus/somalia_unfpa_censu
 
 >For validation data replace `training` with `validation`.
 
-The training data needs to be processed and outputted as `.npy` files when first uploaded to GCP. This is done in the `premodelling_notebook.py`.
+The training data needs to be processed and outputted as `.npy` files when first uploaded to GCP. This is done in the `1_premodelling_notebook.py`.
 
 ## Getting set-up (GCP):
 
@@ -134,6 +139,10 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  ┃ ┃ ┃ ┣ 📜validation_data_<area>_<initial>.geojson
  ┃ ┃ ┃ ┣ 📜validation_data_<area>_<initial>.npy
  ┣ 📂src
+ ┃ ┣ 📜1_premodelling_notebook.py
+ ┃ ┣ 📜2_data_augmentation_notebook.py
+ ┃ ┣ 📜3_model_train_notebook.py
+ ┃ ┣ 📜4_model_outputs_notebook.py
  ┃ ┣ 📜bucket_access_functions.py
  ┃ ┣ 📜bucket_export_notebook.py
  ┃ ┣ 📜bucket_eimport_notebook.py
@@ -145,11 +154,8 @@ The below tree demonstrates where each file/folder needs to be for successful ex
  ┃ ┣ 📜image_processing_functions.py
  ┃ ┣ 📜mask_processing_functions.py
  ┃ ┣ 📜model_outputs_functions.py
- ┃ ┣ 📜model_outputs_notebook.py
- ┃ ┣ 📜model_train_notebook.py
  ┃ ┣ 📜multi_class_unet_model_build.py
  ┃ ┣ 📜preingress_notebook.py
- ┃ ┣ 📜premodelling_notebook.py
  ┃ ┣ 📜weight_functions.py
  ┣ 📜config.yaml
  ┣ 📜.gitignore

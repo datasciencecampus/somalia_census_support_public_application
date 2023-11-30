@@ -26,14 +26,14 @@
 #
 # **Things to note**
 #
-# * This notebook assumes the `premodelling_notebook` has already been run and all the training data has been converted into `.npy` arrays.
+# * This notebook assumes the `1_premodelling_notebook` has already been run and all the training data has been converted into `.npy` arrays.
 # * Run final cell to clear variables and outputs
 #
-# <div class="alert alert-block altert-danger">
+# <div class="alert alert-block alert-danger">
 #     <i class="fa fa-exclamation-triangle"></i> make sure there are no `stacked_arrays` in your `img_dir
 # </div>
 #
-# <div class="alert alert-block altert-danger">
+# <div class="alert alert-block alert-danger">
 #     <i class="fa fa-exclamation-triangle"></i> don't run `hue` on `ramp` data as it uses the 4th channel and so won't work
 # </div>
 #

@@ -21,7 +21,7 @@
 # #### Things to note
 # * We do not have necessary permissions to overwrite or delete files in the ingress bucket, therefore, this ingress process uses the logic of downloading folders with the latest date (`training/validation_data_YY/MM/DD`), deleting all old files in the local folders stoarage (including `.npy`), and downloading data into either `training` or `validation` local folders (with no date prefix).
 # * The kernel should be `Python 3` unlike other notebooks in this workflow.
-# * This notebook only needs run when new training or validation data has been ingressed. If this notebook has been run then `premodelling_notebook.py` must be run next to create the `.npy` files.
+# * This notebook only needs run when new training or validation data has been ingressed. If this notebook has been run then `1_premodelling_notebook.py` must be run next to create the `.npy` files.
 #
 #
 # ### Contents
