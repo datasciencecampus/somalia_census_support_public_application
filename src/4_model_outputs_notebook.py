@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.14.6
 #   kernelspec:
 #     display_name: venv-somalia-gcp
 #     language: python
@@ -70,8 +70,8 @@ folder_dict = get_folder_paths()
 # Set directories to pull run files from
 models_dir = Path(folder_dict["models_dir"])
 outputs_dir = Path(folder_dict["outputs_dir"])
-img_dir = Path(folder_dict["img_dir"])
-mask_dir = Path(folder_dict["mask_dir"])
+img_dir = Path(folder_dict["training_img_dir"])
+mask_dir = Path(folder_dict["training_mask_dir"])
 
 # %% [markdown]
 # ## Import data
@@ -81,7 +81,7 @@ mask_dir = Path(folder_dict["mask_dir"])
 
 # %%
 # Set runid for outputs
-runid = "phase_1_gpu_1_28_06_23"
+runid = "training_2_23_11_23"
 
 
 # %% [markdown]
@@ -89,7 +89,7 @@ runid = "phase_1_gpu_1_28_06_23"
 
 # %%
 # set model input read depending on when model was run
-old_model = False
+old_model = True
 if old_model:
     model_filename = f"{runid}.hdf5"
     model_phase = h5py.File(models_dir.joinpath(model_filename), "r")
@@ -405,7 +405,7 @@ df_pixelobj_final
 # %% [markdown]
 # #### Summary pixel stats
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 pixel_stats_final_df = make_pixel_stats(df_pixelobj_final)
 pixel_stats_final_df
 
@@ -444,5 +444,3 @@ pd.set_option("display.width", 1000)
 display(HTML(combined_pixels.to_html(index=True)))
 # or
 # display(HTML(combined_pixels.head().to_html(index=True)))
-
-# %%
