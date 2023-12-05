@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.14.6
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -49,7 +49,7 @@ from IPython.display import display
 from functions_library import get_folder_paths
 
 # load download data from ingress functions
-from download_data_from_ingress_functions import rm_tree
+from functions_library import rm_tree
 
 # %%
 # for reading in config.yaml directories
