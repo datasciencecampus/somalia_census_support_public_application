@@ -112,7 +112,7 @@ def add_features_to_dict(mask_path, mask_filename, mask_gdf, features_dict):
     return features_dict
 
 
-def data_summary(training_data):
+def data_summary(mask_dir):
     """
     Reads in all .geojson files in directory 'mask_dir', checks for 'Type' column,
     replaces the values 'House' and 'Service' with 'Building', and returns the
@@ -131,16 +131,39 @@ def data_summary(training_data):
         and the size stats for each structure type.
     """
 
+    # empty dataframe
+    training_data = None
+
+    for file in mask_dir.glob("*.geojson"):
+
+        # read GeoJSON into GeoDataFrame
+        df = gpd.read_file(file)
+
+        # check for 'type' column
+        if "Type" not in df.columns:
+            df["Type"] = ""
+
+        # replace values in 'Type' column
+        df["Type"].replace({"House": "Building", "Service": "Building"}, inplace=True)
+
+        # add filename as name to df
+        df["filename"] = file.stem
+
+        if training_data is None:
+            training_data = df
+        else:
+            training_data = training_data.append(df)
+
     # return value counts
-    value_counts = training_data["Type"].value_counts()
+    value_counts = training_data.groupby(["filename", "Type"])["filename"].count()
 
     # calculate structure size
-    training_data["structure_area"] = training_data.geometry.apply(
+    training_data["structure_size"] = training_data.geometry.apply(
         lambda geom: geom.area
     )
 
     # calculate statistics for each type
-    structure_stats = training_data.groupby("Type")["structure_area"].agg(
+    structure_stats = training_data.groupby(["filename", "Type"])["structure_size"].agg(
         ["min", "max", "mean"]
     )
 

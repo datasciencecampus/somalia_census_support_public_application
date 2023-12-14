@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.6
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: venv-somalia-gcp
 #     language: python
@@ -66,7 +66,6 @@ from image_processing_functions import (
 )
 from mask_processing_functions import (
     rasterize_training_data,
-    process_geojson_file,
     data_summary,
 )
 
@@ -171,10 +170,10 @@ with open(file_path, "w") as json_file:
 #
 
 # %%
-# joining masks together to count building types
-for mask_path in mask_dir.glob("*.geojson"):
-    mask_gdf = process_geojson_file(mask_path)
-    training_data, value_counts, structure_stats = data_summary(mask_gdf)
+training_data, value_counts, structure_stats = data_summary(mask_dir)
+
+# %%
+training_data
 
 # %%
 # TODO - ONLY RETURNING RESULTS FOR ONE ARRAY
@@ -182,9 +181,6 @@ value_counts
 
 # %%
 structure_stats
-
-# %%
-training_data
 
 # %% [markdown]
 # ### Visual checking
