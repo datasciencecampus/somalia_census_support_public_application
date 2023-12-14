@@ -66,6 +66,7 @@ from image_processing_functions import (
 )
 from mask_processing_functions import (
     rasterize_training_data,
+    process_geojson_file,
     data_summary,
 )
 
@@ -170,7 +171,19 @@ with open(file_path, "w") as json_file:
 #
 
 # %%
-training_data, value_counts, structure_stats = data_summary(mask_dir)
+# joining masks together to count building types
+training_data = None
+
+for mask_path in mask_dir.glob("*.geojson"):
+    mask_gdf = process_geojson_file(mask_path)
+
+    if training_data is None:
+        training_data = mask_gdf
+    else:
+        training_data = training_data.append(mask_gdf)
+
+# %%
+training_data, value_counts, structure_stats = data_summary(training_data)
 
 # %%
 training_data
