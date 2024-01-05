@@ -189,6 +189,10 @@ all_stacked_filenames = np.concatenate(
 
 all_stacked_filenames.shape
 
+# %%
+file_save = f"{folder_dropdown.value}_all_stacked_filenames.npy"
+np.save(stacked_img / file_save, all_stacked_filenames)
+
 # %% [markdown]
 # #### Final image array
 
