@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import colorsys
+import cv2
 
 
 def stack_array(directory, expanded_outputs=False):
@@ -229,3 +230,13 @@ def stack_images(
             [all_stacked_images] + [adjusted_contrast], axis=0
         )
     return all_stacked_images
+
+
+def create_border(image_mask):
+    kernel = np.ones((3, 3), np.uint8)
+
+    eroded = cv2.erode((image_mask == 1).astype(np.uint8), kernel, iterations=1)
+    border = (image_mask == 1).astype(np.uint8) - eroded
+    image_mask[border > 0] = 3
+
+    return image_mask

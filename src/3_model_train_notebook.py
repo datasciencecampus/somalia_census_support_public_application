@@ -126,7 +126,7 @@ outputs_dir = Path(folder_dict["outputs_dir"])
 # #### Masks
 
 # %%
-ramp = True
+ramp = False
 if ramp:
     ramp_masks = np.load(
         stacked_mask / "ramp_bentiu_south_sudan_stacked_masks_1.5_2.npy"
@@ -135,7 +135,9 @@ else:
     ramp_masks = None
 
 # %%
-training_masks = np.load(stacked_mask / "training_data_all_stacked_masks_1.5_2.npy")
+training_masks = np.load(
+    stacked_mask / "training_data_all_stacked_masks_bordered_1.5_2.npy"
+)
 training_masks.shape
 
 # %%
@@ -144,7 +146,8 @@ validation_masks.shape
 
 # %%
 # joining ramp and training together
-stacked_masks = np.concatenate([training_masks, validation_masks], axis=0)
+stacked_masks = training_masks
+# np.concatenate([training_masks, validation_masks], axis=0)
 stacked_masks.shape
 
 # %%
@@ -161,7 +164,7 @@ validation_masks = []
 # n_classes = len(np.unique(stacked_masks))
 
 # n_classes
-n_classes = 3
+n_classes = 4
 
 # %% [markdown]
 # #### Encoding masks
@@ -170,6 +173,10 @@ n_classes = 3
 # encode building classes into training mask arrays
 stacked_masks_cat = to_categorical(stacked_masks, num_classes=n_classes)
 stacked_masks_cat.shape
+
+# %%
+plt.imshow(stacked_masks_cat[52])
+plt.show()
 
 # %% [markdown]
 # #### Images
@@ -200,7 +207,8 @@ validation_images.shape
 
 # %%
 # joining ramp and training together
-stacked_images = np.concatenate([training_images, validation_images], axis=0)
+stacked_images = training_images
+# np.concatenate([training_images, validation_images], axis=0)
 
 # %%
 stacked_images.shape
@@ -215,13 +223,14 @@ validation_images = []
 # ### Import filenames
 
 # %%
-ramp_filenames = np.load(
-    stacked_img / "ramp_bentiu_south_sudan_all_stacked_filenames.npy"
-)
+# ramp_filenames = np.load(
+#     stacked_img / "ramp_bentiu_south_sudan_all_stacked_filenames.npy"
+# )
 training_filenames = np.load(stacked_img / "training_data_all_stacked_filenames.npy")
 
 # %%
-stacked_filenames = np.concatenate([ramp_filenames, training_filenames], axis=0)
+stacked_filenames = training_filenames
+# np.concatenate([ramp_filenames, training_filenames], axis=0)
 
 # %% [markdown]
 # ### Sense checking images and masks correspond
@@ -249,6 +258,9 @@ plt.subplot(122)
 plt.imshow(stacked_masks_cat[image_number])
 plt.show()
 
+
+# %%
+print(np.unique(stacked_masks_cat[1]))
 
 # %% [markdown]
 # ## Training parameters <a name="trainingparameters"></a>
@@ -294,7 +306,7 @@ model = get_model(n_classes, img_height, img_width, num_channels)
 
 # %%
 # define number of epochs
-num_epochs = 200
+num_epochs = 250
 
 # %% [markdown]
 # ### Batch size
@@ -355,7 +367,7 @@ current_datetime = datetime.datetime.now()
 formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H%M")
 
 # %%
-runid = f"ramp_training_{formatted_datetime}"
+runid = f"border_testing_{formatted_datetime}"
 runid
 
 # %%
@@ -460,10 +472,12 @@ filenames_test_filename = f"{runid}_filenamestest.npy"
 np.save(outputs_dir.joinpath(X_test_filename), X_test)
 np.save(outputs_dir.joinpath(y_pred_filename), y_pred)
 np.save(outputs_dir.joinpath(y_test_filename), y_test)
-# np.save(outputs_dir.joinpath(filenames_test_filename), filenames_test)
+np.save(outputs_dir.joinpath(filenames_test_filename), filenames_test)
 
 # %% [markdown]
 # ## Clear outputs and remove variables<a name="clear"></a>
 
 # %%
 # %reset -f
+
+# %%

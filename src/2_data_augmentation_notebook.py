@@ -84,6 +84,7 @@ from data_augmentation_functions import (
     hue_shift,
     adjust_brightness,
     adjust_contrast,
+    create_border,
 )
 
 
@@ -189,6 +190,10 @@ all_stacked_filenames = np.concatenate(
 
 all_stacked_filenames.shape
 
+# %%
+file_save = f"{folder_dropdown.value}_all_stacked_filenames.npy"
+np.save(stacked_img / file_save, all_stacked_filenames)
+
 # %% [markdown]
 # #### Final image array
 
@@ -228,6 +233,29 @@ stacked_images = []
 stacked_masks = stack_array(mask_dir)
 stacked_masks.shape
 
+# %%
+test_mask = np.copy(stacked_masks[4])
+test_mask[test_mask == 2] = 1
+
+for i, mask in enumerate(stacked_masks):
+    mask_to_update = np.copy(mask)
+    # Changes buildings and tents into a binary classification problem temporarily
+    mask_to_update[mask_to_update == 2] = 1
+    # Testing border additions
+    processed_image_mask = create_border(np.copy(mask_to_update))
+    stacked_masks[i][processed_image_mask == 3] = 3
+
+
+# %%
+import matplotlib.pyplot as plt
+
+# %%
+fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+axes[0].imshow(stacked_masks[3])
+axes[1].imshow(stacked_masks[4])
+plt.tight_layout()
+plt.show()
+
 # %% [markdown]
 # #### Additional augmentations
 
@@ -255,7 +283,9 @@ all_stacked_masks.nbytes
 hue = image_adjustments["hue_shift"]["shift_value"]
 brightness = image_adjustments["brightness"]["factor"]
 contrast = image_adjustments["contrast"]["factor"]
-mask_filename = f"{folder_dropdown.value}_all_stacked_masks_{brightness}_{contrast}.npy"
+mask_filename = (
+    f"{folder_dropdown.value}_all_stacked_masks_bordered_{brightness}_{contrast}.npy"
+)
 
 # %%
 np.save(stacked_mask / mask_filename, all_stacked_masks)
