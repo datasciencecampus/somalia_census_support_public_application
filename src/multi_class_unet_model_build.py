@@ -170,3 +170,12 @@ def split_data(
             random_state=42,
         )
     return X_train, X_test, y_train, y_test, filename_train, filename_test
+
+
+def get_model(n_classes, img_height, img_width, num_channels):
+    return multi_unet_model(
+        n_classes=n_classes,
+        IMG_HEIGHT=img_height,
+        IMG_WIDTH=img_width,
+        IMG_CHANNELS=num_channels,
+    )
