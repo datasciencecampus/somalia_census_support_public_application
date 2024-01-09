@@ -135,7 +135,7 @@ def data_summary(training_data):
     """
 
     # return value counts
-    value_counts = training_data.groupby(["filename", "Type"])["filename"].count()
+    value_counts = training_data.groupby(["Type"])["filename"].count()
 
     # calculate structure size
     training_data["structure_area"] = training_data.geometry.apply(
@@ -143,7 +143,7 @@ def data_summary(training_data):
     )
 
     # calculate statistics for each type
-    structure_stats = training_data.groupby(["filename", "Type"])["structure_area"].agg(
+    structure_stats = training_data.groupby(["Type"])["structure_area"].agg(
         ["min", "max", "mean"]
     )
 
