@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.6
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: venv-somalia-gcp
 #     language: python
@@ -112,9 +112,6 @@ img_size = 384
 img_files = list(img_dir.glob("*.tif"))
 
 # %% [markdown]
-# ### Image band testing
-
-# %% [markdown]
 # ### Image processing
 
 # %%
@@ -152,13 +149,6 @@ for mask_path in mask_dir.glob("*.geojson"):
     )
 
 # %%
-
-# output_file = mask_dir.joinpath("feature_dict.json")
-# with open(output_file, "w") as f:
-#     json.dump(features_dict, f, indent=4)
-
-
-# %%
 # save json file
 folder_name = folder_dropdown.value
 file_path = mask_dir / f"{folder_name}_features_dict.json"
@@ -172,19 +162,24 @@ with open(file_path, "w") as json_file:
 
 # %%
 # joining masks together to count building types
+training_data = None
+
 for mask_path in mask_dir.glob("*.geojson"):
     mask_gdf = process_geojson_file(mask_path)
-    training_data, value_counts, structure_stats = data_summary(mask_gdf)
+
+    if training_data is None:
+        training_data = mask_gdf
+    else:
+        training_data = training_data.append(mask_gdf)
 
 # %%
-# TODO - ONLY RETURNING RESULTS FOR ONE ARRAY
+training_data, value_counts, structure_stats = data_summary(training_data)
+
+# %%
 value_counts
 
 # %%
 structure_stats
-
-# %%
-training_data
 
 # %% [markdown]
 # ### Visual checking
