@@ -112,9 +112,6 @@ img_size = 384
 img_files = list(img_dir.glob("*.tif"))
 
 # %% [markdown]
-# ### Image band testing
-
-# %% [markdown]
 # ### Image processing
 
 # %%
@@ -152,13 +149,6 @@ for mask_path in mask_dir.glob("*.geojson"):
     )
 
 # %%
-
-# output_file = mask_dir.joinpath("feature_dict.json")
-# with open(output_file, "w") as f:
-#     json.dump(features_dict, f, indent=4)
-
-
-# %%
 # save json file
 folder_name = folder_dropdown.value
 file_path = mask_dir / f"{folder_name}_features_dict.json"
@@ -186,10 +176,6 @@ for mask_path in mask_dir.glob("*.geojson"):
 training_data, value_counts, structure_stats = data_summary(training_data)
 
 # %%
-training_data
-
-# %%
-# TODO - ONLY RETURNING RESULTS FOR ONE ARRAY
 value_counts
 
 # %%
