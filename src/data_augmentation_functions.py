@@ -240,3 +240,19 @@ def create_border(image_mask):
     image_mask[border > 0] = 3
 
     return image_mask
+
+
+def create_class_borders(image_mask):
+    kernel = np.ones((3, 3), np.uint8)
+
+    # Create borders for Buildings
+    eroded = cv2.erode((image_mask == 1).astype(np.uint8), kernel, iterations=1)
+    border = (image_mask == 1).astype(np.uint8) - eroded
+    image_mask[border > 0] = 3
+
+    # Create borders for Tents
+    eroded = cv2.erode((image_mask == 2).astype(np.uint8), kernel, iterations=1)
+    border = (image_mask == 2).astype(np.uint8) - eroded
+    image_mask[border > 0] = 4
+
+    return image_mask

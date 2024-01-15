@@ -85,6 +85,7 @@ from data_augmentation_functions import (
     adjust_brightness,
     adjust_contrast,
     create_border,
+    create_class_borders,
 )
 
 
@@ -233,6 +234,9 @@ stacked_images = []
 stacked_masks = stack_array(mask_dir)
 stacked_masks.shape
 
+# %% [markdown]
+# #### Binary borders
+
 # %%
 test_mask = np.copy(stacked_masks[4])
 test_mask[test_mask == 2] = 1
@@ -245,6 +249,20 @@ for i, mask in enumerate(stacked_masks):
     processed_image_mask = create_border(np.copy(mask_to_update))
     stacked_masks[i][processed_image_mask == 3] = 3
 
+
+# %% [markdown]
+# #### Class-specific borders
+
+# %%
+test_mask = np.copy(stacked_masks[4])
+test_mask[test_mask == 2] = 1
+
+for i, mask in enumerate(stacked_masks):
+    mask_to_update = np.copy(mask)
+    # Testing border additions
+    processed_image_mask = create_class_borders(np.copy(mask_to_update))
+    stacked_masks[i][processed_image_mask == 3] = 3
+    stacked_masks[i][processed_image_mask == 4] = 4
 
 # %%
 import matplotlib.pyplot as plt
