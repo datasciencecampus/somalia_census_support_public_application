@@ -256,3 +256,20 @@ def create_class_borders(image_mask):
     image_mask[border > 0] = 4
 
     return image_mask
+
+
+def process_mask(mask, binary_borders):
+    mask_to_update = np.copy(mask)
+    test_mask = np.copy(mask_to_update)
+    test_mask[test_mask == 2] = 1
+
+    if binary_borders:
+        mask_to_update[mask_to_update == 2] = 1
+        processed_image_mask = create_border(np.copy(mask_to_update))
+        mask_to_update[processed_image_mask == 3] = 3
+    else:
+        processed_image_mask = create_class_borders(np.copy(mask_to_update))
+        mask_to_update[processed_image_mask == 3] = 3
+        mask_to_update[processed_image_mask == 4] = 4
+
+    return mask_to_update, test_mask

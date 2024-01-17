@@ -84,8 +84,7 @@ from data_augmentation_functions import (
     hue_shift,
     adjust_brightness,
     adjust_contrast,
-    create_border,
-    create_class_borders,
+    process_mask,
 )
 
 
@@ -138,7 +137,7 @@ stacked_images.shape
 
 # %%
 image_adjustments = {
-    "hue_shift": {"enabled": True, "shift_value": 0.5},  # shift value (between 0 and 1)
+    "hue_shift": {"enabled": True, "shift_value": 0.2},  # shift value (between 0 and 1)
     "brightness": {
         "enabled": True,
         "factor": 1.5,  # values <1 will decrease brightness while values >1 will increase brightness
@@ -209,12 +208,7 @@ all_stacked_images.shape
 # #### Saving image array
 
 # %%
-hue = image_adjustments["hue_shift"]["shift_value"]
-brightness = image_adjustments["brightness"]["factor"]
-contrast = image_adjustments["contrast"]["factor"]
-img_filename = (
-    f"{folder_dropdown.value}_all_stacked_images_{hue}_{brightness}_{contrast}.npy"
-)
+img_filename = f"{folder_dropdown.value}_all_stacked_images.npy"
 
 # %%
 np.save(stacked_img / img_filename, all_stacked_images)
@@ -235,44 +229,18 @@ stacked_masks = stack_array(mask_dir)
 stacked_masks.shape
 
 # %% [markdown]
-# #### Binary borders
+# #### Create border classes
 
 # %%
-test_mask = np.copy(stacked_masks[4])
-test_mask[test_mask == 2] = 1
+# Set to False for class-specific processing
+binary_borders = False
 
 for i, mask in enumerate(stacked_masks):
-    mask_to_update = np.copy(mask)
-    # Changes buildings and tents into a binary classification problem temporarily
-    mask_to_update[mask_to_update == 2] = 1
-    # Testing border additions
-    processed_image_mask = create_border(np.copy(mask_to_update))
-    stacked_masks[i][processed_image_mask == 3] = 3
-
-
-# %% [markdown]
-# #### Class-specific borders
+    stacked_masks[i], test_mask = process_mask(mask, binary_borders)
 
 # %%
-test_mask = np.copy(stacked_masks[4])
-test_mask[test_mask == 2] = 1
-
-for i, mask in enumerate(stacked_masks):
-    mask_to_update = np.copy(mask)
-    # Testing border additions
-    processed_image_mask = create_class_borders(np.copy(mask_to_update))
-    stacked_masks[i][processed_image_mask == 3] = 3
-    stacked_masks[i][processed_image_mask == 4] = 4
-
-# %%
-import matplotlib.pyplot as plt
-
-# %%
-fig, axes = plt.subplots(1, 2, figsize=(10, 5))
-axes[0].imshow(stacked_masks[3])
-axes[1].imshow(stacked_masks[4])
-plt.tight_layout()
-plt.show()
+# Check number of classes
+print(len(np.unique(stacked_masks)))
 
 # %% [markdown]
 # #### Additional augmentations
@@ -298,12 +266,7 @@ all_stacked_masks.nbytes
 # #### Saving mask array
 
 # %%
-hue = image_adjustments["hue_shift"]["shift_value"]
-brightness = image_adjustments["brightness"]["factor"]
-contrast = image_adjustments["contrast"]["factor"]
-mask_filename = (
-    f"{folder_dropdown.value}_all_stacked_masks_bordered_{brightness}_{contrast}.npy"
-)
+mask_filename = f"{folder_dropdown.value}_all_stacked_masks.npy"
 
 # %%
 np.save(stacked_mask / mask_filename, all_stacked_masks)
