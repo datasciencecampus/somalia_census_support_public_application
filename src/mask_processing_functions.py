@@ -13,6 +13,9 @@ def process_geojson_file(mask_path):
     # load the GeoJSON into a GeoPandas dataframe
     mask_gdf = gpd.read_file(mask_path)
 
+    # add new column for filenames
+    mask_gdf["filename"] = mask_path.stem
+
     # Check if 'label' column exists
     if "label" in mask_gdf.columns:
         # rename the 'label' column to 'Type'
@@ -132,7 +135,7 @@ def data_summary(training_data):
     """
 
     # return value counts
-    value_counts = training_data["Type"].value_counts()
+    value_counts = training_data.groupby(["Type"])["filename"].count()
 
     # calculate structure size
     training_data["structure_area"] = training_data.geometry.apply(
@@ -140,7 +143,7 @@ def data_summary(training_data):
     )
 
     # calculate statistics for each type
-    structure_stats = training_data.groupby("Type")["structure_area"].agg(
+    structure_stats = training_data.groupby(["Type"])["structure_area"].agg(
         ["min", "max", "mean"]
     )
 
