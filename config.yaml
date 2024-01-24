@@ -18,3 +18,5 @@ ramp_img: ../data/ramp_bentiu_south_sudan/img
 stacked_dir: ../data/stacked_arrays
 stacked_img_dir: ../data/stacked_arrays/img
 stacked_mask_dir: ../data/stacked_arrays/mask
+
+json_dir: ../data/json

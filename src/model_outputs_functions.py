@@ -19,6 +19,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from functions_library import setup_sub_dir
+import rasterio
+from shapely.geometry import Polygon
+import geopandas as gpd
+from IPython.display import display
 
 
 # %%
@@ -134,9 +138,7 @@ def calculate_tile_metrics(y_pred, y_test_argmax, class_names, filenames):
     return metrics_df
 
 
-def plot_confusion_matrix(y_true, y_pred):
-
-    labels = ["background", "building", "tent"]
+def plot_confusion_matrix(y_true, y_pred, labels):
 
     conf_mat = confusion_matrix(y_true.ravel(), y_pred.ravel())
 
@@ -480,3 +482,272 @@ def make_computed_stats(dataframe):
 
 
 # %%
+
+
+def create_grouped_filenames(filenames):
+    """
+    Create a DataFrame grouped by 'tile_name' with a 'index_number' column that
+    contains comma-separated index positions and a 'count' column of how many times
+    in the training dataset.
+
+    Parameters:
+    - filenames (npy.ndarray): 1D NumPy array containing 'tile_name' values.
+
+    Returns:
+    - pd.DataFrame: DataFrame with columns 'tile_name', 'index_number', and 'count'.
+    """
+    # reshape the 1D array to a 2D array with a single column
+    filenames_reshaped = filenames.reshape(-1, 1)
+
+    # create a DataFrame with 'tile_name' column
+    filenames_df = pd.DataFrame(filenames_reshaped, columns=["tile_name"])
+
+    # group by 'tile_name' and aggregate the index positions into a comma-separated string
+    grouped_df = (
+        filenames_df.groupby("tile_name")
+        .apply(lambda x: ",".join(map(str, x.index.tolist())))
+        .reset_index(name="index_number")
+    )
+
+    # add a 'count' column containing the count of index positions within each group
+    grouped_df["count"] = grouped_df["index_number"].apply(lambda x: len(x.split(",")))
+
+    return grouped_df
+
+
+def generate_class_names(n_classes):
+    """
+    Generate class names based on the number of classes.
+
+    Parameters:
+    - n_classes (int): Number of classes.
+
+    Returns:
+    - list: List of class names.
+    """
+    if n_classes == 3:
+        class_names = ["background", "building", "tent"]
+    elif n_classes == 5:
+        class_names = [
+            "background",
+            "building",
+            "tent",
+            "building_border",
+            "tent_border",
+        ]
+    else:
+        raise ValueError("Unsupported number of classes. Please provide either 3 or 5.")
+
+    return class_names
+
+
+# metrics function to filter on widget
+def update_displayed_data(tile_metrics_df, selected_tile):
+    selected_tile_data = tile_metrics_df[tile_metrics_df.index == selected_tile]
+
+    if not selected_tile_data.empty:
+        display(selected_tile_data)
+
+
+def plot_images_for_tile(model, X_test, y_test_argmax, grouped_tiles_df, selected_tile):
+    """
+    Plot images for a specific tile based on the provided DataFrame and selected tile name.
+
+    Parameters:
+    - grouped_tiles_df (pandas.DataFrame): DataFrame containing information about grouped tiles.
+    - selected_tile (str): Name of the selected tile.
+
+    Returns:
+    list: List of matplotlib figures displaying images for the selected tile.
+    """
+    specific_tile_df = grouped_tiles_df[grouped_tiles_df["tile_name"] == selected_tile]
+
+    num_count = specific_tile_df["count"].iloc[0]
+    index_numbers = specific_tile_df["index_number"].iloc[0].split(",")
+
+    if num_count > 0 and index_numbers:
+        plots = []
+
+        for i in range(min(num_count, len(index_numbers))):
+            test_img_number = int(index_numbers[i])
+
+            test_img = X_test[test_img_number]
+            ground_truth = y_test_argmax[test_img_number]
+            test_img_input = np.expand_dims(test_img, 0)
+            prediction = model.predict(test_img_input)
+            predicted_img = np.argmax(prediction, axis=3)[0, :, :]
+            test_img = test_img[:, :, :3]
+            test_img = test_img[:, :, ::-1]
+
+            fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(12, 8))
+            axs[0].imshow(test_img)
+            axs[0].set_title("Testing Image")
+
+            axs[1].imshow(ground_truth)
+            axs[1].set_title("Testing Label")
+
+            axs[2].imshow(predicted_img)
+            axs[2].set_title("Prediction on test image")
+
+            plots.append(fig)
+
+        return plots
+    else:
+        return []
+
+
+def create_mask_dict(predicted_img, unique_classes):
+    """
+    Create a dictionary of masks based on predicted image and unique classes.
+
+    Parameters:
+    - predicted_img (npy.ndarray): Predicted image with class labels.
+    - unique_classes (list): List of unique class labels.
+
+    Returns:
+    dict: Dictionary containing masks for each unique class.
+    """
+    return {
+        f"mask_{cls}": (predicted_img == cls).astype(np.uint8) for cls in unique_classes
+    }
+
+
+def extract_shapes_from_masks(mask_dict):
+    """
+    Extract shapes from a dictionary of masks.
+
+    Parameters:
+    - mask_dict (dict): Dictionary containing masks.
+
+    Returns:
+    dict: Dictionary containing shapes extracted from masks.
+    """
+    return {
+        title: rasterio.features.shapes(mask, mask=mask, connectivity=4)
+        for title, mask in mask_dict.items()
+    }
+
+
+def shapes_to_geopandas(shapes, category, filename, index_number):
+    """
+    Convert shapes to GDF.
+
+    Parameters:
+    - shapes (dict): Dictionary containing shapes information.
+    - category (str): Category label for the GeoDataFrame.
+    - filename (str): Filename associated with the shapes.
+
+    Returns:
+    list: List of dictionaries containing geometry, type, and filename for each shape.
+    """
+    return [
+        {
+            "geometry": Polygon(shape["coordinates"][0]),
+            "type": category,
+            "filename": filename,
+            "index_num": index_number,
+        }
+        for shape, _ in shapes
+        if shape["type"] == "Polygon"
+    ]
+
+
+def process_tile(model, tile, unique_classes, filename, index_number):
+    """
+    Process a single tile by generating masks, extracting shapes, and creating GDF.
+
+    Parameters:
+    - test_img (npy.ndarray): Input image tile.
+    - unique_classes (list): List of unique class labels.
+    - filename (str): Filename associated with the tile.
+
+    Returns:
+    geopandas.GeoDataFrame: Combined GeoDataFrame containing buildings and tents information.
+    """
+    test_img_input = np.expand_dims(tile, 0)
+    prediction = model.predict(test_img_input)
+    predicted_img = np.argmax(prediction, axis=3)[0, :, :]
+
+    # Create mask dictionary
+    mask_dict = create_mask_dict(predicted_img, unique_classes)
+
+    # Extract shapes from masks
+    shapes_dict = extract_shapes_from_masks(mask_dict)
+
+    # Extract shapes for buildings and tents
+    buildings_shapes = shapes_dict.get("mask_1", None)
+    tents_shapes = shapes_dict.get("mask_2", None)
+
+    # Convert shapes to GDF
+    buildings_geometries = shapes_to_geopandas(
+        buildings_shapes, "buildings", filename, index_number
+    )
+    tents_geometries = shapes_to_geopandas(
+        tents_shapes, "tents", filename, index_number
+    )
+
+    # Create GDF for buildings and tents
+    buildings_gdf = gpd.GeoDataFrame(buildings_geometries)
+    tents_gdf = gpd.GeoDataFrame(tents_geometries)
+
+    # Concatenate GDF
+    combined_gdf = gpd.GeoDataFrame(
+        pd.concat([buildings_gdf, tents_gdf], ignore_index=True)
+    )
+
+    return combined_gdf
+
+
+def process_json_files(json_dir: Path, grouped_counts: pd.DataFrame) -> pd.DataFrame:
+    """
+    Process JSON files in a given directory and return a DataFrame.
+
+    Parameters:
+    - json_dir (Path): The path to the directory containing JSON files.
+
+    Returns:
+    - pd.DataFrame: A DataFrame containing processed data.
+
+    Example:
+    ```
+    json_dir = Path('/path/to/json/files')
+    result_df = process_json_files(json_dir)
+    ```
+    """
+    # Get a list of JSON files in the specified directory
+    json_files = list(json_dir.glob("*.json"))
+
+    # Initialize an empty list to store feature data from each file
+    all_feature_data = []
+
+    # Iterate through each JSON file and load its data
+    for json_file in json_files:
+        with open(json_file, "r") as f:
+            feature_data = json.load(f)
+            all_feature_data.append(feature_data)
+
+    # Concatenate all feature data into a DataFrame
+    feature_data_df = pd.concat([pd.DataFrame(data) for data in all_feature_data])
+
+    # Transpose the DataFrame and reset index
+    feature_data_df = feature_data_df.T.reset_index()
+
+    # Rename the columns
+    feature_data_df = feature_data_df.rename(columns={"index": "filename"})
+
+    # Filter out rows with filenames ending with 'background' and select specific columns
+    feature_data_df = feature_data_df[
+        ~feature_data_df["filename"].str.endswith("background")
+    ][["filename", "building", "tent"]].rename(
+        columns={"building": "building_actual", "tent": "tent_actual"}
+    )
+
+    # Merge with additional data (assuming 'grouped_counts' is defined somewhere)
+    building_polygon_counts = pd.merge(
+        grouped_counts,
+        feature_data_df[["filename", "building_actual", "tent_actual"]],
+        on="filename",
+        how="left",
+    )
+
+    return building_polygon_counts
