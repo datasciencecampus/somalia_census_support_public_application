@@ -1,5 +1,6 @@
 training_dir: ../data/training_data
 validation_dir: ../data/validation_data
+json: ../data/json
 
 training_img_dir: ../data/training_data/img
 training_mask_dir: ../data/training_data/mask
