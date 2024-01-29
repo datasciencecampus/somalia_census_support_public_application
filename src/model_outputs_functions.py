@@ -19,7 +19,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from functions_library import setup_sub_dir
-import rasterio
+from rasterio import features
 from shapely.geometry import Polygon
 import geopandas as gpd
 from IPython.display import display
@@ -576,6 +576,7 @@ def plot_images_for_tile(model, X_test, y_test_argmax, grouped_tiles_df, selecte
             test_img_input = np.expand_dims(test_img, 0)
             prediction = model.predict(test_img_input)
             predicted_img = np.argmax(prediction, axis=3)[0, :, :]
+
             test_img = test_img[:, :, :3]
             test_img = test_img[:, :, ::-1]
 
@@ -623,7 +624,7 @@ def extract_shapes_from_masks(mask_dict):
     dict: Dictionary containing shapes extracted from masks.
     """
     return {
-        title: rasterio.features.shapes(mask, mask=mask, connectivity=4)
+        title: features.shapes(mask, mask=mask, connectivity=4)
         for title, mask in mask_dict.items()
     }
 
