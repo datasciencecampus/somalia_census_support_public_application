@@ -88,7 +88,7 @@ folder_dropdown = widgets.Dropdown(options=sub_dir, description="select folder:"
 display(folder_dropdown)
 
 # %%
-# set img and mask directories based on seelcted folder above
+# set img and mask directories based on selected folder above
 img_dir, mask_dir = get_data_paths(folder_dropdown.value)
 # checking directories
 print(img_dir)
@@ -154,10 +154,9 @@ for mask_path in mask_dir.glob("*.geojson"):
 # %%
 # save json file
 folder_name = folder_dropdown.value
-file_path = mask_dir / f"{folder_name}_features_dict.json"
+file_path = data_dir / "json" / f"{folder_name}_features_dict.json"
 with open(file_path, "w") as json_file:
     json.dump(features_dict, json_file)
-
 
 # %% [markdown]
 # ## Data summary<a name="trainingsummary"></a>
