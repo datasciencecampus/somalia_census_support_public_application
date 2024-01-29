@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import colorsys
+import cv2
 
 
 def stack_array(directory, expanded_outputs=False):
@@ -229,3 +230,46 @@ def stack_images(
             [all_stacked_images] + [adjusted_contrast], axis=0
         )
     return all_stacked_images
+
+
+def create_border(image_mask):
+    kernel = np.ones((3, 3), np.uint8)
+
+    eroded = cv2.erode((image_mask == 1).astype(np.uint8), kernel, iterations=1)
+    border = (image_mask == 1).astype(np.uint8) - eroded
+    image_mask[border > 0] = 3
+
+    return image_mask
+
+
+def create_class_borders(image_mask):
+    kernel = np.ones((3, 3), np.uint8)
+
+    # Create borders for Buildings
+    eroded = cv2.erode((image_mask == 1).astype(np.uint8), kernel, iterations=1)
+    border = (image_mask == 1).astype(np.uint8) - eroded
+    image_mask[border > 0] = 3
+
+    # Create borders for Tents
+    eroded = cv2.erode((image_mask == 2).astype(np.uint8), kernel, iterations=1)
+    border = (image_mask == 2).astype(np.uint8) - eroded
+    image_mask[border > 0] = 4
+
+    return image_mask
+
+
+def process_mask(mask, binary_borders):
+    mask_to_update = np.copy(mask)
+    test_mask = np.copy(mask_to_update)
+    test_mask[test_mask == 2] = 1
+
+    if binary_borders:
+        mask_to_update[mask_to_update == 2] = 1
+        processed_image_mask = create_border(np.copy(mask_to_update))
+        mask_to_update[processed_image_mask == 3] = 3
+    else:
+        processed_image_mask = create_class_borders(np.copy(mask_to_update))
+        mask_to_update[processed_image_mask == 3] = 3
+        mask_to_update[processed_image_mask == 4] = 4
+
+    return mask_to_update, test_mask

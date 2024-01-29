@@ -84,6 +84,7 @@ from data_augmentation_functions import (
     hue_shift,
     adjust_brightness,
     adjust_contrast,
+    process_mask,
 )
 
 
@@ -136,7 +137,7 @@ stacked_images.shape
 
 # %%
 image_adjustments = {
-    "hue_shift": {"enabled": True, "shift_value": 0.5},  # shift value (between 0 and 1)
+    "hue_shift": {"enabled": True, "shift_value": 0.2},  # shift value (between 0 and 1)
     "brightness": {
         "enabled": True,
         "factor": 1.5,  # values <1 will decrease brightness while values >1 will increase brightness
@@ -207,12 +208,7 @@ all_stacked_images.shape
 # #### Saving image array
 
 # %%
-hue = image_adjustments["hue_shift"]["shift_value"]
-brightness = image_adjustments["brightness"]["factor"]
-contrast = image_adjustments["contrast"]["factor"]
-img_filename = (
-    f"{folder_dropdown.value}_all_stacked_images_{hue}_{brightness}_{contrast}.npy"
-)
+img_filename = f"{folder_dropdown.value}_all_stacked_images.npy"
 
 # %%
 np.save(stacked_img / img_filename, all_stacked_images)
@@ -231,6 +227,20 @@ stacked_images = []
 # creating stack of mask arrays that are rotated and horizontally flipped
 stacked_masks = stack_array(mask_dir)
 stacked_masks.shape
+
+# %% [markdown]
+# #### Create border classes
+
+# %%
+# Set to False for class-specific processing
+binary_borders = False
+
+for i, mask in enumerate(stacked_masks):
+    stacked_masks[i], test_mask = process_mask(mask, binary_borders)
+
+# %%
+# Check number of classes
+print(len(np.unique(stacked_masks)))
 
 # %% [markdown]
 # #### Additional augmentations
@@ -256,10 +266,7 @@ all_stacked_masks.nbytes
 # #### Saving mask array
 
 # %%
-hue = image_adjustments["hue_shift"]["shift_value"]
-brightness = image_adjustments["brightness"]["factor"]
-contrast = image_adjustments["contrast"]["factor"]
-mask_filename = f"{folder_dropdown.value}_all_stacked_masks_{brightness}_{contrast}.npy"
+mask_filename = f"{folder_dropdown.value}_all_stacked_masks.npy"
 
 # %%
 np.save(stacked_mask / mask_filename, all_stacked_masks)

@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.14.6
 #   kernelspec:
 #     display_name: venv-somalia-gcp
 #     language: python
@@ -56,7 +56,7 @@ import json
 import ipywidgets as widgets
 from IPython.display import display
 
-
+# %%
 from functions_library import get_data_paths
 
 from image_processing_functions import (
@@ -90,6 +90,7 @@ display(folder_dropdown)
 # %%
 # set img and mask directories based on seelcted folder above
 img_dir, mask_dir = get_data_paths(folder_dropdown.value)
+# checking directories
 print(img_dir)
 print(mask_dir)
 
@@ -98,6 +99,8 @@ print(mask_dir)
 #
 # U-Net architecture uses max pooling to downsample images across 4 levels, so we need to work with tiles that are divisable by 4 x 2.
 # Training data tiles created in QGIS as ~200m x 200m (which equates to ~400 x 400 pixels as resolution is 0.5m/px). Tiles are cropped to 384 pixels (or 192m) as it is easier to crop than be completely accurate in QGIS.
+#
+# If including `ramp` data set then `img_size = 256`.
 
 # %%
 img_size = 384
@@ -105,7 +108,7 @@ img_size = 384
 # %% [markdown]
 # ## Image files <a name="images"></a>
 #
-# Reading in all `.tif` files in the `img_dir` then performing geospatial processing on them using functions from the `image_processing_functions.py` and saving outputted files as `.npy` arrays into the same folder.
+# Reading in all `.tif` files in the `img_dir`.
 
 # %%
 # list all .tif files in directoy
@@ -113,6 +116,8 @@ img_files = list(img_dir.glob("*.tif"))
 
 # %% [markdown]
 # ### Image processing
+#
+# Performing geospatial processing on them using functions from the `image_processing_functions.py` and saving outputted files as `.npy` arrays into the same folder.
 
 # %%
 # process .geotiff and save as .npy
@@ -131,8 +136,6 @@ remove_bgr_from_filename(img_dir, img_files)
 # ## Mask files <a name="masks"></a>
 #
 # Reading in all `.GeoJSON` files in the `mask_dir`, matching files to corresponding `img`, performing geospatial processing with `mask_processing_functions.py`, and saving outputted files as `.npy` arrays into the same folder.
-#
-# Currently only using 'building' and 'tent' as classes - but may incorporate 'service' at a later stage, which is in the commented out code.
 
 # %%
 building_class_list = ["building", "tent"]

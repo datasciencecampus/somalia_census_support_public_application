@@ -64,6 +64,7 @@ print("Memory usage (gb):", memory_usage_gb)
 # %%
 import random
 from pathlib import Path
+import datetime
 
 # %%
 import matplotlib.pyplot as plt
@@ -126,24 +127,23 @@ outputs_dir = Path(folder_dict["outputs_dir"])
 # #### Masks
 
 # %%
-ramp = True
+ramp = False
 if ramp:
-    ramp_masks = np.load(
-        stacked_mask / "ramp_bentiu_south_sudan_stacked_masks_1.5_2.npy"
-    )
+    ramp_masks = np.load(stacked_mask / "ramp_bentiu_south_sudan_stacked_masks.npy")
 else:
     ramp_masks = None
 
 # %%
-training_masks = np.load(stacked_mask / "training_data_all_stacked_masks_1.5_2.npy")
+training_masks = np.load(stacked_mask / "training_data_all_stacked_masks.npy")
 training_masks.shape
 
 # %%
-validation_masks = np.load(stacked_mask / "validation_data_all_stacked_masks_1.5_2.npy")
+validation_masks = np.load(stacked_mask / "validation_data_all_stacked_masks.npy")
 validation_masks.shape
 
 # %%
 # joining ramp and training together
+# stacked_masks = training_masks
 stacked_masks = np.concatenate([training_masks, validation_masks], axis=0)
 stacked_masks.shape
 
@@ -158,10 +158,8 @@ validation_masks = []
 
 # %%
 # number of classes (i.e. building, tent, background)
-# n_classes = len(np.unique(stacked_masks))
-
-# n_classes
-n_classes = 3
+n_classes = len(np.unique(stacked_masks))
+n_classes
 
 # %% [markdown]
 # #### Encoding masks
@@ -171,27 +169,26 @@ n_classes = 3
 stacked_masks_cat = to_categorical(stacked_masks, num_classes=n_classes)
 stacked_masks_cat.shape
 
+# %%
+slice_mask = stacked_masks_cat[52]
+plt.imshow(slice_mask.argmax(axis=-1))
+plt.show()
+
 # %% [markdown]
 # #### Images
 
 # %%
 if ramp:
-    ramp_images = np.load(
-        stacked_img / "ramp_bentiu_south_sudan_stacked_images_0.5_1.5_2.npy"
-    )
+    ramp_images = np.load(stacked_img / "ramp_bentiu_south_sudan_stacked_images.npy")
 else:
     ramp_images = None
 
 # %%
-training_images = np.load(
-    stacked_img / "training_data_all_stacked_images_0.5_1.5_2.npy"
-)
+training_images = np.load(stacked_img / "training_data_all_stacked_images.npy")
 training_images.shape
 
 # %%
-validation_images = np.load(
-    stacked_img / "validation_data_all_stacked_images_0.5_1.5_2.npy"
-)
+validation_images = np.load(stacked_img / "validation_data_all_stacked_images.npy")
 validation_images.shape
 
 # %%
@@ -199,10 +196,9 @@ validation_images.shape
 # training_images = training_images[:, :, :, :3]
 
 # %%
-# joining ramp and training together
+# joining training and validation together
+# stacked_images = training_images
 stacked_images = np.concatenate([training_images, validation_images], axis=0)
-
-# %%
 stacked_images.shape
 
 # %%
@@ -215,13 +211,22 @@ validation_images = []
 # ### Import filenames
 
 # %%
-ramp_filenames = np.load(
-    stacked_img / "ramp_bentiu_south_sudan_all_stacked_filenames.npy"
-)
+# ramp_filenames = np.load(
+#     stacked_img / "ramp_bentiu_south_sudan_all_stacked_filenames.npy"
+# )
 training_filenames = np.load(stacked_img / "training_data_all_stacked_filenames.npy")
+validation_filenames = np.load(
+    stacked_img / "validation_data_all_stacked_filenames.npy"
+)
 
-# %%
-stacked_filenames = np.concatenate([ramp_filenames, training_filenames], axis=0)
+# stacked_filenames = training_filenames
+stacked_filenames = np.concatenate(
+    [
+        training_filenames,
+        validation_filenames,
+    ],
+    axis=0,
+)
 
 # %% [markdown]
 # ### Sense checking images and masks correspond
@@ -246,7 +251,7 @@ plt.figure(figsize=(12, 6))
 plt.subplot(121)
 plt.imshow(image_to_display_normalized)
 plt.subplot(122)
-plt.imshow(stacked_masks_cat[image_number])
+plt.imshow(stacked_masks[image_number])
 plt.show()
 
 
@@ -273,6 +278,11 @@ frequency_weights = compute_class_weight(
 )
 print(frequency_weights)
 
+# %%
+weights = [0.05, 0.05, 0.1, 0.4, 0.4]
+frequency_weights = np.array(weights, dtype=np.float64)
+print(frequency_weights)
+
 # %% [markdown]
 # ## Model parameters <a name="modelparameters"></a>
 
@@ -294,14 +304,14 @@ model = get_model(n_classes, img_height, img_width, num_channels)
 
 # %%
 # define number of epochs
-num_epochs = 200
+num_epochs = 250
 
 # %% [markdown]
 # ### Batch size
 
 # %%
 # define batch size
-batch_size = 40
+batch_size = 10
 
 # %% [markdown]
 # ### Callbacks
@@ -346,16 +356,13 @@ model.compile(
 #
 
 # %%
-import datetime
-
 # Get the current date and time
 current_datetime = datetime.datetime.now()
-
-# Format the date and time as a string (e.g., "2023-11-07_145623" for November 7, 2023, 14:56:23)
+# Format the date and time as a string
 formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H%M")
 
 # %%
-runid = f"ramp_training_{formatted_datetime}"
+runid = f"qa_testing_{formatted_datetime}"
 runid
 
 # %%
@@ -394,30 +401,30 @@ test_gen = DataGenerator(X_test, y_test, 32)
 # ## Model <a name="model"></a>
 
 # %%
-# model.summary()
-# history1 = model.fit(
-#     train_gen,
-#     batch_size=batch_size,
-#     verbose=1,
-#     epochs=num_epochs,
-#     validation_data=test_gen,
-#     shuffle=False,
-#     callbacks=callbacks,
-# )
-
-# %%
 model.summary()
-
 history1 = model.fit(
-    X_train,
-    y_train,
+    train_gen,
     batch_size=batch_size,
     verbose=1,
     epochs=num_epochs,
-    validation_data=(X_test, y_test),
+    validation_data=test_gen,
     shuffle=False,
     # callbacks=callbacks,
 )
+
+# %%
+# model.summary()
+
+# history1 = model.fit(
+#     X_train,
+#     y_train,
+#     batch_size=batch_size,
+#     verbose=1,
+#     epochs=num_epochs,
+#     validation_data=(X_test, y_test),
+#     shuffle=False,
+#     # callbacks=callbacks,
+# )
 
 # %%
 # optional
@@ -425,11 +432,10 @@ history1 = model.fit(
 # %tensorboard --logdir logs/
 
 # %% [markdown]
-# ### Saving output
+# ### Saving files
 
-# %%
-history = history1
-
+# %% [markdown]
+# #### Saving model
 
 # %%
 # saving model run conditions
@@ -438,6 +444,13 @@ model_filename = f"{runid}.hdf5"
 # save model output into models_dir
 model.save(models_dir.joinpath(model_filename))
 
+# %% [markdown]
+# #### Saving history
+
+# %%
+history = history1
+
+
 # %%
 # saving epochs
 history_filename = outputs_dir / f"{runid}.csv"
@@ -445,8 +458,10 @@ history_filename = outputs_dir / f"{runid}.csv"
 history_df = pd.DataFrame(history.history)
 history_df.to_csv(history_filename, index=False)
 
+# %% [markdown]
+# #### Saving outputs
+
 # %%
-# saving output arrays
 # defining y_pred first
 with tf.device("/cpu:0"):
     y_pred = model.predict(X_test)
@@ -460,10 +475,12 @@ filenames_test_filename = f"{runid}_filenamestest.npy"
 np.save(outputs_dir.joinpath(X_test_filename), X_test)
 np.save(outputs_dir.joinpath(y_pred_filename), y_pred)
 np.save(outputs_dir.joinpath(y_test_filename), y_test)
-# np.save(outputs_dir.joinpath(filenames_test_filename), filenames_test)
+np.save(outputs_dir.joinpath(filenames_test_filename), filenames_test)
 
 # %% [markdown]
 # ## Clear outputs and remove variables<a name="clear"></a>
 
 # %%
 # %reset -f
+
+# %%
