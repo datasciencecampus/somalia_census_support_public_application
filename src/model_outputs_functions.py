@@ -751,4 +751,26 @@ def process_json_files(json_dir: Path, grouped_counts: pd.DataFrame) -> pd.DataF
         how="left",
     )
 
+    # Create columns to show count difference between actual and computed polygons
+    building_polygon_counts["building_diff"] = (
+        building_polygon_counts["buildings"]
+        - building_polygon_counts["building_actual"]
+    )
+    building_polygon_counts["tent_diff"] = (
+        building_polygon_counts["tents"] - building_polygon_counts["tent_actual"]
+    )
+
+    # Create columns to show percentage difference between actual and computed polygons
+    building_polygon_counts["%_change_tent"] = (
+        (building_polygon_counts["tent_diff"] / building_polygon_counts["tent_actual"])
+        * 100
+    ).round(0)
+    building_polygon_counts["%_change_building"] = (
+        (
+            building_polygon_counts["building_diff"]
+            / building_polygon_counts["building_actual"]
+        )
+        * 100
+    ).round(0)
+
     return building_polygon_counts
