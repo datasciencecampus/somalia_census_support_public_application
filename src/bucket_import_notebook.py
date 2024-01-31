@@ -70,7 +70,7 @@ read_files_in_folder(bucket_name, folder_name)
 #
 # >To import a specific model run - identified by `run_id`
 
-run_id = "ramp_1_np_18_10_2023"
+run_id = "qa_testing_2024-01-30_1655"
 
 for folder in folders:
     destination_folder = folder_dict[folder]
@@ -78,10 +78,22 @@ for folder in folders:
 
 # #### To download just one file from one folder
 
+# #### For Outputs (6 files)
+
 # +
-folder_name = models / "ramp_1_np_18_10_2023"
+folder_name = "outputs"
+destination_folder = outputs
+file_name = "qa_testing_2024-01-30_1655"
+
+download_run_from_bucket(bucket_name, folder_name, destination_folder, file_name)
+# -
+
+# #### For Models (1 file)
+
+# +
+folder_name = "models"
 destination_folder = models
-file_name = "ramp_1_np_18_10_2023"
+file_name = "qa_testing_2024-01-30_1655"
 
 download_run_from_bucket(bucket_name, folder_name, destination_folder, file_name)
 # -
