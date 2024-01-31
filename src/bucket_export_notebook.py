@@ -70,22 +70,24 @@ delete_folder_from_bucket(bucket_name, folder_name)
 
 # ### Exporting individual files <a name="exportfiles"></a>
 
-run_id = "training_2_23_11_23"
+run_id = "qa_testing_2024-01-30_1655"
 
 # #### Export model file to WiP bucket
 
+destination_folder_name = "models"
 for file in models.iterdir():
     if file.name.startswith(run_id):
-        move_file_to_bucket(file, bucket_name)
+        move_file_to_bucket(file, bucket_name, destination_folder_name)
 
 # #### Export model outputs to WiP bucket
 
+destination_folder_name = "outputs"
 for file in outputs.iterdir():
     if file.name.startswith(run_id):
-        move_file_to_bucket(file, bucket_name)
+        move_file_to_bucket(file, bucket_name, destination_folder_name)
 
 # ### Exporting folders <a name="exportfolders"></a>
 
-destination_folder_name = "ramp_bentiu_south_sudan/mask"
-source_folder = ramp_mask
+destination_folder_name = "models"
+source_folder = models
 move_folder_to_bucket(source_folder, bucket_name, destination_folder_name)
