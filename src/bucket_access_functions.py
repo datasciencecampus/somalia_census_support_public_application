@@ -28,12 +28,15 @@ from pathlib import Path
 # #### Files
 
 # %%
-def move_file_to_bucket(source_file_path, bucket_name):
+def move_file_to_bucket(source_file_path, bucket_name, destination_folder):
     client = storage.Client()
     bucket = client.get_bucket(bucket_name)
-    blob_name = source_file_path.parent.name + "/" + source_file_path.name
+
+    blob_name = f"{destination_folder}/{source_file_path.name}"
+
     blob = bucket.blob(blob_name)
     blob.upload_from_filename(str(source_file_path))
+
     print(f"File {source_file_path} uploaded to {bucket_name}/{blob_name}")
 
 

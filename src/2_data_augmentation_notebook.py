@@ -81,6 +81,8 @@ from functions_library import get_data_paths, get_folder_paths
 
 from data_augmentation_functions import (
     stack_array,
+    stack_rotate,
+    stack_background_arrays,
     hue_shift,
     adjust_brightness,
     adjust_contrast,
@@ -124,9 +126,30 @@ print(mask_dir)
 # #### Rotating & mirroring arrays
 
 # %%
-# creating stack of img arrays that are rotated and horizontally flipped
+# creating stack of img arrays and filenames
 stacked_images, stacked_filenames = stack_array(img_dir, expanded_outputs=True)
 stacked_images.shape
+
+# %%
+# creating rotaed and mirror array
+stacked_rotated, stacked_rotated_filenames = stack_rotate(
+    stacked_images, stacked_filenames, expanded_outputs=True
+)
+stacked_rotated.shape
+
+# %%
+# background img arrays
+stacked_background, stacked_background_filenames = stack_background_arrays(
+    img_dir, expanded_outputs=True
+)
+stacked_background.shape
+
+# %%
+# creating rotated and mirror array
+stacked_background_rotated, stacked_background_rotated_filenames = stack_rotate(
+    stacked_background, stacked_background_filenames, expanded_outputs=True
+)
+stacked_background_rotated.shape
 
 # %%
 # for ramp
@@ -181,10 +204,11 @@ adjusted_contrast = adjust_contrast(
 all_stacked_filenames = []
 # Order of Final image array needs to be followed
 all_stacked_filenames = np.concatenate(
-    [stacked_filenames]
-    + [stacked_filenames]
-    + [stacked_filenames]
-    + [stacked_filenames],
+    [stacked_filenames] + [stacked_rotated_filenames]
+    # + [stacked_filenames]
+    + [stacked_filenames] + [stacked_filenames],
+    # + [stacked_background_filenames]
+    # + [stacked_background_rotated_filenames],
     axis=0,
 )
 
@@ -199,7 +223,11 @@ np.save(stacked_img / file_save, all_stacked_filenames)
 
 # %%
 all_stacked_images = np.concatenate(
-    [stacked_images] + [adjusted_hue] + [adjusted_brightness] + [adjusted_contrast],
+    [stacked_images] + [stacked_rotated]
+    # + [adjusted_hue]
+    + [adjusted_brightness] + [adjusted_contrast],
+    # + [stacked_background]
+    # + [stacked_background_rotated],
     axis=0,
 )
 all_stacked_images.shape
@@ -224,9 +252,24 @@ stacked_images = []
 # ### Mask augmentation
 
 # %%
-# creating stack of mask arrays that are rotated and horizontally flipped
+# creating stack of mask arrays
 stacked_masks = stack_array(mask_dir)
 stacked_masks.shape
+
+# %%
+# creating rotaed and mirror array
+mask_rotated = stack_rotate(stacked_masks, stacked_filenames)
+mask_rotated.shape
+
+# %%
+# background mask arrays
+mask_background = stack_background_arrays(mask_dir)
+mask_background.shape
+
+# %%
+# creating rotated and mirror array
+mask_background_rotated = stack_rotate(mask_background, stacked_filenames)
+mask_background_rotated.shape
 
 # %% [markdown]
 # #### Create border classes
@@ -254,7 +297,11 @@ mask_hue, mask_brightness, mask_contrast = [np.copy(stacked_masks) for _ in rang
 
 # %%
 all_stacked_masks = np.concatenate(
-    [stacked_masks] + [mask_hue] + [mask_brightness] + [mask_contrast], axis=0
+    [stacked_masks] + [mask_rotated]
+    # + [mask_hue]
+    + [mask_brightness] + [mask_contrast],
+    # + [mask_background]
+    # + [mask_background_rotated], axis=0
 )
 all_stacked_masks.shape
 

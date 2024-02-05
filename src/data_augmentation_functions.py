@@ -42,6 +42,33 @@ def stack_array(directory, expanded_outputs=False):
         np_array = np.load(file)
         array_list.append(np_array)
         filenames.append(file.stem)
+
+    # stack the original arrays, rotated versions and mirror versions
+    stacked_images = np.concatenate([array_list], axis=0)
+    # stacked_images = stacked_images.astype(np.float32)  # Convert to float32
+    stacked_filenames = np.concatenate([filenames], axis=0)
+
+    if expanded_outputs:
+        return stacked_images, stacked_filenames
+    else:
+        return stacked_images
+
+
+def stack_rotate(array_list, filenames, expanded_outputs=False):
+    """
+
+    Stack all .npy files in the specified directory (excluding files ending with "background.npy"),
+    along with their rotated and mirrored versions, and return the resulting array.
+
+    Args:
+        directory (str or Path): The directroy containing the .npy files to stack.
+        validation_area (str, optional): The word to exclude from file names. Defaults to None.
+
+    Returns:
+        np.ndarray: The stacked array of images/masks.
+
+    """
+
     # create a rotated version of each array and stack along the same axis
     rotations = []
     for i in range(1, 4):  # Create 3 rotated versions (90, 180, 270 degrees)
@@ -57,10 +84,9 @@ def stack_array(directory, expanded_outputs=False):
     ]
 
     # stack the original arrays, rotated versions and mirror versions
-    stacked_images = np.concatenate([array_list] + rotations + mirrors, axis=0)
-    stacked_images = stacked_images.astype(np.float32)  # Convert to float32
-    # Tile repeats the pattern, repeat would order them incorrectly.
-    stacked_filenames = np.tile(filenames, 8)
+    stacked_images = np.concatenate(rotations + mirrors, axis=0)
+    # stacked_images = stacked_images.astype(np.float32)  # Convert to float32
+    stacked_filenames = np.tile(filenames, 7)
 
     if expanded_outputs:
         return stacked_images, stacked_filenames
@@ -97,6 +123,10 @@ def stack_background_arrays(directory, expanded_outputs=False):
         np_array = np.load(file)
         background_arrays.append(np_array)
         background_filenames.append(file.stem)
+
+    background_arrays = np.concatenate([background_arrays], axis=0)
+    # stacked_images = stacked_images.astype(np.float32)  # Convert to float32
+    background_filenames = np.concatenate([background_filenames], axis=0)
 
     if expanded_outputs:
         return background_arrays, background_filenames

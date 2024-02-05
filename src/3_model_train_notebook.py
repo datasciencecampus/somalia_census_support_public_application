@@ -71,6 +71,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import pynvml
+from numba import cuda
 from keras.utils import to_categorical
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import train_test_split
@@ -106,6 +108,43 @@ except OSError:
         "Invalid device or cannot modify virtual devices once initialized."
     )
 print("Num GPUs Available: ", len(tf.config.list_physical_devices("GPU")))
+
+
+# %% [markdown]
+# #### GPU memory usage
+
+# %%
+def bytes_to_gb(bytes_value):
+    return round(bytes_value / (1024**3), 2)
+
+
+pynvml.nvmlInit()
+handle = pynvml.nvmlDeviceGetHandleByIndex(
+    0
+)  # Assuming the GPU you are interested in is at index 0
+
+info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+total_gb = bytes_to_gb(info.total)
+free_gb = bytes_to_gb(info.free)
+used_gb = bytes_to_gb(info.used)
+
+print(f"Total GPU Memory: {total_gb} GB")
+print(f"Free GPU Memory: {free_gb} GB")
+print(f"Used GPU Memory: {used_gb} GB")
+
+pynvml.nvmlShutdown()
+
+# %% [markdown]
+# #### Freeing GPU memory
+
+# %%
+# reset tensorflow session
+tf.keras.backend.clear_session()
+
+# %%
+# using CUDA operations
+cuda.select_device(0)
+cuda.close()
 
 # %% [markdown]
 # ### Set-up filepaths
@@ -228,6 +267,8 @@ stacked_filenames = np.concatenate(
     axis=0,
 )
 
+stacked_filenames.shape
+
 # %% [markdown]
 # ### Sense checking images and masks correspond
 
@@ -296,6 +337,11 @@ img_height, img_width, num_channels = (
 print(img_height, img_width, num_channels)
 
 # %%
+stacked_images = []
+stacked_masks_cat = []
+stacked_filenames = []
+
+# %%
 # defined under training parameters
 model = get_model(n_classes, img_height, img_width, num_channels)
 
@@ -304,14 +350,14 @@ model = get_model(n_classes, img_height, img_width, num_channels)
 
 # %%
 # define number of epochs
-num_epochs = 250
+num_epochs = 300
 
 # %% [markdown]
 # ### Batch size
 
 # %%
 # define batch size
-batch_size = 10
+batch_size = 50
 
 # %% [markdown]
 # ### Callbacks
