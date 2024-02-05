@@ -699,76 +699,97 @@ def process_tile(model, tile, unique_classes, filename, index_number):
     return combined_gdf
 
 
-def process_json_files(json_dir: Path, grouped_counts: pd.DataFrame) -> pd.DataFrame:
+def process_json_files(json_dir, grouped_counts):
     """
-    Process JSON files in a given directory and return a DataFrame.
+    Process JSON files in a directory and return a DataFrame with selected columns.
 
     Parameters:
-    - json_dir (Path): The path to the directory containing JSON files.
+    - json_dir (Path): Path object pointing to the directory containing JSON files.
 
     Returns:
-    - pd.DataFrame: A DataFrame containing processed data.
-
-    Example:
-    ```
-    json_dir = Path('/path/to/json/files')
-    result_df = process_json_files(json_dir)
-    ```
+    - pd.DataFrame: DataFrame containing selected columns from the JSON files.
     """
-    # Get a list of JSON files in the specified directory
+
+    # List all JSON files in the directory
     json_files = list(json_dir.glob("*.json"))
 
-    # Initialize an empty list to store feature data from each file
+    # Load data from each JSON file and store it in a list
     all_feature_data = []
-
-    # Iterate through each JSON file and load its data
     for json_file in json_files:
         with open(json_file, "r") as f:
             feature_data = json.load(f)
             all_feature_data.append(feature_data)
 
     # Concatenate all feature data into a DataFrame
-    feature_data_df = pd.concat([pd.DataFrame(data) for data in all_feature_data])
+    feature_data_df = pd.concat(
+        [
+            pd.DataFrame(data).T.assign(filename=json_file.stem)
+            for json_file, data in zip(json_files, all_feature_data)
+        ]
+    )
 
-    # Transpose the DataFrame and reset index
-    feature_data_df = feature_data_df.T.reset_index()
+    # Select and reset index for specified columns
+    selected_columns_df = (
+        feature_data_df[["building", "tent"]]
+        .reset_index()
+        .rename(columns={"index": "filename"})
+    )
 
-    # Rename the columns
-    feature_data_df = feature_data_df.rename(columns={"index": "filename"})
-
-    # Filter out rows with filenames ending with 'background' and select specific columns
-    feature_data_df = feature_data_df[
-        ~feature_data_df["filename"].str.endswith("background")
-    ][["filename", "building", "tent"]].rename(
+    # Rename columns
+    renamed_columns_df = selected_columns_df[["filename", "building", "tent"]].rename(
         columns={"building": "building_actual", "tent": "tent_actual"}
     )
 
-    # Merge with additional data (assuming 'grouped_counts' is defined somewhere)
+    # Merge with existing DataFrame
     building_polygon_counts = pd.merge(
         grouped_counts,
-        feature_data_df[["filename", "building_actual", "tent_actual"]],
+        renamed_columns_df[["filename", "building_actual", "tent_actual"]],
         on="filename",
         how="left",
     )
 
+    return building_polygon_counts
+
+
+def building_stats(building_polygon_counts):
+    """
+    Preprocess building counts DataFrame by filling NaN values, setting numerical columns to whole numbers,
+    and creating columns to show count and percentage differences between actual and computed polygons.
+
+    Parameters:
+    - building_polygon_counts (pd.DataFrame): DataFrame containing building counts data.
+
+    Returns:
+    - pd.DataFrame: Preprocessed DataFrame with the specified modifications.
+    """
+
+    # Fill NaN values in 'building_actual' and 'tent_actual' columns with zeros
+    building_polygon_counts["building_actual"].fillna(0, inplace=True)
+    building_polygon_counts["tent_actual"].fillna(0, inplace=True)
+
+    # Set specified numerical columns to whole numbers
+    numerical_columns = ["building_actual", "tent_actual"]
+    building_polygon_counts[numerical_columns] = building_polygon_counts[
+        numerical_columns
+    ].astype(int)
+
     # Create columns to show count difference between actual and computed polygons
     building_polygon_counts["building_diff"] = (
-        building_polygon_counts["buildings"]
-        - building_polygon_counts["building_actual"]
+        building_polygon_counts["building_actual"]
+        - building_polygon_counts["buildings"]
     )
     building_polygon_counts["tent_diff"] = (
-        building_polygon_counts["tents"] - building_polygon_counts["tent_actual"]
+        building_polygon_counts["tent_actual"] - building_polygon_counts["tents"]
     )
 
     # Create columns to show percentage difference between actual and computed polygons
     building_polygon_counts["%_change_tent"] = (
-        (building_polygon_counts["tent_diff"] / building_polygon_counts["tent_actual"])
-        * 100
+        (building_polygon_counts["tent_diff"] / building_polygon_counts["tents"]) * 100
     ).round(0)
     building_polygon_counts["%_change_building"] = (
         (
             building_polygon_counts["building_diff"]
-            / building_polygon_counts["building_actual"]
+            / building_polygon_counts["buildings"]
         )
         * 100
     ).round(0)
