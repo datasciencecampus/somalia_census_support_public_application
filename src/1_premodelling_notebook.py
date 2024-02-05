@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.6
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: venv-somalia-gcp
 #     language: python
@@ -154,7 +154,7 @@ for mask_path in mask_dir.glob("*.geojson"):
 # %%
 # save json file
 folder_name = folder_dropdown.value
-file_path = data_dir / "json" / f"{folder_name}_features_dict.json"
+file_path = data_dir / "json_dir" / f"{folder_name}_features_dict.json"
 with open(file_path, "w") as json_file:
     json.dump(features_dict, json_file)
 

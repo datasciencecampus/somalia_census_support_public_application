@@ -28,7 +28,6 @@ from bucket_access_functions import (
     delete_folder_from_bucket,
 )
 from functions_library import get_folder_paths
-from pathlib import Path
 
 # +
 # local folders
@@ -53,7 +52,7 @@ folders = [
     ramp_img,
     models,
     outputs,
-) = [Path(folder_dict[folder]) for folder in folders]
+) = [folder_dict[folder] for folder in folders]
 
 
 # work-in-progress bucket
@@ -61,29 +60,27 @@ bucket_name = folder_dict["wip_bucket"]
 # -
 
 # ### Read files in bucket <a name="read"></a>
-folder_name = models
+
+folder_name = "models"
 read_files_in_folder(bucket_name, folder_name)
 
 # ### Import individual files <a name="importfiles"></a>
 
-# #### Importing individual models and associated files.
-#
-# >To import a specific model run - identified by `run_id`
+run_id = "qa_testing_2024-01-30_1655"
 
-run_id = "ramp_1_np_18_10_2023"
+# #### For Outputs (6 files)
 
-for folder in folders:
-    destination_folder = folder_dict[folder]
-    download_run_from_bucket(bucket_name, folder, destination_folder, run_id)
+folder_name = "outputs"
+destination_folder = outputs
+download_run_from_bucket(bucket_name, folder_name, destination_folder, run_id)
 
-# #### To download just one file from one folder
+# #### For Models (1 file)
 
 # +
-folder_name = models / "ramp_1_np_18_10_2023"
+folder_name = "models"
 destination_folder = models
-file_name = "ramp_1_np_18_10_2023"
 
-download_run_from_bucket(bucket_name, folder_name, destination_folder, file_name)
+download_run_from_bucket(bucket_name, folder_name, destination_folder, run_id)
 # -
 
 # ### Importing whole folders <a name="importfolders"></a>

@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.6
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: venv-somalia-gcp
 #     language: python
@@ -81,6 +81,7 @@ from model_outputs_functions import (
     plot_images_for_tile,
     process_tile,
     process_json_files,
+    building_stats,
 )
 
 # %% [markdown]
@@ -98,7 +99,7 @@ json_dir = Path(folder_dict["json_dir"])
 
 # %%
 # Set runid for outputs
-runid = "qa_testing_2024-01-23_0848"
+runid = "qa_testing_2024-01-30_1655"
 
 
 # %% [markdown]
@@ -239,7 +240,7 @@ grouped_tiles_df
 # ### Plotting individual tiles
 
 # %%
-test_img_number = 6
+test_img_number = 100
 test_img = X_test[test_img_number]
 
 # mask
@@ -274,7 +275,7 @@ plt.show()
 # finding number of classes
 unique_classes = np.unique(predicted_img)
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 all_results = []
 
 for idx, (tile, filename) in enumerate(zip(X_test, filenames)):
@@ -294,7 +295,8 @@ grouped_counts = grouped_counts.reset_index()
 
 # %%
 building_polygon_counts = process_json_files(json_dir, grouped_counts)
-building_polygon_counts
+building_polygon_stats = building_stats(building_polygon_counts)
+building_polygon_stats
 
 # %% [markdown]
 # ## Confusion Matrix
@@ -328,7 +330,7 @@ plot_confusion_matrix(y_true, y_pred_arg, class_names)
 tile_metrics_df = calculate_tile_metrics(y_pred, y_test_argmax, class_names, filenames)
 tile_metrics_df = tile_metrics_df.set_index("tile")
 # tile_metrics_df.to_csv(str(outputs_dir) + "/" + runid + "_tile_metrics.csv")
-tile_metrics_df
+# tile_metrics_df
 
 # %% [markdown]
 # ## Quality Assuring tiles
@@ -372,8 +374,8 @@ plot_images_for_tile(
 
 # %%
 selected_tile_name = dropdown_tile_names.value
-selected_polygons = building_polygon_counts[
-    building_polygon_counts["filename"] == selected_tile_name
+selected_polygons = building_polygon_stats[
+    building_polygon_stats["filename"] == selected_tile_name
 ]
 selected_polygons
 
