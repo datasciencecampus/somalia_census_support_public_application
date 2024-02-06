@@ -549,7 +549,7 @@ def update_displayed_data(tile_metrics_df, selected_tile):
         display(selected_tile_data)
 
 
-def plot_images_for_tile(model, X_test, y_test_argmax, grouped_tiles_df, selected_tile):
+def plot_images_for_tile(model, X_test, y_test, grouped_tiles_df, selected_tile):
     """
     Plot images for a specific tile based on the provided DataFrame and selected tile name.
 
@@ -565,6 +565,9 @@ def plot_images_for_tile(model, X_test, y_test_argmax, grouped_tiles_df, selecte
     num_count = specific_tile_df["count"].iloc[0]
     index_numbers = specific_tile_df["index_number"].iloc[0].split(",")
 
+    y_test_reduced = y_test[:, :, :, :-2]
+    y_test_argmax = np.argmax(y_test_reduced, axis=3)
+
     if num_count > 0 and index_numbers:
         plots = []
 
@@ -572,10 +575,13 @@ def plot_images_for_tile(model, X_test, y_test_argmax, grouped_tiles_df, selecte
             test_img_number = int(index_numbers[i])
 
             test_img = X_test[test_img_number]
+
             ground_truth = y_test_argmax[test_img_number]
+
             test_img_input = np.expand_dims(test_img, 0)
             prediction = model.predict(test_img_input)
-            predicted_img = np.argmax(prediction, axis=3)[0, :, :]
+            prediction_reduced = prediction[:, :, :, :-2]
+            predicted_img = np.argmax(prediction_reduced, axis=3)[0, :, :]
 
             test_img = test_img[:, :, :3]
             test_img = test_img[:, :, ::-1]
