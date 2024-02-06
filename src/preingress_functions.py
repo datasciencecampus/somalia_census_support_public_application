@@ -219,7 +219,6 @@ def cleaning_of_mask_files(mask_files_lower, data_type):
                 + f"""{(mask_file)} contains no type but has geometry.
 
                 Add type information to each polygon using your GIS software. File has not been saved!"""
-
             )
             continue
 
@@ -232,7 +231,7 @@ def cleaning_of_mask_files(mask_files_lower, data_type):
             )
 
         # check any null values in type column - send error
-        if mask_gdf["Type"].isnull().values.any():
+        if mask_gdf["Type"].isna().values.any():
             warnings.warn(
                 Fore.GREEN
                 + f"Type column for ({mask_file}) has null values. File has not been saved!"
@@ -243,9 +242,7 @@ def cleaning_of_mask_files(mask_files_lower, data_type):
         if mask_gdf["geometry"].isnull().values.any():
             warnings.warn(
                 Fore.GREEN
-
                 + f"Geometry column for ({mask_file}) has null values. File has not been saved! Check the file in your GIS software."
-
             )
             continue
 
