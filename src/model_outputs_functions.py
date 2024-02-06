@@ -760,7 +760,7 @@ def process_json_files(json_dir, grouped_counts):
 def building_stats(building_polygon_counts):
     """
     Preprocess building counts DataFrame by filling NaN values, setting numerical columns to whole numbers,
-    and creating columns to show count and percentage differences between actual and computed polygons.
+    and creating columns to show count and accuracy percentage differences between actual and computed polygons.
 
     Parameters:
     - building_polygon_counts (pd.DataFrame): DataFrame containing building counts data.
@@ -781,23 +781,33 @@ def building_stats(building_polygon_counts):
 
     # Create columns to show count difference between actual and computed polygons
     building_polygon_counts["building_diff"] = (
-        building_polygon_counts["building_actual"]
-        - building_polygon_counts["buildings"]
+        building_polygon_counts["buildings"]
+        - building_polygon_counts["building_actual"]
     )
     building_polygon_counts["tent_diff"] = (
-        building_polygon_counts["tent_actual"] - building_polygon_counts["tents"]
+        building_polygon_counts["tents"] - building_polygon_counts["tent_actual"]
     )
 
-    # Create columns to show percentage difference between actual and computed polygons
-    building_polygon_counts["%_change_tent"] = (
-        (building_polygon_counts["tent_diff"] / building_polygon_counts["tents"]) * 100
-    ).round(0)
-    building_polygon_counts["%_change_building"] = (
+    # Create columns to show accuracy percentage difference between actual and computed polygons
+    building_polygon_counts["accuracy_percentage_tent"] = (
         (
-            building_polygon_counts["building_diff"]
-            / building_polygon_counts["buildings"]
+            1
+            - abs(
+                building_polygon_counts["tent_diff"]
+                / building_polygon_counts["tent_actual"]
+            )
         )
         * 100
-    ).round(0)
+    ).round(2)
+    building_polygon_counts["accuracy_percentage_building"] = (
+        (
+            1
+            - abs(
+                building_polygon_counts["building_diff"]
+                / building_polygon_counts["building_actual"]
+            )
+        )
+        * 100
+    ).round(2)
 
     return building_polygon_counts
