@@ -12,20 +12,58 @@
 #     name: venv-somalia-gcp
 # ---
 
+# %% [markdown]
+# # Model Run Evaluation
+#
+# <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #31708f; background-color: #d9edf7; border-color: #bce8f1;">
+# Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
+# </div>
+#
+# This notebook evaluates model runs to allow for comparisons. Can see how individual tiles performed.
+
 # %%
-from pathlib import Path
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-# %%
 from functions_library import get_folder_paths
+from pathlib import Path
 
 # %%
 folder_dict = get_folder_paths()
 # set model and output directories
 outputs_dir = Path(folder_dict["outputs_dir"])
+model_dir = Path(folder_dict["models_dir"])
+
+# %% [markdown]
+# ### Model Run Conditions
+
+# %%
+runid = "qa_testing_2024-01-31_0658"
+
+# %%
+# load in txt file
+conditions_file = f"{runid}_conditions.txt"
+
+conditions = outputs_dir / conditions_file
+
+run_conditions = open(conditions, "r")
+print(run_conditions.read())
+
+# %%
+# convert run conditions to dataframe
+conditions_df = pd.read_csv(conditions, header=None, names=[runid])
+conditions_df
+
+# %%
+conditions_csv_filename = runid + "_conditions.csv"
+
+# %%
+conditions_csv_file_path = outputs_dir / conditions_csv_filename
+
+# %%
+# save run conditions to csv
+conditions_df.to_csv(conditions_csv_file_path, index=None)
 
 # %%
 # create df of csv building counts
@@ -61,18 +99,21 @@ merged_df
 # %%
 # find rows where 'accuracy_percentage_tent' is -inf
 inf_rows = merged_df[merged_df["accuracy_percentage_tent"] == -np.inf]
+
 # remove rows where 'accuracy_percentage_tent' is -inf
 merged_clean_df = merged_df[merged_df["accuracy_percentage_tent"] != -np.inf]
 
 merged_clean_df
 
 # %%
+# group df by csv name, aggregate stats for tents and reset index
 grouped_df = (
     merged_clean_df.groupby("csv_name")["accuracy_percentage_tent"]
     .agg(["min", "max", "mean"])
     .reset_index()
 )
 
+# rename columns
 grouped_df.columns = [
     "csv_name",
     "min_accuracy_tent",
@@ -95,9 +136,14 @@ filtered_df = merged_clean_df[~merged_clean_df["csv_name"].isin(exclude_filename
 
 filtered_df
 
+# %% [markdown]
+# ### Tent accuracy percentage
+
 # %%
+# make copy of filtered_df
 filtered_bin_df = filtered_df.copy()
 
+# create bin edges and labels for accuracy category
 bin_edges = [-np.inf, 59, 79, 89, 91, np.inf]
 bin_labels = ["<59", "60-79", "80-89", "90-91", ">91"]
 
@@ -107,16 +153,36 @@ filtered_bin_df["accuracy_category"] = pd.cut(
     labels=bin_labels,
     right=False,
 )
+
 filtered_bin_df
 
-# %% jupyter={"outputs_hidden": true}
+# %%
+# group df by filename and area for accuracy category
 category_counts = (
     filtered_bin_df.groupby(["filename", "area"])["accuracy_category"]
     .value_counts()
     .unstack(fill_value=0)
 )
+
 category_counts = category_counts.sort_values(by=">91", ascending=False)
 category_counts
+
+# %%
+tent_category_counts = category_counts.copy()
+
+# transform index to columns so they appear in csv
+tent_category_counts.reset_index(inplace=True)
+
+# %%
+tent_category_csv_filename = runid + "_tent_percentage_accuracy.csv"
+tent_category_csv_file_path = outputs_dir / tent_category_csv_filename
+
+# %%
+# save as csv into outputs_dir
+tent_category_counts.to_csv(tent_category_csv_file_path, index=False)
+
+# %% [markdown]
+# ### Tent Visualisations
 
 # %%
 category_counts = category_counts.sort_values(by="<59", ascending=False)
@@ -191,5 +257,68 @@ plt.legend()
 
 plt.show()
 
+
+# %% [markdown]
+# ### Buildings accuracy percentage
+
+# %%
+# group df by csv name, aggregate stats for buildings and reset index
+grouped_df_building = (
+    merged_clean_df.groupby("csv_name")["accuracy_percentage_building"]
+    .agg(["min", "max", "mean"])
+    .reset_index()
+)
+
+# rename columns
+grouped_df_building.columns = [
+    "csv_name",
+    "min_accuracy_building",
+    "max_accuracy_building",
+    "avg_accuracy_building",
+]
+
+grouped_df_building
+
+
+# %%
+# make copy of filtered_df
+building_filtered_bin_df = filtered_df.copy()
+
+# create bin edges and labels for accuracy category
+bin_edges = [-np.inf, 59, 79, 89, 91, np.inf]
+bin_labels = ["<59", "60-79", "80-89", "90-91", ">91"]
+
+building_filtered_bin_df["accuracy_category"] = pd.cut(
+    building_filtered_bin_df["accuracy_percentage_building"],
+    bins=bin_edges,
+    labels=bin_labels,
+    right=False,
+)
+
+building_filtered_bin_df
+
+# %%
+# group df by filename and area for accuracy category
+building_category_counts = (
+    building_filtered_bin_df.groupby(["filename", "area"])["accuracy_category"]
+    .value_counts()
+    .unstack(fill_value=0)
+)
+
+building_category_counts = building_category_counts.sort_values(
+    by=">91", ascending=False
+)
+building_category_counts
+
+# %%
+building_category_csv_filename = runid + "_building_percentage_accuracy.csv"
+building_category_csv_file_path = outputs_dir / building_category_csv_filename
+
+# %%
+# transform index to columns so they appear in csv
+building_category_counts.reset_index(inplace=True)
+
+# save as csv
+building_category_counts.to_csv(building_category_csv_file_path, index=False)
 
 # %%
