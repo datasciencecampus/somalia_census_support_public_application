@@ -222,10 +222,40 @@ def adjust_brightness(images, factor):
     return adjusted_images
 
 
-def adjust_contrast(images, factor):
+def adjust_contrast(images, clip_limit=2.0, tile_grid_size=(8, 8)):
     adjusted_images = np.copy(images)
-    # scales the pixel values around a neutral point of 0.5 to effectively preserve the overall brightness while adjusting contrast
-    adjusted_images[..., :3] *= (adjusted_images[..., :3] - 0.5) * factor + 0.5
+
+    # Assuming images are in the range [0, 1], convert to uint8 for cv2
+    adjusted_images_uint8 = (adjusted_images * 255).astype(np.uint8)
+
+    # Iterate over the images and apply CLAHE to RGB channels
+    for i in range(len(adjusted_images_uint8)):
+        rgb_image = adjusted_images_uint8[i][:, :, :3]  # Extract RGB channels
+        nir_channel = adjusted_images_uint8[i][:, :, 3]  # Extract NIR channel
+
+        # Convert RGB image to LAB color space
+        lab_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2LAB)
+
+        # Split the LAB image into L, A, and B channels
+        l_channel, a_channel, b_channel = cv2.split(lab_image)
+
+        # Apply CLAHE to the L channel
+        clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
+        l_channel_clahe = clahe.apply(l_channel)
+
+        # Merge the processed L channel with the original A and B channels
+        lab_image_clahe = cv2.merge([l_channel_clahe, a_channel, b_channel])
+
+        # Convert LAB image back to RGB
+        rgb_image_clahe = cv2.cvtColor(lab_image_clahe, cv2.COLOR_LAB2RGB)
+
+        # Combine the adjusted RGB image with the original NIR channel
+        adjusted_images_uint8[i] = np.concatenate(
+            [rgb_image_clahe, np.expand_dims(nir_channel, axis=-1)], axis=-1
+        )
+
+    # Convert back to float in the range [0, 1]
+    adjusted_images = adjusted_images_uint8 / 255.0
 
     return adjusted_images
 

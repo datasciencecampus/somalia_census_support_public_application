@@ -154,6 +154,7 @@ stacked_background_rotated.shape
 # %%
 # for ramp
 # stacked_images = stacked_images.astype(np.float16)
+# stacked_rotated = stacked_rotated.astype(np.float16)
 
 # %% [markdown]
 # #### Set augmentation
@@ -164,10 +165,6 @@ image_adjustments = {
     "brightness": {
         "enabled": True,
         "factor": 1.5,  # values <1 will decrease brightness while values >1 will increase brightness
-    },
-    "contrast": {
-        "enabled": True,
-        "factor": 2,  # values <1 will decrease contrast while values >1 will increase contrast
     },
 }
 
@@ -189,13 +186,7 @@ adjusted_brightness = adjust_brightness(
 # #### Contrast
 
 # %%
-# if image_adjustments["contrast"]["enabled"]:
-#     adjusted_contrast = adjust_contrast(stacked_images, image_adjustments["contrast"]["factor"])
-
-# %%
-adjusted_contrast = adjust_contrast(
-    stacked_images, image_adjustments["contrast"]["factor"]
-)
+adjusted_contrast = adjust_contrast(stacked_images)
 
 # %% [markdown]
 # #### Expand Filenames List
@@ -203,14 +194,27 @@ adjusted_contrast = adjust_contrast(
 # %%
 all_stacked_filenames = []
 # Order of Final image array needs to be followed
-all_stacked_filenames = np.concatenate(
-    [stacked_filenames] + [stacked_rotated_filenames]
-    # + [stacked_filenames]
-    + [stacked_filenames] + [stacked_filenames],
-    # + [stacked_background_filenames]
-    # + [stacked_background_rotated_filenames],
-    axis=0,
-)
+if folder_dropdown.value == "training_data":
+    all_stacked_filenames = np.concatenate(
+        [stacked_filenames]
+        + [stacked_rotated_filenames]
+        + [stacked_filenames]
+        + [stacked_filenames]
+        + [stacked_filenames]
+        + [stacked_background_filenames]
+        + [stacked_background_rotated_filenames],
+        axis=0,
+    )
+
+elif folder_dropdown.value == "validation_data":
+    all_stacked_filenames = np.concatenate(
+        [stacked_filenames]
+        + [stacked_rotated_filenames]
+        + [stacked_filenames]
+        + [stacked_filenames]
+        + [stacked_filenames],
+        axis=0,
+    )
 
 all_stacked_filenames.shape
 
@@ -222,14 +226,28 @@ np.save(stacked_img / file_save, all_stacked_filenames)
 # #### Final image array
 
 # %%
-all_stacked_images = np.concatenate(
-    [stacked_images] + [stacked_rotated]
-    # + [adjusted_hue]
-    + [adjusted_brightness] + [adjusted_contrast],
-    # + [stacked_background]
-    # + [stacked_background_rotated],
-    axis=0,
-)
+if folder_dropdown.value == "training_data":
+    all_stacked_images = np.concatenate(
+        [stacked_images]
+        + [stacked_rotated]
+        + [adjusted_hue]
+        + [adjusted_brightness]
+        + [adjusted_contrast]
+        + [stacked_background]
+        + [stacked_background_rotated],
+        axis=0,
+    )
+
+elif folder_dropdown.value == "validation_data":
+    all_stacked_images = np.concatenate(
+        [stacked_images]
+        + [stacked_rotated]
+        + [adjusted_hue]
+        + [adjusted_brightness]
+        + [adjusted_contrast],
+        axis=0,
+    )
+
 all_stacked_images.shape
 
 # %% [markdown]
@@ -296,17 +314,32 @@ mask_hue, mask_brightness, mask_contrast = [np.copy(stacked_masks) for _ in rang
 # #### Final mask array
 
 # %%
-all_stacked_masks = np.concatenate(
-    [stacked_masks] + [mask_rotated]
-    # + [mask_hue]
-    + [mask_brightness] + [mask_contrast],
-    # + [mask_background]
-    # + [mask_background_rotated], axis=0
-)
+if folder_dropdown.value == "training_data":
+    all_stacked_masks = np.concatenate(
+        [stacked_masks]
+        + [mask_rotated]
+        + [mask_hue]
+        + [mask_brightness]
+        + [mask_contrast]
+        + [mask_background]
+        + [mask_background_rotated],
+        axis=0,
+    )
+
+elif folder_dropdown.value == "validation_data":
+    all_stacked_masks = np.concatenate(
+        [stacked_masks]
+        + [mask_rotated]
+        + [mask_hue]
+        + [mask_brightness]
+        + [mask_contrast],
+        axis=0,
+    )
+
 all_stacked_masks.shape
 
 # %%
-all_stacked_masks = all_stacked_masks.astype(np.int32)
+# all_stacked_masks = all_stacked_masks.astype(np.int32)
 all_stacked_masks.nbytes
 
 # %% [markdown]
