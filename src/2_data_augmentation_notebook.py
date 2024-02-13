@@ -86,7 +86,7 @@ from data_augmentation_functions import (
     hue_shift,
     adjust_brightness,
     adjust_contrast,
-    process_mask,
+    create_class_borders_array,
 )
 
 
@@ -152,9 +152,10 @@ stacked_background_rotated, stacked_background_rotated_filenames = stack_rotate(
 stacked_background_rotated.shape
 
 # %%
-# for ramp
-# stacked_images = stacked_images.astype(np.float16)
-# stacked_rotated = stacked_rotated.astype(np.float16)
+# setting ramp as lower resolution
+if folder_dropdown.value == "ramp_bentiu_south_sudan":
+    stacked_images = stacked_images.astype(np.float16)
+    stacked_rotated = stacked_rotated.astype(np.float16)
 
 # %% [markdown]
 # #### Set augmentation
@@ -251,6 +252,18 @@ elif folder_dropdown.value == "validation_data":
 all_stacked_images.shape
 
 # %% [markdown]
+# #### Padding
+
+# %%
+padding = 20
+all_stacked_images = np.pad(
+    all_stacked_images,
+    ((0, 0), (padding, padding), (padding, padding), (0, 0)),
+    mode="constant",
+)
+all_stacked_images.shape
+
+# %% [markdown]
 # #### Saving image array
 
 # %%
@@ -288,20 +301,6 @@ mask_background.shape
 # creating rotated and mirror array
 mask_background_rotated = stack_rotate(mask_background, stacked_filenames)
 mask_background_rotated.shape
-
-# %% [markdown]
-# #### Create border classes
-
-# %%
-# Set to False for class-specific processing
-binary_borders = False
-
-for i, mask in enumerate(stacked_masks):
-    stacked_masks[i], test_mask = process_mask(mask, binary_borders)
-
-# %%
-# Check number of classes
-print(len(np.unique(stacked_masks)))
 
 # %% [markdown]
 # #### Additional augmentations
@@ -343,6 +342,34 @@ all_stacked_masks.shape
 all_stacked_masks.nbytes
 
 # %% [markdown]
+# #### Create border classes
+
+# %%
+# create border of original polygon then reduce polygon by 2 in all_stacked_masks
+all_stacked_masks, all_stacked_edges = create_class_borders_array(all_stacked_masks)
+
+# %%
+all_stacked_masks.shape
+
+# %%
+all_stacked_edges.shape
+
+# %% [markdown]
+# #### Padding
+
+# %%
+all_stacked_masks = np.pad(
+    all_stacked_masks, ((0, 0), (padding, padding), (padding, padding)), mode="constant"
+)
+all_stacked_masks.shape
+
+# %%
+all_stacked_edges = np.pad(
+    all_stacked_edges, ((0, 0), (padding, padding), (padding, padding)), mode="constant"
+)
+all_stacked_edges.shape
+
+# %% [markdown]
 # #### Saving mask array
 
 # %%
@@ -350,6 +377,15 @@ mask_filename = f"{folder_dropdown.value}_all_stacked_masks.npy"
 
 # %%
 np.save(stacked_mask / mask_filename, all_stacked_masks)
+
+# %% [markdown]
+# #### Saving edge array
+
+# %%
+edge_filename = f"{folder_dropdown.value}_all_stacked_edges.npy"
+
+# %%
+np.save(stacked_mask / edge_filename, all_stacked_edges)
 
 # %% [markdown]
 # ## Clear outputs and remove variables<a name="clear"></a>
