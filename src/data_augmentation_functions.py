@@ -333,3 +333,25 @@ def process_mask(mask, binary_borders):
         mask_to_update[processed_image_mask == 4] = 4
 
     return mask_to_update, test_mask
+
+
+def create_class_borders_array(image_mask):
+    kernel = np.ones((3, 3), np.uint8)
+    classes = np.unique(image_mask)
+
+    reduced_classes = image_mask.copy()
+    borders = np.zeros_like(image_mask)
+
+    for class_value in classes:
+        if class_value == 0:  # skip background
+            continue
+
+        eroded = cv2.erode(
+            (image_mask == class_value).astype(np.uint8), kernel, iterations=1
+        )
+        border = (image_mask == class_value).astype(np.uint8) - eroded
+
+        borders[border > 0] = class_value
+        reduced_classes[border > 0] = class_value - 2  # reduce the original class by 2
+
+    return reduced_classes, borders
