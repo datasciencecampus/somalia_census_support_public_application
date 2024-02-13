@@ -146,10 +146,11 @@ stacked_background.shape
 
 # %%
 # creating rotated and mirror array
-stacked_background_rotated, stacked_background_rotated_filenames = stack_rotate(
-    stacked_background, stacked_background_filenames, expanded_outputs=True
-)
-stacked_background_rotated.shape
+if folder_dropdown.value == "training_data":
+    stacked_background_rotated, stacked_background_rotated_filenames = stack_rotate(
+        stacked_background, stacked_background_filenames, expanded_outputs=True
+    )
+    stacked_background_rotated.shape
 
 # %%
 # setting ramp as lower resolution
@@ -189,12 +190,15 @@ adjusted_brightness = adjust_brightness(
 # %%
 adjusted_contrast = adjust_contrast(stacked_images)
 
+# %%
+folder_dropdown.value
+
 # %% [markdown]
 # #### Expand Filenames List
 
 # %%
 all_stacked_filenames = []
-# Order of Final image array needs to be followed
+# Order of final image array needs to be followed
 if folder_dropdown.value == "training_data":
     all_stacked_filenames = np.concatenate(
         [stacked_filenames]
@@ -297,10 +301,12 @@ mask_rotated.shape
 mask_background = stack_background_arrays(mask_dir)
 mask_background.shape
 
-# %%
+# %% jupyter={"outputs_hidden": true}
 # creating rotated and mirror array
-mask_background_rotated = stack_rotate(mask_background, stacked_filenames)
-mask_background_rotated.shape
+if folder_dropdown.value == "training_data":
+    mask_background_rotated = stack_rotate(mask_background, stacked_filenames)
+    mask_background_rotated.shape
+
 
 # %% [markdown]
 # #### Additional augmentations
