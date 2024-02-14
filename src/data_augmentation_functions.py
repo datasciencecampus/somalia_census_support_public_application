@@ -336,22 +336,35 @@ def process_mask(mask, binary_borders):
 
 
 def create_class_borders_array(image_mask):
+    image_mask = np.copy(image_mask)
     kernel = np.ones((3, 3), np.uint8)
-    classes = np.unique(image_mask)
 
-    reduced_classes = image_mask.copy()
-    borders = np.zeros_like(image_mask)
+    # Create borders for Buildings
+    eroded_building = cv2.erode(
+        (image_mask == 1).astype(np.uint8), kernel, iterations=1
+    )
+    border_building = (image_mask == 1).astype(np.uint8) - eroded_building
+    image_mask[(border_building > 0) & (image_mask == 1)] = 1
 
-    for class_value in classes:
-        if class_value == 0:  # skip background
-            continue
+    # Create borders for Tents
+    eroded_tent = cv2.erode((image_mask == 2).astype(np.uint8), kernel, iterations=1)
+    border_tent = (image_mask == 2).astype(np.uint8) - eroded_tent
+    image_mask[(border_tent > 0) & (image_mask == 2)] = 2
 
-        eroded = cv2.erode(
-            (image_mask == class_value).astype(np.uint8), kernel, iterations=1
-        )
-        border = (image_mask == class_value).astype(np.uint8) - eroded
+    # Set interior of the polygons to 0 (background)
+    image_mask[(image_mask == 1) & (border_building == 0)] = 0
+    image_mask[(image_mask == 2) & (border_tent == 0)] = 0
 
-        borders[border > 0] = class_value
-        reduced_classes[border > 0] = class_value - 2  # reduce the original class by 2
+    return image_mask
 
-    return reduced_classes, borders
+
+def create_class_borders_batch(image_masks):
+    batch_size, height, width = image_masks.shape
+    result_masks = np.zeros_like(image_masks)
+
+    for i in range(batch_size):
+        image_mask = image_masks[i]
+        result_mask = create_class_borders_array(image_mask)
+        result_masks[i] = result_mask
+
+    return result_masks

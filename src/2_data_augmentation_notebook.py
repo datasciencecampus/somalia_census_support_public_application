@@ -86,7 +86,7 @@ from data_augmentation_functions import (
     hue_shift,
     adjust_brightness,
     adjust_contrast,
-    create_class_borders_array,
+    create_class_borders_batch,
 )
 
 
@@ -190,9 +190,6 @@ adjusted_brightness = adjust_brightness(
 # %%
 adjusted_contrast = adjust_contrast(stacked_images)
 
-# %%
-folder_dropdown.value
-
 # %% [markdown]
 # #### Expand Filenames List
 
@@ -259,13 +256,15 @@ all_stacked_images.shape
 # #### Padding
 
 # %%
-padding = 20
-all_stacked_images = np.pad(
+padding = 64
+
+# %%
+all_padded_images = np.pad(
     all_stacked_images,
     ((0, 0), (padding, padding), (padding, padding), (0, 0)),
     mode="constant",
 )
-all_stacked_images.shape
+all_padded_images.shape
 
 # %% [markdown]
 # #### Saving image array
@@ -274,7 +273,7 @@ all_stacked_images.shape
 img_filename = f"{folder_dropdown.value}_all_stacked_images.npy"
 
 # %%
-np.save(stacked_img / img_filename, all_stacked_images)
+np.save(stacked_img / img_filename, all_padded_images)
 
 # %%
 # clearing memory
@@ -293,7 +292,9 @@ stacked_masks.shape
 
 # %%
 # creating rotaed and mirror array
-mask_rotated = stack_rotate(stacked_masks, stacked_filenames)
+mask_rotated, mask_rotated_filenames = stack_rotate(
+    stacked_masks, stacked_filenames, expanded_outputs=True
+)
 mask_rotated.shape
 
 # %%
@@ -301,11 +302,10 @@ mask_rotated.shape
 mask_background = stack_background_arrays(mask_dir)
 mask_background.shape
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 # creating rotated and mirror array
 if folder_dropdown.value == "training_data":
     mask_background_rotated = stack_rotate(mask_background, stacked_filenames)
-    mask_background_rotated.shape
 
 
 # %% [markdown]
@@ -348,32 +348,61 @@ all_stacked_masks.shape
 all_stacked_masks.nbytes
 
 # %% [markdown]
-# #### Create border classes
+# ### Create border array
 
 # %%
-# create border of original polygon then reduce polygon by 2 in all_stacked_masks
-all_stacked_masks, all_stacked_edges = create_class_borders_array(all_stacked_masks)
+all_stacked_borders = create_class_borders_batch(all_stacked_masks)
+all_stacked_borders.shape
+
+# %% [markdown]
+# #### Sense checking images, masks, and borders
 
 # %%
-all_stacked_masks.shape
+import matplotlib.pyplot as plt
 
-# %%
-all_stacked_edges.shape
+img_num = 30
+
+fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(12, 8))
+
+axs[0].imshow(all_stacked_images[img_num])
+axs[0].set_title("Image")
+
+axs[1].imshow(all_stacked_masks[img_num])  #
+axs[1].set_title("Mask")
+
+axs[2].imshow(all_stacked_borders[img_num])
+axs[2].set_title("Border mask")
+
+plt.show()
 
 # %% [markdown]
 # #### Padding
 
 # %%
-all_stacked_masks = np.pad(
-    all_stacked_masks, ((0, 0), (padding, padding), (padding, padding)), mode="constant"
+all_padded_masks = np.pad(
+    all_stacked_masks,
+    ((0, 0), (padding, padding), (padding, padding)),
+    mode="constant",
+    constant_values=0,
 )
-all_stacked_masks.shape
+all_padded_masks.shape
 
 # %%
-all_stacked_edges = np.pad(
-    all_stacked_edges, ((0, 0), (padding, padding), (padding, padding)), mode="constant"
+all_padded_borders = np.pad(
+    all_stacked_borders,
+    ((0, 0), (padding, padding), (padding, padding)),
+    mode="constant",
+    constant_values=0,
 )
-all_stacked_edges.shape
+all_padded_borders.shape
+
+# %%
+n_classes = len(np.unique(all_padded_masks))
+n_classes
+
+# %%
+n_classes = len(np.unique(all_padded_borders))
+n_classes
 
 # %% [markdown]
 # #### Saving mask array
@@ -382,7 +411,7 @@ all_stacked_edges.shape
 mask_filename = f"{folder_dropdown.value}_all_stacked_masks.npy"
 
 # %%
-np.save(stacked_mask / mask_filename, all_stacked_masks)
+np.save(stacked_mask / mask_filename, all_padded_masks)
 
 # %% [markdown]
 # #### Saving edge array
@@ -391,7 +420,7 @@ np.save(stacked_mask / mask_filename, all_stacked_masks)
 edge_filename = f"{folder_dropdown.value}_all_stacked_edges.npy"
 
 # %%
-np.save(stacked_mask / edge_filename, all_stacked_edges)
+np.save(stacked_mask / edge_filename, all_padded_borders)
 
 # %% [markdown]
 # ## Clear outputs and remove variables<a name="clear"></a>
