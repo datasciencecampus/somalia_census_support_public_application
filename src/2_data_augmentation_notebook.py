@@ -256,7 +256,7 @@ all_stacked_images.shape
 # #### Padding
 
 # %%
-padding = 64
+padding = 8
 
 # %%
 all_padded_images = np.pad(
@@ -395,14 +395,6 @@ all_padded_borders = np.pad(
     constant_values=0,
 )
 all_padded_borders.shape
-
-# %%
-n_classes = len(np.unique(all_padded_masks))
-n_classes
-
-# %%
-n_classes = len(np.unique(all_padded_borders))
-n_classes
 
 # %% [markdown]
 # #### Saving mask array
