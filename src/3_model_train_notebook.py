@@ -62,12 +62,11 @@ print("Memory usage (gb):", memory_usage_gb)
 # ### Import libraries & custom functions
 
 # %%
-import random
 from pathlib import Path
 import datetime
 
 # %%
-import matplotlib.pyplot as plt
+
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -81,7 +80,7 @@ from tensorflow.keras.utils import Sequence
 # %%
 from functions_library import get_folder_paths
 from multi_class_unet_model_build import jacard_coef, get_model
-from loss_functions import get_sm_loss, get_combined_loss, get_focal_tversky_loss
+from loss_functions import get_sm_loss, get_combined_loss, get_tversky_loss
 
 # %% [markdown]
 # #### GPU Availability check
@@ -138,13 +137,17 @@ pynvml.nvmlShutdown()
 # #### Freeing GPU memory
 
 # %%
-# reset tensorflow session
-tf.keras.backend.clear_session()
+if free_gb < 10:
+    # reset tensorflow session
+    tf.keras.backend.clear_session()
 
-# %%
-# using CUDA operations
-cuda.select_device(0)
-cuda.close()
+    # Using CUDA operations
+    cuda.select_device(0)
+    cuda.close()
+
+    print("TensorFlow session cleared and CUDA operations performed.")
+else:
+    print("No need to clear TensorFlow session or perform CUDA operations.")
 
 # %% [markdown]
 # ### Set-up filepaths
@@ -168,7 +171,7 @@ outputs_dir = Path(folder_dict["outputs_dir"])
 # %%
 ramp = False
 if ramp:
-    ramp_masks = np.load(stacked_mask / "ramp_bentiu_south_sudan_stacked_masks.npy")
+    ramp_masks = np.load(stacked_mask / "ramp_bentiu_south_sudan_all_stacked_masks.npy")
 else:
     ramp_masks = None
 
@@ -181,9 +184,14 @@ validation_masks = np.load(stacked_mask / "validation_data_all_stacked_masks.npy
 validation_masks.shape
 
 # %%
-# joining ramp and training together
-# stacked_masks = training_masks
-stacked_masks = np.concatenate([training_masks, validation_masks], axis=0)
+# joining masks together
+if ramp:
+    stacked_masks = np.concatenate(
+        [training_masks, validation_masks, ramp_masks], axis=0
+    )
+else:
+    stacked_masks = np.concatenate([training_masks, validation_masks], axis=0)
+
 stacked_masks.shape
 
 # %%
@@ -208,17 +216,14 @@ n_classes
 stacked_masks_cat = to_categorical(stacked_masks, num_classes=n_classes)
 stacked_masks_cat.shape
 
-# %%
-slice_mask = stacked_masks_cat[52]
-plt.imshow(slice_mask.argmax(axis=-1))
-plt.show()
-
 # %% [markdown]
 # #### Images
 
 # %%
 if ramp:
-    ramp_images = np.load(stacked_img / "ramp_bentiu_south_sudan_stacked_images.npy")
+    ramp_images = np.load(
+        stacked_img / "ramp_bentiu_south_sudan_all_stacked_images.npy"
+    )
 else:
     ramp_images = None
 
@@ -232,12 +237,20 @@ validation_images.shape
 
 # %%
 # dropping 4 th channel to join with ramp
-# training_images = training_images[:, :, :, :3]
+if ramp:
+    training_images = training_images[:, :, :, :3]
+    validation_images = validation_images[:, :, :, :3]
+
 
 # %%
-# joining training and validation together
-# stacked_images = training_images
-stacked_images = np.concatenate([training_images, validation_images], axis=0)
+# joining images together
+if ramp:
+    stacked_images = np.concatenate(
+        [training_images, validation_images, ramp_images], axis=0
+    )
+else:
+    stacked_images = np.concatenate([training_images, validation_images], axis=0)
+
 stacked_images.shape
 
 # %%
@@ -247,63 +260,87 @@ training_images = []
 validation_images = []
 
 # %% [markdown]
-# ### Import filenames
+# #### Import filenames
 
 # %%
-# ramp_filenames = np.load(
-#     stacked_img / "ramp_bentiu_south_sudan_all_stacked_filenames.npy"
-# )
+if ramp:
+    ramp_filenames = np.load(
+        stacked_img / "ramp_bentiu_south_sudan_all_stacked_filenames.npy"
+    )
+else:
+    ramp_filenames = None
+
+# %%
 training_filenames = np.load(stacked_img / "training_data_all_stacked_filenames.npy")
+
+# %%
 validation_filenames = np.load(
     stacked_img / "validation_data_all_stacked_filenames.npy"
 )
 
-# stacked_filenames = training_filenames
-stacked_filenames = np.concatenate(
-    [
-        training_filenames,
-        validation_filenames,
-    ],
-    axis=0,
-)
+# %%
+# joining images together
+if ramp:
+    stacked_filenames = np.concatenate(
+        [training_filenames, validation_filenames, ramp_filenames], axis=0
+    )
+else:
+    stacked_filenames = np.concatenate(
+        [training_filenames, validation_filenames], axis=0
+    )
 
 stacked_filenames.shape
 
 # %% [markdown]
-# ### Sense checking images and masks correspond
+# #### Borders
 
 # %%
-# Create a random number to check both image and mask
-image_number = random.randint(0, len(stacked_images) - 1)
+training_edges = np.load(stacked_mask / "training_data_all_stacked_edges.npy")
+training_edges.shape
 
-# Get the BGR image data
-bgr_image = stacked_images[image_number, :, :, :3]
+# %%
+validation_edges = np.load(stacked_mask / "validation_data_all_stacked_edges.npy")
+validation_edges.shape
 
-# Convert BGR to RGB
-rgb_image = bgr_image[:, :, ::-1]
+# %%
+stacked_edges = np.concatenate([training_edges, validation_edges], axis=0)
 
-# Normalize the data to the [0.0, 1.0] range
-min_value = rgb_image.min()
-max_value = rgb_image.max()
-image_to_display_normalized = (rgb_image - min_value) / (max_value - min_value)
+# %%
+# encode building classes into training mask arrays
+stacked_edges_cat = to_categorical(stacked_edges, num_classes=n_classes)
+stacked_edges_cat.shape
 
-# Plot the RGB image and mask
-plt.figure(figsize=(12, 6))
-plt.subplot(121)
-plt.imshow(image_to_display_normalized)
-plt.subplot(122)
-plt.imshow(stacked_masks[image_number])
-plt.show()
-
+# %%
+# clearing out some memory
+ramp_edges = []
+training_edges = []
+validation_edges = []
 
 # %% [markdown]
 # ## Training parameters <a name="trainingparameters"></a>
 
 # %%
+# X_train, X_test, y_train, y_test, filenames_train, filenames_test = train_test_split(
+#     stacked_images,
+#     stacked_masks_cat,
+#     stacked_filenames,
+#     test_size=0.20,
+#     random_state=42,
+# )
+
+# %% [markdown]
+# ### Adding edges as model in/outputs
+
+# %%
+train_images = np.concatenate([stacked_images, stacked_images], axis=0)
+train_masks = np.concatenate([stacked_masks_cat, stacked_edges_cat], axis=0)
+train_filenames = np.concatenate([stacked_filenames, stacked_filenames], axis=0)
+
+# %%
 X_train, X_test, y_train, y_test, filenames_train, filenames_test = train_test_split(
-    stacked_images,
-    stacked_masks_cat,
-    stacked_filenames,
+    train_images,
+    train_masks,
+    train_filenames,
     test_size=0.20,
     random_state=42,
 )
@@ -320,21 +357,21 @@ frequency_weights = compute_class_weight(
 print(frequency_weights)
 
 # %%
-weights = [0.05, 0.05, 0.1, 0.4, 0.4]
-frequency_weights = np.array(weights, dtype=np.float64)
-print(frequency_weights)
+# weights = [0.2, 0.2, 0.2, 0.2, 0.2]
+# frequency_weights = np.array(weights, dtype=np.float64)
+# print(frequency_weights)
 
 # %% [markdown]
 # ## Model parameters <a name="modelparameters"></a>
 
 # %%
 # Extract img_height, img_width, and num_channels
-img_height, img_width, num_channels = (
+img_height, img_width, img_channels = (
     stacked_images.shape[1],
     stacked_images.shape[2],
     stacked_images.shape[3],
 )
-print(img_height, img_width, num_channels)
+print(img_height, img_width, img_channels)
 
 # %%
 stacked_images = []
@@ -343,14 +380,14 @@ stacked_filenames = []
 
 # %%
 # defined under training parameters
-model = get_model(n_classes, img_height, img_width, num_channels)
+model = get_model(n_classes, img_height, img_width, img_channels)
 
 # %% [markdown]
 # ### Epochs
 
 # %%
 # define number of epochs
-num_epochs = 300
+num_epochs = 250
 
 # %% [markdown]
 # ### Batch size
@@ -368,12 +405,31 @@ callbacks = [
     tf.keras.callbacks.TensorBoard(log_dir="logs"),
 ]
 
+
 # %% [markdown]
 # ### Loss functions
 
 # %%
+def tversky(y_true, y_pred):
+    alpha = 0.7
+    smooth = 1.0
+    y_true_pos = tf.reshape(y_true, [-1])
+    y_pred_pos = tf.reshape(y_pred, [-1])
+    true_pos = tf.reduce_sum(y_true_pos * y_pred_pos)
+    false_neg = tf.reduce_sum(y_true_pos * (1 - y_pred_pos))
+    false_pos = tf.reduce_sum((1 - y_true_pos) * y_pred_pos)
+    return (true_pos + smooth) / (
+        true_pos + alpha * false_neg + (1 - alpha) * false_pos + smooth
+    )
+
+
+def tversky_loss(y_true, y_pred):
+    return 1 - tversky(y_true, y_pred)
+
+
+# %%
 # choose loss function
-loss_function = "segmentation_models"  # specify the loss function you want to use: "combined", "segmentation_models, focal_tversky"
+loss_function = "combined"  # specify the loss function you want to use: "combined", "segmentation_models, focal_tversky"
 
 optimizer = "adam"  # specify the optimizer you want to use
 
@@ -390,7 +446,7 @@ elif loss_function == "combined":
     loss_weights = [0.5, 0.5]
 
 elif loss_function == "focal_tversky":
-    loss = get_focal_tversky_loss()
+    loss = get_tversky_loss()
 
 # %%
 model.compile(
