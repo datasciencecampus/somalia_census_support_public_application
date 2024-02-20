@@ -99,8 +99,7 @@ json_dir = Path(folder_dict["json_dir"])
 
 # %%
 # Set runid for outputs
-# runid = "qa_testing_2024-01-30_1655"
-runid = "qa_testing_2024-01-31_0658"
+runid = "qa_testing_2024-02-20_0735"
 
 
 # %% [markdown]
@@ -233,7 +232,7 @@ print("Mean IoU =", IOU_keras.result().numpy())
 #
 # Can use `index_number` column to identify the array number to plot below
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 grouped_tiles_df = create_grouped_filenames(filenames)
 grouped_tiles_df
 
@@ -241,7 +240,7 @@ grouped_tiles_df
 # ### Plotting individual tiles
 
 # %%
-test_img_number = 100
+test_img_number = 196
 test_img = X_test[test_img_number]
 
 # mask
@@ -332,7 +331,7 @@ plot_confusion_matrix(y_true, y_pred_arg, class_names)
 # %% [markdown]
 # ### Individual tile metrics
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 tile_metrics_df = calculate_tile_metrics(y_pred, y_test_argmax, class_names, filenames)
 tile_metrics_df = tile_metrics_df.set_index("tile")
 # tile_metrics_df.to_csv(str(outputs_dir) + "/" + runid + "_tile_metrics.csv")
@@ -371,7 +370,9 @@ update_displayed_data(tile_metrics_df, dropdown_tile_names.value)
 # * areas with good or bad predictions
 
 # %%
-plot_images_for_tile(model, X_test, y_test, grouped_tiles_df, dropdown_tile_names.value)
+plot_images_for_tile(
+    model, X_test, y_test_argmax, grouped_tiles_df, dropdown_tile_names.value
+)
 
 # %% [markdown]
 # ### Building counts
