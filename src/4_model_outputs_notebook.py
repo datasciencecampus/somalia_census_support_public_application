@@ -402,3 +402,61 @@ selected_polygons
 
 # %%
 # merged_df = gpd.sjoin(combined_gdf, geojson_data, how="left", predicate="intersects")
+
+# %%
+
+# %% [markdown]
+# ### Building best fit
+
+# %% jupyter={"outputs_hidden": true}
+tent_rank_indices = building_polygon_stats.groupby("filename")["tent_rank"].idxmin()
+tent_best_df = building_polygon_stats.loc[tent_rank_indices]
+
+building_rank_indices = building_polygon_stats.groupby("filename")[
+    "building_rank"
+].idxmin()
+building_best_df = building_polygon_stats.loc[building_rank_indices]
+
+# %%
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+
+axes[0].hist(
+    tent_best_df["accuracy_percentage_tent"], bins=10, edgecolor="black", color="green"
+)
+axes[0].set_title("tent")
+axes[0].set_xlabel("accuracy percentage")
+axes[0].set_ylabel("count")
+
+axes[1].hist(
+    building_best_df["accuracy_percentage_building"],
+    bins=10,
+    edgecolor="black",
+    color="purple",
+)
+axes[1].set_title("building")
+# axes[1].set_xlabel('accuracy percentage')
+# axes[1].set_ylabel('count')
+
+plt.tight_layout()
+
+plt.show()
+
+# %%
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+
+tent_best_df.boxplot(column="accuracy_percentage_tent", by="area", ax=axes[0])
+axes[0].set_title("tent")
+axes[0].set_xlabel("")
+axes[0].set_ylabel("")
+axes[0].grid(False)
+axes[0].set_ylim(-10)
+
+building_best_df.boxplot(column="accuracy_percentage_building", by="area", ax=axes[1])
+axes[1].set_title("building")
+axes[1].set_xlabel("")
+axes[1].set_ylabel("")
+axes[1].grid(False)
+axes[1].set_ylim(-10)
+
+plt.tight_layout()
+plt.show()

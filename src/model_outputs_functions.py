@@ -804,4 +804,21 @@ def building_stats(building_polygon_counts):
         * 100
     ).round(2)
 
+    building_polygon_counts["area"] = (
+        building_polygon_counts["filename"].str.split("_").str[2]
+    )
+    building_polygon_counts = building_polygon_counts[
+        ~building_polygon_counts["filename"].str.endswith("_background")
+    ]
+    building_polygon_counts["tent_rank"] = (
+        building_polygon_counts.groupby("filename")["accuracy_percentage_tent"]
+        .rank(ascending=False)
+        .astype(int)
+    )
+    building_polygon_counts["building_rank"] = (
+        building_polygon_counts.groupby("filename")["accuracy_percentage_building"]
+        .rank(ascending=False)
+        .astype(int)
+    )
+
     return building_polygon_counts
