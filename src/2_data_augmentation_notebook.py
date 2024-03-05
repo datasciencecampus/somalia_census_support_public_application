@@ -87,6 +87,7 @@ from data_augmentation_functions import (
     adjust_brightness,
     adjust_contrast,
     create_class_borders_batch,
+    split_arrays,
 )
 
 
@@ -220,10 +221,6 @@ elif folder_dropdown.value == "validation_data":
 
 all_stacked_filenames.shape
 
-# %%
-file_save = f"{folder_dropdown.value}_all_stacked_filenames.npy"
-np.save(stacked_img / file_save, all_stacked_filenames)
-
 # %% [markdown]
 # #### Final image array
 
@@ -251,29 +248,6 @@ elif folder_dropdown.value == "validation_data":
     )
 
 all_stacked_images.shape
-
-# %% [markdown]
-# #### Padding
-
-# %%
-padding = 8
-
-# %%
-all_padded_images = np.pad(
-    all_stacked_images,
-    ((0, 0), (padding, padding), (padding, padding), (0, 0)),
-    mode="constant",
-)
-all_padded_images.shape
-
-# %% [markdown]
-# #### Saving image array
-
-# %%
-img_filename = f"{folder_dropdown.value}_all_stacked_images.npy"
-
-# %%
-np.save(stacked_img / img_filename, all_padded_images)
 
 # %%
 # clearing memory
@@ -376,11 +350,57 @@ axs[2].set_title("Border mask")
 plt.show()
 
 # %% [markdown]
+# #### Creating tiles
+
+# %%
+create_tiles = False
+
+# %%
+if create_tiles:
+    new_images, new_masks, new_edges, new_filenames = split_arrays(
+        all_stacked_images,
+        all_stacked_masks,
+        all_stacked_borders,
+        all_stacked_filenames,
+        overlap_pixels=20,
+    )
+
+# %%
+if create_tiles:
+    print("images:", new_images.shape)
+    print("masks:", new_masks.shape)
+    print("edges Shape:", new_edges.shape)
+    print("filenames:", new_filenames.shape)
+
+# %% [markdown]
 # #### Padding
 
 # %%
+if create_tiles:
+    images_padding = new_images
+    masks_padding = new_masks
+    border_padding = new_edges
+    filesnames = new_filenames
+else:
+    images_padding = all_stacked_images
+    masks_padding = all_stacked_masks
+    border_padding = all_stacked_borders
+    filesnames = all_stacked_filenames
+
+# %%
+padding = 8
+
+# %%
+all_padded_images = np.pad(
+    images_padding,
+    ((0, 0), (padding, padding), (padding, padding), (0, 0)),
+    mode="constant",
+)
+all_padded_images.shape
+
+# %%
 all_padded_masks = np.pad(
-    all_stacked_masks,
+    masks_padding,
     ((0, 0), (padding, padding), (padding, padding)),
     mode="constant",
     constant_values=0,
@@ -389,12 +409,21 @@ all_padded_masks.shape
 
 # %%
 all_padded_borders = np.pad(
-    all_stacked_borders,
+    border_padding,
     ((0, 0), (padding, padding), (padding, padding)),
     mode="constant",
     constant_values=0,
 )
 all_padded_borders.shape
+
+# %% [markdown]
+# #### Saving image array
+
+# %%
+img_filename = f"{folder_dropdown.value}_all_stacked_images.npy"
+
+# %%
+np.save(stacked_img / img_filename, all_padded_images)
 
 # %% [markdown]
 # #### Saving mask array
@@ -406,13 +435,20 @@ mask_filename = f"{folder_dropdown.value}_all_stacked_masks.npy"
 np.save(stacked_mask / mask_filename, all_padded_masks)
 
 # %% [markdown]
-# #### Saving edge array
+# #### Saving border array
 
 # %%
 edge_filename = f"{folder_dropdown.value}_all_stacked_edges.npy"
 
 # %%
 np.save(stacked_mask / edge_filename, all_padded_borders)
+
+# %% [markdown]
+# #### Saving filenames array
+
+# %%
+file_save = f"{folder_dropdown.value}_all_stacked_filenames.npy"
+np.save(stacked_img / file_save, filesnames)
 
 # %% [markdown]
 # ## Clear outputs and remove variables<a name="clear"></a>
