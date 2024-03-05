@@ -292,6 +292,8 @@ plt.legend()
 plt.show()
 
 
+# %%
+
 # %% [markdown]
 # ### Buildings accuracy percentage
 
@@ -360,4 +362,37 @@ building_category_counts.reset_index(inplace=True)
 # save as csv
 building_category_counts.to_csv(building_category_csv_file_path, index=False)
 
+# %% [markdown]
+# ### Compare Model Runs
+
+# %% [markdown]
+# ##### Conditions
+
 # %%
+runid_2 = "qa_testing_2024-01-30_1655"
+
+# %%
+# load in second model run conditions txt file
+model_run_conditions_file_2 = f"{runid_2}_conditions.txt"
+
+model_run_conditions_2 = outputs_dir / model_run_conditions_file_2
+
+run_conditions_2 = open(model_run_conditions_2, "r")
+
+print(run_conditions_2.read())
+
+# %%
+model_run_conditions_1_df = pd.read_csv(
+    model_run_conditions, header=None, names=[runid]
+)
+
+model_run_conditions_2_df = pd.read_csv(
+    model_run_conditions_2, header=None, names=[runid_2]
+)
+
+# merge both condition dataframes
+merged_model_run_conditions = model_run_conditions_1_df.join(model_run_conditions_2_df)
+merged_model_run_conditions
+
+# %% [markdown]
+# ##### Accuracy
