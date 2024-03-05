@@ -41,29 +41,35 @@ model_dir = Path(folder_dict["models_dir"])
 # %%
 runid = "qa_testing_2024-01-31_0658"
 
+# %% [markdown]
+# #### Load run conditions
+
 # %%
-# load in txt file
-conditions_file = f"{runid}_conditions.txt"
+# load in model run conditions txt file
+model_run_conditions_file = f"{runid}_conditions.txt"
 
-conditions = outputs_dir / conditions_file
+model_run_conditions = outputs_dir / model_run_conditions_file
 
-run_conditions = open(conditions, "r")
+run_conditions = open(model_run_conditions, "r")
+
 print(run_conditions.read())
+
+# %% [markdown]
+# #### Save run conditions
 
 # %%
 # convert run conditions to dataframe
-conditions_df = pd.read_csv(conditions, header=None, names=[runid])
-conditions_df
+model_run_conditions_df = pd.read_csv(model_run_conditions, header=None, names=[runid])
 
-# %%
-conditions_csv_filename = runid + "_conditions.csv"
+model_run_conditions_csv_filename = runid + "_conditions.csv"
 
-# %%
-conditions_csv_file_path = outputs_dir / conditions_csv_filename
+model_run_conditions_csv_file_path = outputs_dir / model_run_conditions_csv_filename
 
-# %%
 # save run conditions to csv
-conditions_df.to_csv(conditions_csv_file_path, index=None)
+model_run_conditions_df.to_csv(model_run_conditions_csv_file_path, index=None)
+
+# %% [markdown]
+# ### Building Counts
 
 # %%
 # create df of csv building counts
@@ -73,7 +79,7 @@ csv_files = outputs_dir.glob(file_pattern)
 dataframes = []
 
 for csv_file in csv_files:
-    df = pd.read_csv(
+    building_polygon_stats_df = pd.read_csv(
         csv_file,
         usecols=[
             "filename",
@@ -84,45 +90,68 @@ for csv_file in csv_files:
         ],
     )
     # adding area name as column
-    df["area"] = df["filename"].str.split("_").str[2]
+    building_polygon_stats_df["area"] = (
+        building_polygon_stats_df["filename"].str.split("_").str[2]
+    )
     # adding csv file name as column
-    df["csv_name"] = csv_file.stem
-    dataframes.append(df)
+    building_polygon_stats_df["csv_name"] = csv_file.stem
+    dataframes.append(building_polygon_stats_df)
 
 
-merged_df = pd.concat(dataframes, ignore_index=True)
+merged_building_polygon_stats_df = pd.concat(dataframes, ignore_index=True)
+
 # removing background tiles
-merged_df = merged_df[~merged_df["filename"].str.endswith("_background")]
+merged_building_polygon_stats_df = merged_building_polygon_stats_df[
+    ~merged_building_polygon_stats_df["filename"].str.endswith("_background")
+]
 
-merged_df
+merged_building_polygon_stats_df
+
+# %%
+##########
 
 # %%
 # find rows where 'accuracy_percentage_tent' is -inf
-inf_rows = merged_df[merged_df["accuracy_percentage_tent"] == -np.inf]
+inf_rows_merged_building_polygon_stats_df = merged_building_polygon_stats_df[
+    merged_building_polygon_stats_df["accuracy_percentage_tent"] == -np.inf
+]
 
 # remove rows where 'accuracy_percentage_tent' is -inf
-merged_clean_df = merged_df[merged_df["accuracy_percentage_tent"] != -np.inf]
+merged_clean_building_polygon_stats_df = merged_building_polygon_stats_df[
+    merged_building_polygon_stats_df["accuracy_percentage_tent"] != -np.inf
+]
 
-merged_clean_df
+merged_clean_building_polygon_stats_df
+
+# %%
+####### find out where inf is coming from
+
+# %% [markdown]
+# #### Tent Stats
 
 # %%
 # group df by csv name, aggregate stats for tents and reset index
-grouped_df = (
-    merged_clean_df.groupby("csv_name")["accuracy_percentage_tent"]
+tent_stats_grouped_df = (
+    merged_clean_building_polygon_stats_df.groupby("csv_name")[
+        "accuracy_percentage_tent"
+    ]
     .agg(["min", "max", "mean"])
     .reset_index()
 )
 
 # rename columns
-grouped_df.columns = [
+tent_stats_grouped_df.columns = [
     "csv_name",
     "min_accuracy_tent",
     "max_accuracy_tent",
     "avg_accuracy_tent",
 ]
 
-grouped_df
+tent_stats_grouped_df
 
+
+# %%
+#### same as merged_clean_building_polygon_stats_df so not sure if needed?
 
 # %%
 exclude_filenames = [
@@ -132,52 +161,57 @@ exclude_filenames = [
 ]
 
 # removing low building count csvs
-filtered_df = merged_clean_df[~merged_clean_df["csv_name"].isin(exclude_filenames)]
+building_polygon_stats_filtered_df = merged_clean_building_polygon_stats_df[
+    ~merged_clean_building_polygon_stats_df["csv_name"].isin(exclude_filenames)
+]
 
-filtered_df
+building_polygon_stats_filtered_df
+
+# %%
+###########################
 
 # %% [markdown]
 # ### Tent accuracy percentage
 
 # %%
 # make copy of filtered_df
-filtered_bin_df = filtered_df.copy()
+tent_filtered_bin_df = building_polygon_stats_filtered_df.copy()
 
 # create bin edges and labels for accuracy category
 bin_edges = [-np.inf, 59, 79, 89, 91, np.inf]
 bin_labels = ["<59", "60-79", "80-89", "90-91", ">91"]
 
-filtered_bin_df["accuracy_category"] = pd.cut(
-    filtered_bin_df["accuracy_percentage_tent"],
+# create accuracy category column for tor tents
+tent_filtered_bin_df["accuracy_category"] = pd.cut(
+    tent_filtered_bin_df["accuracy_percentage_tent"],
     bins=bin_edges,
     labels=bin_labels,
     right=False,
 )
 
-filtered_bin_df
+tent_filtered_bin_df
 
 # %%
 # group df by filename and area for accuracy category
 category_counts = (
-    filtered_bin_df.groupby(["filename", "area"])["accuracy_category"]
+    tent_filtered_bin_df.groupby(["filename", "area"])["accuracy_category"]
     .value_counts()
     .unstack(fill_value=0)
 )
 
-category_counts = category_counts.sort_values(by=">91", ascending=False)
-category_counts
+tent_category_counts = category_counts.sort_values(by=">91", ascending=False)
+tent_category_counts
+
+# %% [markdown]
+# #### Save tent percentages
 
 # %%
-tent_category_counts = category_counts.copy()
-
 # transform index to columns so they appear in csv
 tent_category_counts.reset_index(inplace=True)
 
-# %%
 tent_category_csv_filename = runid + "_tent_percentage_accuracy.csv"
 tent_category_csv_file_path = outputs_dir / tent_category_csv_filename
 
-# %%
 # save as csv into outputs_dir
 tent_category_counts.to_csv(tent_category_csv_file_path, index=False)
 
@@ -263,26 +297,28 @@ plt.show()
 
 # %%
 # group df by csv name, aggregate stats for buildings and reset index
-grouped_df_building = (
-    merged_clean_df.groupby("csv_name")["accuracy_percentage_building"]
+building_stats_grouped_df = (
+    merged_clean_building_polygon_stats_df.groupby("csv_name")[
+        "accuracy_percentage_building"
+    ]
     .agg(["min", "max", "mean"])
     .reset_index()
 )
 
 # rename columns
-grouped_df_building.columns = [
+building_stats_grouped_df.columns = [
     "csv_name",
     "min_accuracy_building",
     "max_accuracy_building",
     "avg_accuracy_building",
 ]
 
-grouped_df_building
+building_stats_grouped_df
 
 
 # %%
 # make copy of filtered_df
-building_filtered_bin_df = filtered_df.copy()
+building_filtered_bin_df = building_polygon_stats_filtered_df.copy()
 
 # create bin edges and labels for accuracy category
 bin_edges = [-np.inf, 59, 79, 89, 91, np.inf]
@@ -310,11 +346,14 @@ building_category_counts = building_category_counts.sort_values(
 )
 building_category_counts
 
-# %%
-building_category_csv_filename = runid + "_building_percentage_accuracy.csv"
-building_category_csv_file_path = outputs_dir / building_category_csv_filename
+# %% [markdown]
+# #### Save building percentages
 
 # %%
+building_category_csv_filename = runid + "_building_percentage_accuracy.csv"
+
+building_category_csv_file_path = outputs_dir / building_category_csv_filename
+
 # transform index to columns so they appear in csv
 building_category_counts.reset_index(inplace=True)
 
