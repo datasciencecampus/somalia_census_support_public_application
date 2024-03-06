@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from functions_library import get_folder_paths
 from pathlib import Path
+import warnings
 
 # %%
 folder_dict = get_folder_paths()
@@ -108,33 +109,25 @@ merged_building_polygon_stats_df = merged_building_polygon_stats_df[
 merged_building_polygon_stats_df
 
 # %%
-##########
+# checks if `inf` present in this column
+inf_check = list(np.isinf(merged_building_polygon_stats_df["accuracy_percentage_tent"]))
 
-# %%
-# find rows where 'accuracy_percentage_tent' is -inf
-inf_rows_merged_building_polygon_stats_df = merged_building_polygon_stats_df[
-    merged_building_polygon_stats_df["accuracy_percentage_tent"] == -np.inf
-]
+if True not in inf_check:
+    print("NO `inf` present in dataframe")
 
-# remove rows where 'accuracy_percentage_tent' is -inf
-merged_clean_building_polygon_stats_df = merged_building_polygon_stats_df[
-    merged_building_polygon_stats_df["accuracy_percentage_tent"] != -np.inf
-]
-
-merged_clean_building_polygon_stats_df
-
-# %%
-####### find out where inf is coming from
-
-# %% [markdown]
-# #### Tent Stats
+# warning generated if `inf` in dataframe and shows where
+elif True in inf_check:
+    warnings.warn("inf PRESENT in dataframe - please check")
+    print(
+        merged_building_polygon_stats_df[
+            merged_building_polygon_stats_df["accuracy_percentage_tent"] == -np.inf
+        ]
+    )
 
 # %%
 # group df by csv name, aggregate stats for tents and reset index
 tent_stats_grouped_df = (
-    merged_clean_building_polygon_stats_df.groupby("csv_name")[
-        "accuracy_percentage_tent"
-    ]
+    merged_building_polygon_stats_df.groupby("csv_name")["accuracy_percentage_tent"]
     .agg(["min", "max", "mean"])
     .reset_index()
 )
@@ -151,7 +144,7 @@ tent_stats_grouped_df
 
 
 # %%
-#### same as merged_clean_building_polygon_stats_df so not sure if needed?
+#### same as merged_building_polygon_stats_df so not sure if needed?
 
 # %%
 exclude_filenames = [
@@ -161,8 +154,8 @@ exclude_filenames = [
 ]
 
 # removing low building count csvs
-building_polygon_stats_filtered_df = merged_clean_building_polygon_stats_df[
-    ~merged_clean_building_polygon_stats_df["csv_name"].isin(exclude_filenames)
+building_polygon_stats_filtered_df = merged_building_polygon_stats_df[
+    ~merged_building_polygon_stats_df["csv_name"].isin(exclude_filenames)
 ]
 
 building_polygon_stats_filtered_df
@@ -292,17 +285,13 @@ plt.legend()
 plt.show()
 
 
-# %%
-
 # %% [markdown]
 # ### Buildings accuracy percentage
 
 # %%
 # group df by csv name, aggregate stats for buildings and reset index
 building_stats_grouped_df = (
-    merged_clean_building_polygon_stats_df.groupby("csv_name")[
-        "accuracy_percentage_building"
-    ]
+    merged_building_polygon_stats_df.groupby("csv_name")["accuracy_percentage_building"]
     .agg(["min", "max", "mean"])
     .reset_index()
 )
@@ -396,3 +385,20 @@ merged_model_run_conditions
 
 # %% [markdown]
 # ##### Accuracy
+
+# %%
+## for loop
+
+# %%
+# file_pattern = "*_building_polygon_stats.csv"
+# csv_files = outputs_dir.glob(file_pattern)
+
+# %%
+# load in model run conditions txt file
+# model_run_conditions_file = f"{runid}_conditions.txt"
+
+# model_run_conditions = outputs_dir / model_run_conditions_file
+
+# run_conditions = open(model_run_conditions, "r")
+
+# print(run_conditions.read())
