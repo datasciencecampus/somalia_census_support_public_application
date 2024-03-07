@@ -6,7 +6,7 @@
 #
 # **Purpose**
 #
-# To export files or folders from local GCP storage to the WiP bucket.
+# To export files or folders from local GCP storage to the WiP or review bucket.
 #
 # **Things to note**
 #
@@ -55,18 +55,18 @@ folders = [
 ) = [Path(folder_dict[folder]) for folder in folders]
 
 
-# work-in-progress bucket
-bucket_name = folder_dict["wip_bucket"]
+# buckets
+wip_bucket = folder_dict["wip_bucket"]
+review_bucket = folder_dict["review_bucket"]
 # -
 
 # ### Read files in bucket <a name="read"></a>
 
-read_files_in_bucket(bucket_name)
+read_files_in_bucket(review_bucket)
 
 # ### Delete folder from bucket <a name="delete"></a>
 
-folder_name = "ramp_bentiu_south_sudan"
-delete_folder_from_bucket(bucket_name, folder_name)
+delete_folder_from_bucket(bucket_name=wip_bucket, folder_name="ramp_bentiu_south_sudan")
 
 # ### Exporting individual files <a name="exportfiles"></a>
 
@@ -74,20 +74,24 @@ run_id = "qa_testing_2024-01-30_1655"
 
 # #### Export model file to WiP bucket
 
-destination_folder_name = "models"
 for file in models.iterdir():
     if file.name.startswith(run_id):
-        move_file_to_bucket(file, bucket_name, destination_folder_name)
+        move_file_to_bucket(source_file_path=file, bucket_name=wip_bucket)
 
 # #### Export model outputs to WiP bucket
 
-destination_folder_name = "outputs"
 for file in outputs.iterdir():
     if file.name.startswith(run_id):
-        move_file_to_bucket(file, bucket_name, destination_folder_name)
+        move_file_to_bucket(source_file_path=file, bucket_name=wip_bucket)
 
 # ### Exporting folders <a name="exportfolders"></a>
 
-destination_folder_name = "models"
-source_folder = models
-move_folder_to_bucket(source_folder, bucket_name, destination_folder_name)
+move_folder_to_bucket(
+    source_folder=models, bucket_name=wip_bucket, destination_folder_name="models"
+)
+
+# #### Export .shp file to review bucket
+
+# example file for now
+file = Path("../outputs/qa_testing_2024-01-31_0658_ytest.npy")
+move_file_to_bucket(source_file_path=file, bucket_name=review_bucket)
