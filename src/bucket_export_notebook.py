@@ -6,7 +6,7 @@
 #
 # **Purpose**
 #
-# To export files or folders from local GCP storage to the WiP bucket.
+# To export files or folders from local GCP storage to the WiP or review bucket.
 #
 # **Things to note**
 #
@@ -55,17 +55,19 @@ folders = [
 ) = [Path(folder_dict[folder]) for folder in folders]
 
 
-# work-in-progress bucket
-bucket_name = folder_dict["wip_bucket"]
+# buckets
+wip_bucket = folder_dict["wip_bucket"]
+review_bucket = folder_dict["review_bucket"]
 # -
 
 # ### Read files in bucket <a name="read"></a>
 
-read_files_in_bucket(bucket_name)
+read_files_in_bucket(review_bucket)
 
 # ### Delete folder from bucket <a name="delete"></a>
 
 folder_name = "ramp_bentiu_south_sudan"
+bucket_name = wip_bucket
 delete_folder_from_bucket(bucket_name, folder_name)
 
 # ### Exporting individual files <a name="exportfiles"></a>
@@ -75,6 +77,7 @@ run_id = "qa_testing_2024-01-30_1655"
 # #### Export model file to WiP bucket
 
 destination_folder_name = "models"
+bucket_name = wip_bucket
 for file in models.iterdir():
     if file.name.startswith(run_id):
         move_file_to_bucket(file, bucket_name, destination_folder_name)
@@ -82,9 +85,18 @@ for file in models.iterdir():
 # #### Export model outputs to WiP bucket
 
 destination_folder_name = "outputs"
+bucket_name = wip_bucket
 for file in outputs.iterdir():
     if file.name.startswith(run_id):
         move_file_to_bucket(file, bucket_name, destination_folder_name)
+
+# #### Export model outputs to review bucket
+
+# example file for now
+file = Path("../outputs/qa_testing_2024-01-31_0658_ytest.npy")
+bucket_name = review_bucket
+destination_folder_name = "outputs"
+move_file_to_bucket(file, bucket_name, destination_folder_name)
 
 # ### Exporting folders <a name="exportfolders"></a>
 
