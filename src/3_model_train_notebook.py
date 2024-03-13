@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.6
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: venv-somalia-gcp
 #     language: python
@@ -81,6 +81,7 @@ from tensorflow.keras.utils import Sequence
 from functions_library import get_folder_paths
 from multi_class_unet_model_build import jacard_coef, get_model
 from loss_functions import get_sm_loss, get_combined_loss, get_tversky_loss
+from weight_functions import calculate_distance_weights
 
 # %% [markdown]
 # #### GPU Availability check
@@ -409,27 +410,8 @@ callbacks = [
     tf.keras.callbacks.TensorBoard(log_dir="logs"),
 ]
 
-
 # %% [markdown]
 # ### Loss functions
-
-# %%
-def tversky(y_true, y_pred):
-    alpha = 0.7
-    smooth = 1.0
-    y_true_pos = tf.reshape(y_true, [-1])
-    y_pred_pos = tf.reshape(y_pred, [-1])
-    true_pos = tf.reduce_sum(y_true_pos * y_pred_pos)
-    false_neg = tf.reduce_sum(y_true_pos * (1 - y_pred_pos))
-    false_pos = tf.reduce_sum((1 - y_true_pos) * y_pred_pos)
-    return (true_pos + smooth) / (
-        true_pos + alpha * false_neg + (1 - alpha) * false_pos + smooth
-    )
-
-
-def tversky_loss(y_true, y_pred):
-    return 1 - tversky(y_true, y_pred)
-
 
 # %%
 # choose loss function
