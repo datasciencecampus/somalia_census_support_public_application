@@ -22,3 +22,4 @@ outputs_dir: ../outputs
 footprints_dir: ../footprints
 
 wip_bucket: ons-net-zero-analysis-prod-somalia-wip
+review_bucket: ons-net-zero-analysis-prod-somalia-review

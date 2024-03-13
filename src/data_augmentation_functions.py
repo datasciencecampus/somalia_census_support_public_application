@@ -191,6 +191,7 @@ def adjust_brightness(images, factor):
 
 
 def adjust_contrast(images, clip_limit=2.0, tile_grid_size=(8, 8)):
+
     """
     Adjust the contrast of input images using Contrast Limited Adaptive Histogram Equalization (CLAHE).
 
