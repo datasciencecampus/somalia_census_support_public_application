@@ -86,7 +86,8 @@ from data_augmentation_functions import (
     hue_shift,
     adjust_brightness,
     adjust_contrast,
-    process_mask,
+    create_class_borders_batch,
+    split_arrays,
 )
 
 
@@ -146,14 +147,17 @@ stacked_background.shape
 
 # %%
 # creating rotated and mirror array
-stacked_background_rotated, stacked_background_rotated_filenames = stack_rotate(
-    stacked_background, stacked_background_filenames, expanded_outputs=True
-)
-stacked_background_rotated.shape
+if folder_dropdown.value == "training_data":
+    stacked_background_rotated, stacked_background_rotated_filenames = stack_rotate(
+        stacked_background, stacked_background_filenames, expanded_outputs=True
+    )
+    stacked_background_rotated.shape
 
 # %%
-# for ramp
-# stacked_images = stacked_images.astype(np.float16)
+# setting ramp as lower resolution
+if folder_dropdown.value == "ramp_bentiu_south_sudan":
+    stacked_images = stacked_images.astype(np.float16)
+    stacked_rotated = stacked_rotated.astype(np.float16)
 
 # %% [markdown]
 # #### Set augmentation
@@ -164,10 +168,6 @@ image_adjustments = {
     "brightness": {
         "enabled": True,
         "factor": 1.5,  # values <1 will decrease brightness while values >1 will increase brightness
-    },
-    "contrast": {
-        "enabled": True,
-        "factor": 2,  # values <1 will decrease contrast while values >1 will increase contrast
     },
 }
 
@@ -189,57 +189,65 @@ adjusted_brightness = adjust_brightness(
 # #### Contrast
 
 # %%
-# if image_adjustments["contrast"]["enabled"]:
-#     adjusted_contrast = adjust_contrast(stacked_images, image_adjustments["contrast"]["factor"])
-
-# %%
-adjusted_contrast = adjust_contrast(
-    stacked_images, image_adjustments["contrast"]["factor"]
-)
+adjusted_contrast = adjust_contrast(stacked_images)
 
 # %% [markdown]
 # #### Expand Filenames List
 
 # %%
 all_stacked_filenames = []
-# Order of Final image array needs to be followed
-all_stacked_filenames = np.concatenate(
-    [stacked_filenames] + [stacked_rotated_filenames]
-    # + [stacked_filenames]
-    + [stacked_filenames] + [stacked_filenames],
-    # + [stacked_background_filenames]
-    # + [stacked_background_rotated_filenames],
-    axis=0,
-)
+# Order of final image array needs to be followed
+if folder_dropdown.value == "training_data":
+    all_stacked_filenames = np.concatenate(
+        [stacked_filenames]
+        + [stacked_rotated_filenames]
+        + [stacked_filenames]
+        + [stacked_filenames]
+        + [stacked_filenames]
+        + [stacked_background_filenames]
+        + [stacked_background_rotated_filenames],
+        axis=0,
+    )
+
+elif folder_dropdown.value == "validation_data":
+    all_stacked_filenames = np.concatenate(
+        [stacked_filenames]
+        + [stacked_rotated_filenames]
+        + [stacked_filenames]
+        + [stacked_filenames]
+        + [stacked_filenames],
+        axis=0,
+    )
 
 all_stacked_filenames.shape
-
-# %%
-file_save = f"{folder_dropdown.value}_all_stacked_filenames.npy"
-np.save(stacked_img / file_save, all_stacked_filenames)
 
 # %% [markdown]
 # #### Final image array
 
 # %%
-all_stacked_images = np.concatenate(
-    [stacked_images] + [stacked_rotated]
-    # + [adjusted_hue]
-    + [adjusted_brightness] + [adjusted_contrast],
-    # + [stacked_background]
-    # + [stacked_background_rotated],
-    axis=0,
-)
+if folder_dropdown.value == "training_data":
+    all_stacked_images = np.concatenate(
+        [stacked_images]
+        + [stacked_rotated]
+        + [adjusted_hue]
+        + [adjusted_brightness]
+        + [adjusted_contrast]
+        + [stacked_background]
+        + [stacked_background_rotated],
+        axis=0,
+    )
+
+elif folder_dropdown.value == "validation_data":
+    all_stacked_images = np.concatenate(
+        [stacked_images]
+        + [stacked_rotated]
+        + [adjusted_hue]
+        + [adjusted_brightness]
+        + [adjusted_contrast],
+        axis=0,
+    )
+
 all_stacked_images.shape
-
-# %% [markdown]
-# #### Saving image array
-
-# %%
-img_filename = f"{folder_dropdown.value}_all_stacked_images.npy"
-
-# %%
-np.save(stacked_img / img_filename, all_stacked_images)
 
 # %%
 # clearing memory
@@ -258,7 +266,9 @@ stacked_masks.shape
 
 # %%
 # creating rotaed and mirror array
-mask_rotated = stack_rotate(stacked_masks, stacked_filenames)
+mask_rotated, mask_rotated_filenames = stack_rotate(
+    stacked_masks, stacked_filenames, expanded_outputs=True
+)
 mask_rotated.shape
 
 # %%
@@ -268,22 +278,9 @@ mask_background.shape
 
 # %%
 # creating rotated and mirror array
-mask_background_rotated = stack_rotate(mask_background, stacked_filenames)
-mask_background_rotated.shape
+if folder_dropdown.value == "training_data":
+    mask_background_rotated = stack_rotate(mask_background, stacked_filenames)
 
-# %% [markdown]
-# #### Create border classes
-
-# %%
-# Set to False for class-specific processing
-binary_borders = False
-
-for i, mask in enumerate(stacked_masks):
-    stacked_masks[i], test_mask = process_mask(mask, binary_borders)
-
-# %%
-# Check number of classes
-print(len(np.unique(stacked_masks)))
 
 # %% [markdown]
 # #### Additional augmentations
@@ -296,18 +293,137 @@ mask_hue, mask_brightness, mask_contrast = [np.copy(stacked_masks) for _ in rang
 # #### Final mask array
 
 # %%
-all_stacked_masks = np.concatenate(
-    [stacked_masks] + [mask_rotated]
-    # + [mask_hue]
-    + [mask_brightness] + [mask_contrast],
-    # + [mask_background]
-    # + [mask_background_rotated], axis=0
-)
+if folder_dropdown.value == "training_data":
+    all_stacked_masks = np.concatenate(
+        [stacked_masks]
+        + [mask_rotated]
+        + [mask_hue]
+        + [mask_brightness]
+        + [mask_contrast]
+        + [mask_background]
+        + [mask_background_rotated],
+        axis=0,
+    )
+
+elif folder_dropdown.value == "validation_data":
+    all_stacked_masks = np.concatenate(
+        [stacked_masks]
+        + [mask_rotated]
+        + [mask_hue]
+        + [mask_brightness]
+        + [mask_contrast],
+        axis=0,
+    )
+
 all_stacked_masks.shape
 
 # %%
-all_stacked_masks = all_stacked_masks.astype(np.int32)
+# all_stacked_masks = all_stacked_masks.astype(np.int32)
 all_stacked_masks.nbytes
+
+# %% [markdown]
+# ### Create border array
+
+# %%
+all_stacked_borders = create_class_borders_batch(all_stacked_masks)
+all_stacked_borders.shape
+
+# %% [markdown]
+# #### Sense checking images, masks, and borders
+
+# %%
+import matplotlib.pyplot as plt
+
+img_num = 30
+
+fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(12, 8))
+
+axs[0].imshow(all_stacked_images[img_num])
+axs[0].set_title("Image")
+
+axs[1].imshow(all_stacked_masks[img_num])  #
+axs[1].set_title("Mask")
+
+axs[2].imshow(all_stacked_borders[img_num])
+axs[2].set_title("Border mask")
+
+plt.show()
+
+# %% [markdown]
+# #### Creating tiles
+
+# %%
+create_tiles = False
+
+# %%
+if create_tiles:
+    new_images, new_masks, new_edges, new_filenames = split_arrays(
+        all_stacked_images,
+        all_stacked_masks,
+        all_stacked_borders,
+        all_stacked_filenames,
+        overlap_pixels=20,
+    )
+
+# %%
+if create_tiles:
+    print("images:", new_images.shape)
+    print("masks:", new_masks.shape)
+    print("edges Shape:", new_edges.shape)
+    print("filenames:", new_filenames.shape)
+
+# %% [markdown]
+# #### Padding
+
+# %%
+if create_tiles:
+    images_padding = new_images
+    masks_padding = new_masks
+    border_padding = new_edges
+    filesnames = new_filenames
+else:
+    images_padding = all_stacked_images
+    masks_padding = all_stacked_masks
+    border_padding = all_stacked_borders
+    filesnames = all_stacked_filenames
+
+# %%
+padding = 8
+
+# %%
+all_padded_images = np.pad(
+    images_padding,
+    ((0, 0), (padding, padding), (padding, padding), (0, 0)),
+    mode="constant",
+)
+all_padded_images.shape
+
+# %%
+all_padded_masks = np.pad(
+    masks_padding,
+    ((0, 0), (padding, padding), (padding, padding)),
+    mode="constant",
+    constant_values=0,
+)
+all_padded_masks.shape
+
+# %%
+all_padded_borders = np.pad(
+    border_padding,
+    ((0, 0), (padding, padding), (padding, padding)),
+    mode="constant",
+    constant_values=0,
+)
+all_padded_borders.shape
+
+# %% [markdown]
+# #### Saving image array
+
+# %%
+img_filename = f"{folder_dropdown.value}_all_stacked_images.npy"
+
+# %%
+np.save(stacked_img / img_filename, all_padded_images)
 
 # %% [markdown]
 # #### Saving mask array
@@ -316,7 +432,23 @@ all_stacked_masks.nbytes
 mask_filename = f"{folder_dropdown.value}_all_stacked_masks.npy"
 
 # %%
-np.save(stacked_mask / mask_filename, all_stacked_masks)
+np.save(stacked_mask / mask_filename, all_padded_masks)
+
+# %% [markdown]
+# #### Saving border array
+
+# %%
+edge_filename = f"{folder_dropdown.value}_all_stacked_edges.npy"
+
+# %%
+np.save(stacked_mask / edge_filename, all_padded_borders)
+
+# %% [markdown]
+# #### Saving filenames array
+
+# %%
+file_save = f"{folder_dropdown.value}_all_stacked_filenames.npy"
+np.save(stacked_img / file_save, filesnames)
 
 # %% [markdown]
 # ## Clear outputs and remove variables<a name="clear"></a>

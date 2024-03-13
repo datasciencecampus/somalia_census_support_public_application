@@ -134,50 +134,6 @@ def stack_background_arrays(directory, expanded_outputs=False):
         return background_arrays
 
 
-def stack_array_with_validation(directory, validation_area, expanded_outputs=False):
-    """
-    Stack all .npy files in the specified directory that contain the validation area.
-
-    Args:
-        directory (str or Path): The directroy containing the .npy files to stack.
-        excluded_word (str, optional): The word to include from file names.
-
-    Returns:
-        np.ndarray: The stacked array of images/masks.
-
-    """
-
-    # get all .npy files in the directory exlcuding background
-    array_files = [
-        file
-        for file in Path(directory).glob("*npy")
-        if validation_area in file.name and not file.name.endswith("background.npy")
-    ]
-
-    # sort the file names alphabetically
-    array_files = sorted(array_files)
-
-    # empty list for appending originals
-    array_list = []
-
-    # empty list or appending file names
-    val_filenames = []
-
-    # load each .npy and appent to list
-    for file in array_files:
-        np_array = np.load(file)
-        array_list.append(np_array)
-        val_filenames.append(file.stem)
-
-    # stack the arrays
-    stacked_images = np.stack(array_list, axis=0)
-
-    if expanded_outputs:
-        return stacked_images, val_filenames
-    else:
-        return stacked_images
-
-
 def hue_shift(images, shift):
     """
     Apply hue shift to an array of stacked images with RGBN channels
@@ -216,50 +172,73 @@ def hue_shift(images, shift):
 
 
 def adjust_brightness(images, factor):
+    """
+    Adjust the brightness of input images by multiplying RGB channels with a scalar factor.
+
+    Parameters:
+        images (numpy.ndarray): Array of input images with shape (batch_size, height, width, channels).
+        factor (float): Brightness adjustment factor.
+
+    Returns:
+        numpy.ndarray: Array of adjusted images with shape (batch_size, height, width, channels).
+    """
     adjusted_images = np.copy(images)
+
+    # Multiply RGB channels with the adjustment factor
     adjusted_images[..., :3] *= factor
 
     return adjusted_images
 
 
-def adjust_contrast(images, factor):
+def adjust_contrast(images, clip_limit=2.0, tile_grid_size=(8, 8)):
+    """
+    Adjust the contrast of input images using Contrast Limited Adaptive Histogram Equalization (CLAHE).
+
+    Parameters:
+        images (numpy.ndarray): Array of input images with shape (batch_size, height, width, channels).
+        clip_limit (float): Threshold for contrast limiting (default is 2.0).
+        tile_grid_size (tuple): Size of grid for histogram equalization (default is (8, 8)).
+
+    Returns:
+        numpy.ndarray: Array of adjusted images with shape (batch_size, height, width, channels).
+    """
+
+    # Create copy array
     adjusted_images = np.copy(images)
-    # scales the pixel values around a neutral point of 0.5 to effectively preserve the overall brightness while adjusting contrast
-    adjusted_images[..., :3] *= (adjusted_images[..., :3] - 0.5) * factor + 0.5
+
+    # Assuming images are in the range [0, 1], convert to uint8 for cv2
+    adjusted_images_uint8 = (adjusted_images * 255).astype(np.uint8)
+
+    # Iterate over the images and apply CLAHE to RGB channels
+    for i in range(len(adjusted_images_uint8)):
+        rgb_image = adjusted_images_uint8[i][:, :, :3]  # Extract RGB channels
+        nir_channel = adjusted_images_uint8[i][:, :, 3]  # Extract NIR channel
+
+        # Convert RGB image to LAB color space
+        lab_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2LAB)
+
+        # Split the LAB image into L, A, and B channels
+        l_channel, a_channel, b_channel = cv2.split(lab_image)
+
+        # Apply CLAHE to the L channel
+        clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
+        l_channel_clahe = clahe.apply(l_channel)
+
+        # Merge the processed L channel with the original A and B channels
+        lab_image_clahe = cv2.merge([l_channel_clahe, a_channel, b_channel])
+
+        # Convert LAB image back to RGB
+        rgb_image_clahe = cv2.cvtColor(lab_image_clahe, cv2.COLOR_LAB2RGB)
+
+        # Combine the adjusted RGB image with the original NIR channel
+        adjusted_images_uint8[i] = np.concatenate(
+            [rgb_image_clahe, np.expand_dims(nir_channel, axis=-1)], axis=-1
+        )
+
+    # Convert back to float in the range [0, 1]
+    adjusted_images = adjusted_images_uint8 / 255.0
 
     return adjusted_images
-
-
-def stack_images(
-    stacked_images,
-    background_images,
-    adjusted_hue,
-    adjusted_brightness,
-    adjusted_contrast,
-    include_hue_adjustment,
-    include_backgrounds,
-    include_brightness_adjustments,
-    include_contrast_adjustments,
-):
-    """Combine the different augementation stacks based on conditionals"""
-    all_stacked_images = stacked_images
-    if include_backgrounds:
-        all_stacked_images = np.concatenate(
-            [all_stacked_images] + [background_images], axis=0
-        )
-    if include_hue_adjustment:
-        all_stacked_images = np.concatenate(
-            [all_stacked_images] + [adjusted_hue], axis=0
-        )
-    if include_brightness_adjustments:
-        all_stacked_images = np.concatenate(
-            [all_stacked_images] + [adjusted_brightness], axis=0
-        )
-    if include_contrast_adjustments:
-        all_stacked_images = np.concatenate(
-            [all_stacked_images] + [adjusted_contrast], axis=0
-        )
-    return all_stacked_images
 
 
 def create_border(image_mask):
@@ -303,3 +282,106 @@ def process_mask(mask, binary_borders):
         mask_to_update[processed_image_mask == 4] = 4
 
     return mask_to_update, test_mask
+
+
+def create_class_borders_array(image_mask):
+    image_mask = np.copy(image_mask)
+    kernel = np.ones((3, 3), np.uint8)
+
+    # Create borders for Buildings
+    eroded_building = cv2.erode(
+        (image_mask == 1).astype(np.uint8), kernel, iterations=1
+    )
+    border_building = (image_mask == 1).astype(np.uint8) - eroded_building
+    image_mask[(border_building > 0) & (image_mask == 1)] = 1
+
+    # Create borders for Tents
+    eroded_tent = cv2.erode((image_mask == 2).astype(np.uint8), kernel, iterations=1)
+    border_tent = (image_mask == 2).astype(np.uint8) - eroded_tent
+    image_mask[(border_tent > 0) & (image_mask == 2)] = 2
+
+    # Set interior of the polygons to 0 (background)
+    image_mask[(image_mask == 1) & (border_building == 0)] = 0
+    image_mask[(image_mask == 2) & (border_tent == 0)] = 0
+
+    return image_mask
+
+
+def create_class_borders_batch(image_masks):
+    """
+    Create border masks for each mask in the batch.
+
+    Parameters:
+        image_masks (numpy.ndarray): Array of binary masks with shape (batch_size, height, width).
+
+    Returns:
+        numpy.ndarray: Array of border masks with shape (batch_size, height, width).
+    """
+
+    # Set parameters
+    batch_size, height, width = image_masks.shape
+    # Empty mask array
+    result_masks = np.zeros_like(image_masks)
+
+    # Iterate over each mask in the batch and create border masks
+    for i in range(batch_size):
+        image_mask = image_masks[i]
+        result_mask = create_class_borders_array(image_mask)
+        result_masks[i] = result_mask
+
+    return result_masks
+
+
+def split_arrays(images, masks, edges, filenames, overlap_pixels=20):
+    """
+    Split input images, masks, and edges into smaller tiles.
+
+    Parameters:
+        images (numpy.ndarray): Array of input images with shape (batch_size, height, width, channels).
+        masks (numpy.ndarray): Array of masks with shape (batch_size, height, width).
+        edges (numpy.ndarray): Array of edge masks with shape (batch_size, height, width).
+        filenames (list): List of filenames corresponding to the images.
+        overlap_pixels (int): Number of overlapping pixels between tiles (default is 20).
+
+    Returns:
+        tuple: A tuple containing four numpy arrays representing the split images, masks, edges, and the corresponding filenames.
+            - new_images: Array of split images with shape (batch_size * 4, tile_height, tile_width, channels).
+            - new_masks: Array of split masks with shape (batch_size * 4, tile_height, tile_width).
+            - new_edges: Array of split edge masks with shape (batch_size * 4, tile_height, tile_width).
+            - new_filenames: List of filenames corresponding to the split images.
+    """
+
+    # Set parameters
+    batch_size, height, width, channels = images.shape
+
+    # Reshape filenames to match the new batch size
+    new_filenames = []
+    for filename in filenames:
+        new_filenames.extend(
+            [filename + "_a", filename + "_b", filename + "_c", filename + "_d"]
+        )
+
+    new_filenames = np.array(new_filenames)
+
+    # Calculate the new tile size
+    tile_height = height // 2
+    tile_width = width // 2
+
+    # Initialize arrays to store split images, masks, and edges
+    new_images = np.empty((batch_size * 4, tile_height, tile_width, channels))
+    new_masks = np.empty((batch_size * 4, tile_height, tile_width))
+    new_edges = np.empty((batch_size * 4, tile_height, tile_width))
+
+    # Split each image, mask, and edge into four tiles
+    for i in range(batch_size):
+        for j, suffix in enumerate(["_a", "_b", "_c", "_d"]):
+            h_start = max(0, (j // 2) * (tile_height - overlap_pixels))
+            h_end = min(height, h_start + tile_height)
+            w_start = max(0, (j % 2) * (tile_width - overlap_pixels))
+            w_end = min(width, w_start + tile_width)
+
+            new_images[i * 4 + j] = images[i, h_start:h_end, w_start:w_end, :]
+            new_masks[i * 4 + j] = masks[i, h_start:h_end, w_start:w_end]
+            new_edges[i * 4 + j] = edges[i, h_start:h_end, w_start:w_end]
+
+    return new_images, new_masks, new_edges, new_filenames
