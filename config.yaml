@@ -1,16 +1,10 @@
 training_dir: ../data/training_data
-validation_dir: ../data/validation_data
-json: ../data/json
-
 training_img_dir: ../data/training_data/img
 training_mask_dir: ../data/training_data/mask
+
+validation_dir: ../data/validation_data
 validation_img_dir: ../data/validation_data/img
 validation_mask_dir: ../data/validation_data/mask
-
-models_dir: ../models
-outputs_dir: ../outputs
-
-wip_bucket: ons-net-zero-analysis-prod-somalia-wip
 
 ramp_dir: ../data/ramp_bentiu_south_sudan
 ramp_mask: ../data/ramp_bentiu_south_sudan/mask
@@ -21,3 +15,10 @@ stacked_img_dir: ../data/stacked_arrays/img
 stacked_mask_dir: ../data/stacked_arrays/mask
 
 json_dir: ../data/json_dir
+
+models_dir: ../models
+outputs_dir: ../outputs
+
+footprints_dir: ../footprints
+
+wip_bucket: ons-net-zero-analysis-prod-somalia-wip
