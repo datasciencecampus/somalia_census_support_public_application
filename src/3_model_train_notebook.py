@@ -349,6 +349,10 @@ X_train, X_test, y_train, y_test, filenames_train, filenames_test = train_test_s
 # ## Weights <a name="weights"></a>
 
 # %%
+google_weights = calculate_distance_weights(stacked_masks_cat)
+print(google_weights)
+
+# %%
 frequency_weights = compute_class_weight(
     "balanced",
     classes=np.unique(stacked_masks),
@@ -443,7 +447,7 @@ if loss_function == "segmentation_models":
 
 elif loss_function == "combined":
     loss = get_combined_loss()
-    loss_weights = [0.5, 0.5]
+    loss_weights = google_weights
 
 elif loss_function == "focal_tversky":
     loss = get_tversky_loss()
@@ -530,8 +534,8 @@ history1 = model.fit(
 
 # %%
 # optional
-# %load_ext tensorboard
-# %tensorboard --logdir logs/
+# #%load_ext tensorboard
+# #%tensorboard --logdir logs/
 
 # %% [markdown]
 # ### Saving files
@@ -574,6 +578,7 @@ y_pred_filename = f"{runid}_ypred.npy"
 y_test_filename = f"{runid}_ytest.npy"
 filenames_test_filename = f"{runid}_filenamestest.npy"
 
+
 np.save(outputs_dir.joinpath(X_test_filename), X_test)
 np.save(outputs_dir.joinpath(y_pred_filename), y_pred)
 np.save(outputs_dir.joinpath(y_test_filename), y_test)
@@ -583,6 +588,4 @@ np.save(outputs_dir.joinpath(filenames_test_filename), filenames_test)
 # ## Clear outputs and remove variables<a name="clear"></a>
 
 # %%
-# %reset -f
-
-# %%
+# #%reset -f

@@ -150,7 +150,7 @@ def plot_confusion_matrix(y_true, y_pred, labels):
     )
 
     # plot the confusion matrix
-    display.plot(cmap="cividis", values_format=".2%")
+    display.plot(cmap="cividis")
 
     # show the plot
     plt.show()

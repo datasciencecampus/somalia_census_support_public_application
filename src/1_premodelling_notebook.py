@@ -155,6 +155,7 @@ for mask_path in mask_dir.glob("*.geojson"):
 # save json file
 folder_name = folder_dropdown.value
 file_path = data_dir / "json_dir" / f"{folder_name}_features_dict.json"
+file_path.parent.mkdir(parents=True, exist_ok=True)
 with open(file_path, "w") as json_file:
     json.dump(features_dict, json_file)
 

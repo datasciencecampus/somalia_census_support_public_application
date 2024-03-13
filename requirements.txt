@@ -13,3 +13,6 @@ Path
 datetime
 google.cloud
 pytz
+pynvml
+numba
+opencv-python
