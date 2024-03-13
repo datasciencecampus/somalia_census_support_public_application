@@ -41,6 +41,7 @@ folders = [
     "ramp_img",
     "models_dir",
     "outputs_dir",
+    "footprints_dir",
 ]
 
 (
@@ -52,6 +53,7 @@ folders = [
     ramp_img,
     models,
     outputs,
+    footprints,
 ) = [Path(folder_dict[folder]) for folder in folders]
 
 
@@ -66,8 +68,8 @@ read_files_in_bucket(review_bucket)
 
 # ### Delete folder from bucket <a name="delete"></a>
 
-folder_name = "ramp_bentiu_south_sudan"
-bucket_name = wip_bucket
+folder_name = "outputs"
+bucket_name = review_bucket
 delete_folder_from_bucket(bucket_name, folder_name)
 
 # ### Exporting individual files <a name="exportfiles"></a>
@@ -92,10 +94,11 @@ for file in outputs.iterdir():
 
 # #### Export model outputs to review bucket
 
-# example file for now
-file = Path("../outputs/qa_testing_2024-01-31_0658_ytest.npy")
+file_to_move = "training_data_baidoa_10_jo.geojson"
+
+file = footprints / file_to_move
 bucket_name = review_bucket
-destination_folder_name = "outputs"
+destination_folder_name = "footprints"
 move_file_to_bucket(file, bucket_name, destination_folder_name)
 
 # ### Exporting folders <a name="exportfolders"></a>
