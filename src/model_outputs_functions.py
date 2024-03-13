@@ -12,7 +12,6 @@
 
 
 import pandas as pd
-import cv2
 import json
 import numpy as np
 from pathlib import Path
@@ -165,323 +164,6 @@ def remove_rows_by_index(df, word):
     df = df.set_index("Tile")
 
     return df
-
-
-def compute_predicted_counts(y_pred, filenames_test):
-    """
-    Compute the counts of each class in each tile for predicted arrays.
-
-    Args:
-        y_pred (ndarray): Predicted array with shape (batch_size, height, width, num_classes).
-        filenames_test (ndarray): Array with filenames for each tile.
-
-    Returns:
-        DataFrame: Pandas DataFrame containing the counts of each class in each sample.
-    """
-
-    class_counts_pred = []
-    class_labels = {0: "Background", 1: "Building", 2: "Tent"}
-
-    for tile_index in range(y_pred.shape[0]):
-        tile_counts_pred = {}
-
-        for class_index, class_label in class_labels.items():
-            if class_label == "background":
-                continue
-
-            # Extract the predicted mask for the current class
-            class_mask_pred = np.argmax(y_pred[tile_index], axis=-1) == class_index
-
-            # Perform connected component analysis for predicted counts
-            num_labels_pred, labeled_mask_pred = cv2.connectedComponents(
-                class_mask_pred.astype(np.uint8)
-            )
-            # Count the number of objects for the current class in the current tile
-            num_objects_pred = num_labels_pred - 1
-            tile_counts_pred[class_label] = num_objects_pred
-
-        class_counts_pred.append(tile_counts_pred)
-
-    # Create a pandas DataFrame
-    df = pd.DataFrame(columns=list(class_labels.values()))
-
-    # Populate the DataFrame with the predicted counts for each class in each tile
-    for tile_index in range(y_pred.shape[0]):
-        tile_counts_pred = class_counts_pred[tile_index]
-        row_data = {}
-
-        for class_label in class_labels.values():
-            if class_label != "Background":
-                pred_count = tile_counts_pred.get(class_label, 0)
-                row_data[class_label] = pred_count
-
-        df = df.append(row_data, ignore_index=True)
-
-    df.index = filenames_test
-    df.index.name = "Tile"
-    df = df.reindex(columns=["Tent", "Building"])
-
-    # change column names for Tent and Building
-    df = df.rename(columns={"Tent": "tent_computed", "Building": "building_computed"})
-
-    return df
-
-
-def compute_actual_counts(filenames_test):
-    """
-    Compute the counts of each class in each tile from the actual JSON files.
-
-    Args:
-        filenames_test (ndarray): Array with filenames for each tile.
-
-    Returns:
-        DataFrame: Pandas DataFrame containing the counts of each class in each sample.
-    """
-
-    class_counts_actual = []
-
-    # Load in the actual feature numbers from geoJSONs
-    features_file = mask_dir.joinpath("feature_dict.json")
-
-    with open(features_file) as f:
-        feature_data = json.load(f)
-
-    for filename in filenames_test:
-        if filename in feature_data:
-            class_counts_actual.append(feature_data[filename])
-        else:
-            print(filename)
-
-    # Create a pandas DataFrame
-    df = pd.DataFrame(
-        columns=[
-            "Tile",
-            "tent_actual",
-            "building_actual",
-            "tent_average",
-            "building_average",
-        ]
-    )
-    # Populate the DataFrame with the actual counts for each class in each tile
-    for tile_index in range(len(filenames_test)):
-        tile_counts_actual = class_counts_actual[tile_index]
-        row_data = {"Tile": filenames_test[tile_index]}
-
-        for class_label in ["tent", "building"]:
-            actual_count = tile_counts_actual.get(class_label, 0)
-            row_data[class_label + "_actual"] = actual_count
-
-            row_data["tent_average"] = feature_data[filenames_test[tile_index]].get(
-                "tent_average", 0
-            )
-            row_data["building_average"] = feature_data[filenames_test[tile_index]].get(
-                "building_average", 0
-            )
-
-        df = df.append(row_data, ignore_index=True)
-    df.set_index("Tile", inplace=True)
-
-    df = df.reindex(
-        columns=["tent_actual", "building_actual", "tent_average", "building_average"]
-    )
-
-    return df
-
-
-def compute_object_counts(
-    y_pred, filenames_test, average_building_size, average_tent_size
-):
-    """
-    Compute the number of individual objects for each class in a new object based on average sizes.
-
-    Args:
-        y_pred (ndarray): Predicted array with shape (batch_size, height, width, num_classes).
-        filenames_test (ndarray): Array with filenames for each tile.
-        average_building_size (float): Average size of a building object in square meters.
-        average_tent_size (float): Average size of a tent object in square meters.
-
-    Returns:
-        DataFrame: Pandas DataFrame containing the number of individual objects for each class in each sample.
-    """
-
-    class_labels = {1: "building", 2: "tent"}
-    object_counts = []
-
-    for tile_index in range(y_pred.shape[0]):
-        tile_objects = {}
-        for class_index, class_label in class_labels.items():
-
-            # Extract the predicted mask for the current class
-            class_mask_pred = np.argmax(y_pred[tile_index], axis=-1) == class_index
-            # Compute the sum of pixels for the current class in the current tile
-            pixel_sum = np.sum(class_mask_pred)
-
-            # Convert pixel sum to area in square meters
-            area = pixel_sum * 0.5  # Assuming each pixel represents 0.5m
-            if class_label == "building":
-                object_count = area / average_building_size
-            elif class_label == "tent":
-                object_count = area / average_tent_size
-            else:
-                object_count = 0
-
-            tile_objects[class_label + "_object_count"] = object_count
-        object_counts.append(tile_objects)
-
-    # Create a pandas DataFrame
-    df = pd.DataFrame(
-        columns=["Tile"]
-        + [class_label + "_object_count" for class_label in class_labels.values()]
-    )
-
-    # Populate the DataFrame with the number of objects for each class in each tile
-    for tile_index, filename in enumerate(filenames_test):
-        tile_objects = object_counts[tile_index]
-        row_data = {"Tile": filename}
-        for class_label in class_labels.values():
-            row_data[class_label + "_object_count"] = tile_objects.get(
-                class_label + "_object_count", 0
-            )
-
-        df = df.append(row_data, ignore_index=True)
-
-    df.set_index("Tile", inplace=True)
-
-    return df
-
-
-def compute_pixel_counts(y_pred, filenames_test):
-    """
-    Compute the number of individual objects for each class in a new object based on average sizes.
-
-    Args:
-        y_pred (ndarray): Predicted array with shape (batch_size, height, width, num_classes).
-        filenames_test (ndarray): Array with filenames for each tile.
-
-    Returns:
-        DataFrame: Pandas DataFrame containing the number of individual objects for each class in each sample.
-    """
-
-    class_labels = {1: "building", 2: "tent"}
-    object_counts = []
-
-    pixel_area = 0.5
-
-    for tile_index in range(y_pred.shape[0]):
-        tile_objects = {}
-        for class_index, class_label in class_labels.items():
-
-            # Extract the predicted mask for the current class
-            class_mask_pred = np.argmax(y_pred[tile_index], axis=-1) == class_index
-            # Compute the sum of pixels for the current class in the current tile
-            pixel_sum = np.sum(class_mask_pred)
-
-            # Convert pixel sum to area in square meters
-            area = pixel_sum * pixel_area  # Assuming each pixel represents 0.5m
-            tile_objects[class_label + "_area"] = area
-            tile_objects[class_label + "_pixel_sum"] = pixel_sum
-
-        object_counts.append(tile_objects)
-
-    # Create a pandas DataFrame
-    df = pd.DataFrame(
-        columns=["Tile"]
-        + [class_label + "_area" for class_label in class_labels.values()]
-        + [class_label + "_pixel_sum" for class_label in class_labels.values()]
-    )
-
-    # Populate the DataFrame with the number of objects for each class in each tile
-    for tile_index, filename in enumerate(filenames_test):
-        tile_objects = object_counts[tile_index]
-        row_data = {"Tile": filename}
-        for class_label in class_labels.values():
-            row_data[class_label + "_area"] = tile_objects.get(class_label + "_area", 0)
-            row_data[class_label + "_pixel_sum"] = tile_objects.get(
-                class_label + "_pixel_sum", 0
-            )
-
-        df = df.append(row_data, ignore_index=True)
-
-    df.set_index("Tile", inplace=True)
-
-    return df
-
-
-def make_pixel_stats(dataframe):
-    """
-    Calculates and merges statistics for building and tent object counts.
-
-    Args:
-        dataframe (DataFrame): Input DataFrame containing the columns 'Building_actual', 'Tent_actual',
-                              'tent_average', 'building_average', Building_object_count', 'Tent_object_count'.
-
-    Returns:
-        DataFrame: Merged DataFrame containing statistics for calculated columns and reference columns
-
-    """
-    # reset index to have 'tile' as regular column
-    dataframe_reset = dataframe.reset_index()
-
-    # columns for ref
-    col_for_ref = ["building_actual", "tent_actual", "tent_average", "building_average"]
-
-    # take reference figures and group by tile for first df
-    ref_fig_df = dataframe_reset.groupby("Tile")[col_for_ref].max()
-
-    # columns for stats
-    col_for_stats = ["building_object_count", "tent_object_count"]
-
-    # second df with summary stats for selected columns
-    pixel_stats_df = dataframe_reset.groupby("Tile")[col_for_stats].agg(
-        ["min", "max", "mean"]
-    )
-    # rename columns with building and tent to keep on one level
-    pixel_stats_df.columns = [f"{col}_{label}" for col, label in pixel_stats_df.columns]
-
-    # merge two df on 'tile' column
-    pixel_stats_final_df = pixel_stats_df.merge(ref_fig_df, on="Tile")
-
-    return pixel_stats_final_df
-
-
-def make_computed_stats(dataframe):
-    """
-    Calculates and merges statistics for building and tent object counts.
-
-    Args:
-        dataframe (DataFrame): Input DataFrame containing the columns 'Building_actual', 'Tent_actual',
-                              'tent_average', 'building_average', Building_object_count', 'Tent_object_count'.
-
-    Returns:
-        DataFrame: Merged DataFrame containing statistics for calculated columns and reference columns
-
-    """
-    # reset index to have 'tile' as regular column
-    dataframe_reset = dataframe.reset_index()
-
-    # columns for ref
-    col_for_ref = ["building_actual", "tent_actual"]
-
-    # take reference figures and group by tile for first df
-    ref_fig_df = dataframe_reset.groupby("Tile")[col_for_ref].max()
-
-    # columns for stats
-    col_for_stats = ["building_computed", "tent_computed"]
-
-    # second df with summary stats for selected columns
-    stats_df = dataframe_reset.groupby("Tile")[col_for_stats].agg(
-        ["min", "max", "mean"]
-    )
-    # rename columns with building and tent to keep on one level
-    stats_df.columns = [f"{col}_{label}" for col, label in stats_df.columns]
-
-    # merge two df on 'tile' column
-    stats_final_df = stats_df.merge(ref_fig_df, on="Tile")
-
-    return stats_final_df
-
-
-# %%
 
 
 def create_grouped_filenames(filenames):
@@ -754,7 +436,7 @@ def process_json_files(json_dir, grouped_counts):
 def building_stats(building_polygon_counts):
     """
     Preprocess building counts DataFrame by filling NaN values, setting numerical columns to whole numbers,
-    and creating columns to show count and percentage differences between actual and computed polygons.
+    and creating columns to show count and accuracy percentage differences between actual and computed polygons.
 
     Parameters:
     - building_polygon_counts (pd.DataFrame): DataFrame containing building counts data.
@@ -762,36 +444,64 @@ def building_stats(building_polygon_counts):
     Returns:
     - pd.DataFrame: Preprocessed DataFrame with the specified modifications.
     """
+    # Create a copy of the DataFrame
+    building_polygon_copy = building_polygon_counts.copy()
 
     # Fill NaN values in 'building_actual' and 'tent_actual' columns with zeros
-    building_polygon_counts["building_actual"].fillna(0, inplace=True)
-    building_polygon_counts["tent_actual"].fillna(0, inplace=True)
+    building_polygon_copy["building_actual"].fillna(0, inplace=True)
+    building_polygon_copy["tent_actual"].fillna(0, inplace=True)
 
     # Set specified numerical columns to whole numbers
     numerical_columns = ["building_actual", "tent_actual"]
-    building_polygon_counts[numerical_columns] = building_polygon_counts[
-        numerical_columns
+    building_polygon_copy.loc[:, numerical_columns] = building_polygon_copy.loc[
+        :, numerical_columns
     ].astype(int)
 
     # Create columns to show count difference between actual and computed polygons
-    building_polygon_counts["building_diff"] = (
-        building_polygon_counts["building_actual"]
-        - building_polygon_counts["buildings"]
+    building_polygon_copy["building_diff"] = (
+        building_polygon_copy["buildings"] - building_polygon_copy["building_actual"]
     )
-    building_polygon_counts["tent_diff"] = (
-        building_polygon_counts["tent_actual"] - building_polygon_counts["tents"]
+    building_polygon_copy["tent_diff"] = (
+        building_polygon_copy["tents"] - building_polygon_copy["tent_actual"]
     )
 
-    # Create columns to show percentage difference between actual and computed polygons
-    building_polygon_counts["%_change_tent"] = (
-        (building_polygon_counts["tent_diff"] / building_polygon_counts["tents"]) * 100
-    ).round(0)
-    building_polygon_counts["%_change_building"] = (
+    # Create columns to show accuracy percentage difference between actual and computed polygons
+    building_polygon_copy["accuracy_percentage_tent"] = (
         (
-            building_polygon_counts["building_diff"]
-            / building_polygon_counts["buildings"]
+            1
+            - abs(
+                building_polygon_copy["tent_diff"]
+                / building_polygon_copy["tent_actual"]
+            )
         )
         * 100
-    ).round(0)
+    ).round(2)
+    building_polygon_copy["accuracy_percentage_building"] = (
+        (
+            1
+            - abs(
+                building_polygon_copy["building_diff"]
+                / building_polygon_copy["building_actual"]
+            )
+        )
+        * 100
+    ).round(2)
 
-    return building_polygon_counts
+    building_polygon_copy["area"] = (
+        building_polygon_copy["filename"].str.split("_").str[2]
+    )
+    building_polygon_copy = building_polygon_copy[
+        ~building_polygon_copy["filename"].str.endswith("_background")
+    ]
+    building_polygon_copy["tent_rank"] = (
+        building_polygon_copy.groupby("filename")["accuracy_percentage_tent"]
+        .rank(ascending=False)
+        .astype(int)
+    )
+    building_polygon_copy["building_rank"] = (
+        building_polygon_copy.groupby("filename")["accuracy_percentage_building"]
+        .rank(ascending=False)
+        .astype(int)
+    )
+
+    return building_polygon_copy
