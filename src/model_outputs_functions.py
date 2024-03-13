@@ -445,64 +445,63 @@ def building_stats(building_polygon_counts):
     - pd.DataFrame: Preprocessed DataFrame with the specified modifications.
     """
     # Create a copy of the DataFrame
-    building_polygon_counts = building_polygon_counts.copy()
+    building_polygon_copy = building_polygon_counts.copy()
 
     # Fill NaN values in 'building_actual' and 'tent_actual' columns with zeros
-    building_polygon_counts["building_actual"].fillna(0, inplace=True)
-    building_polygon_counts["tent_actual"].fillna(0, inplace=True)
+    building_polygon_copy["building_actual"].fillna(0, inplace=True)
+    building_polygon_copy["tent_actual"].fillna(0, inplace=True)
 
     # Set specified numerical columns to whole numbers
     numerical_columns = ["building_actual", "tent_actual"]
-    building_polygon_counts.loc[:, numerical_columns] = building_polygon_counts.loc[
+    building_polygon_copy.loc[:, numerical_columns] = building_polygon_copy.loc[
         :, numerical_columns
     ].astype(int)
 
     # Create columns to show count difference between actual and computed polygons
-    building_polygon_counts["building_diff"] = (
-        building_polygon_counts["buildings"]
-        - building_polygon_counts["building_actual"]
+    building_polygon_copy["building_diff"] = (
+        building_polygon_copy["buildings"] - building_polygon_copy["building_actual"]
     )
-    building_polygon_counts["tent_diff"] = (
-        building_polygon_counts["tents"] - building_polygon_counts["tent_actual"]
+    building_polygon_copy["tent_diff"] = (
+        building_polygon_copy["tents"] - building_polygon_copy["tent_actual"]
     )
 
     # Create columns to show accuracy percentage difference between actual and computed polygons
-    building_polygon_counts["accuracy_percentage_tent"] = (
+    building_polygon_copy["accuracy_percentage_tent"] = (
         (
             1
             - abs(
-                building_polygon_counts["tent_diff"]
-                / building_polygon_counts["tent_actual"]
+                building_polygon_copy["tent_diff"]
+                / building_polygon_copy["tent_actual"]
             )
         )
         * 100
     ).round(2)
-    building_polygon_counts["accuracy_percentage_building"] = (
+    building_polygon_copy["accuracy_percentage_building"] = (
         (
             1
             - abs(
-                building_polygon_counts["building_diff"]
-                / building_polygon_counts["building_actual"]
+                building_polygon_copy["building_diff"]
+                / building_polygon_copy["building_actual"]
             )
         )
         * 100
     ).round(2)
 
-    building_polygon_counts["area"] = (
-        building_polygon_counts["filename"].str.split("_").str[2]
+    building_polygon_copy["area"] = (
+        building_polygon_copy["filename"].str.split("_").str[2]
     )
-    building_polygon_counts = building_polygon_counts[
-        ~building_polygon_counts["filename"].str.endswith("_background")
+    building_polygon_copy = building_polygon_copy[
+        ~building_polygon_copy["filename"].str.endswith("_background")
     ]
-    building_polygon_counts["tent_rank"] = (
-        building_polygon_counts.groupby("filename")["accuracy_percentage_tent"]
+    building_polygon_copy["tent_rank"] = (
+        building_polygon_copy.groupby("filename")["accuracy_percentage_tent"]
         .rank(ascending=False)
         .astype(int)
     )
-    building_polygon_counts["building_rank"] = (
-        building_polygon_counts.groupby("filename")["accuracy_percentage_building"]
+    building_polygon_copy["building_rank"] = (
+        building_polygon_copy.groupby("filename")["accuracy_percentage_building"]
         .rank(ascending=False)
         .astype(int)
     )
 
-    return building_polygon_counts
+    return building_polygon_copy
