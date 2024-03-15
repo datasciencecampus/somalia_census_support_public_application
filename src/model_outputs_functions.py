@@ -134,6 +134,38 @@ def calculate_tile_metrics(y_pred, y_test_argmax, class_names, filenames):
     metrics_df = metrics_df.T
     metrics_df.insert(0, "tile", filenames_without_background)
 
+    # rename columns
+    metrics_df.rename(
+        columns={
+            "Precision_1": "precision_background",
+            "Recall_1": "recall_background",
+            "F1-score_1": "F1-score_background",
+            "Accuracy_1": "accuracy_background",
+            "Precision_2": "precision_building",
+            "Recall_2": "recall_building",
+            "F1-score_2": "F1-score_building",
+            "Accuracy_2": "accuracy_building",
+            "Precision_3": "precision_tent",
+            "Recall_3": "recall_tent",
+            "F1-score_3": "F1-score_tent",
+            "Accuracy_3": "accuracy_tent",
+            "Precision_4": "precision_building_border",
+            "Recall_4": "recall_building_border",
+            "F1-score_4": "F1-score_building_border",
+            "Accuracy_4": "accuracy_building_border",
+            "Precision_5": "precision_tent_border",
+            "Recall_5": "recall_tent_border",
+            "F1-score_5": "F1-score_tent_border",
+            "Accuracy_5": "accuracy_tent_border",
+        },
+        inplace=True,
+    )
+
+    # drop class number columns
+    metrics_df = metrics_df.drop(
+        ["Class_1", "Class_2", "Class_3", "Class_4", "Class_5"], axis=1
+    )
+
     return metrics_df
 
 
