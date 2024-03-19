@@ -25,7 +25,7 @@ def process_geojson_file(mask_path):
     mask_gdf["Type"] = mask_gdf.get("Type", "")
 
     # replace values in 'Type' column
-    mask_gdf["Type"].replace({"House": "Building", "Service": "Building"}, inplace=True)
+    mask_gdf.replace(to_replace=["Service", "House"], value="Building", inplace=True)
 
     # change to lower case
     mask_gdf["Type"] = mask_gdf["Type"].str.lower()
