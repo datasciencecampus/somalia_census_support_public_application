@@ -5,9 +5,9 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.6
+#       jupytext_version: 1.16.1
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (Local)
 #     language: python
 #     name: python3
 # ---
@@ -55,10 +55,11 @@ from functions_library import rm_tree
 # for reading in config.yaml directories
 folder_dict = get_folder_paths()
 
-# Note local data folder path - We always want it to end up in training_data or validation_data
+# Note local data folder path - We always want it to end up in training_data, validation_data or camp_tiles_data
 # rather than the specific timestamp.
 training_data_dir = Path(folder_dict["training_dir"])
 validation_data_dir = Path(folder_dict["validation_dir"])
+camp_tiles_data_dir = Path(folder_dict["camp_tiles_dir"])
 
 # %%
 # Initialise client and note bucket location
@@ -70,7 +71,7 @@ bucket_prefix = "ons-des-prod-net-zero-somalia-ingress/"
 # ### Select whether you want to download the latest training/validation
 
 # %%
-folders = ["validation_data", "training_data"]
+folders = ["validation_data", "training_data", "camp_tiles_data"]
 folder_dropdown = widgets.Dropdown(options=folders, description="select folder:")
 display(folder_dropdown)
 
@@ -125,6 +126,8 @@ if folder_dropdown.value == "training_data":
     data_dir = training_data_dir
 elif folder_dropdown.value == "validation_data":
     data_dir = validation_data_dir
+elif folder_dropdown.value == "camp_tiles_data":
+    data_dir = camp_tiles_data_dir
 
 # %%
 # removes folder and its contents from directory
