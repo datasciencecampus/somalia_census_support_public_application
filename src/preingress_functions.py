@@ -246,6 +246,14 @@ def cleaning_of_mask_files(mask_files_lower, data_type):
             )
             continue
 
+        # check any null values in area column - send error
+        if mask_gdf["Area"].isnull().values.any():
+            warnings.warn(
+                Fore.GREEN
+                + f"Area column for ({mask_file}) has null values. File has not been saved! Check the file in your GIS software."
+            )
+            continue
+
         # write back to geojson for training
         mask_gdf.to_file(mask_dir.joinpath(f"{(mask_file.name)}"), driver="GeoJSON")
 
