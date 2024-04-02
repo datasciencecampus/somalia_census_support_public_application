@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.16.1
 #   kernelspec:
-#     display_name: venv-somalia-gcp
+#     display_name: venv-somalia-gcp (Local)
 #     language: python
 #     name: venv-somalia-gcp
 # ---
@@ -126,7 +126,7 @@ footprints_dir = Path(folder_dict["footprints_dir"])
 
 # %%
 # Set runid for outputs
-runid = "qa_testing_2024-02-20_1247"
+runid = "qa_testing_2024-03-27_0955"
 
 
 # %% [markdown]
@@ -300,7 +300,13 @@ plt.show()
 
 # %%
 # finding number of classes
-unique_classes = np.unique(predicted_img)
+unique_classes = None
+max_unique_classes = 0
+for row in y_test_argmax:
+    row_classes = len(np.unique(row))
+    if row_classes > max_unique_classes:
+        max_unique_classes = row_classes
+        unique_classes = np.unique(row)
 
 # %% jupyter={"outputs_hidden": true}
 all_results = []
