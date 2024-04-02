@@ -5,9 +5,9 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.16.1
 #   kernelspec:
-#     display_name: venv-somalia-gcp
+#     display_name: venv-somalia-gcp (Local)
 #     language: python
 #     name: venv-somalia-gcp
 # ---
@@ -169,11 +169,12 @@ training_data = None
 
 for mask_path in mask_dir.glob("*.geojson"):
     mask_gdf = process_geojson_file(mask_path)
+    mask_gdf = mask_gdf.to_crs("WGS 84")
 
     if training_data is None:
         training_data = mask_gdf
     else:
-        training_data = training_data.append(mask_gdf)
+        training_data = training_data._append(mask_gdf)
 
 # %%
 training_data, value_counts, structure_stats = data_summary(training_data)
