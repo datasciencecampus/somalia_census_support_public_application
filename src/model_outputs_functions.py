@@ -114,57 +114,21 @@ def calculate_tile_metrics(y_pred, y_test_argmax, class_names, filenames):
 
     """
     metrics_df = pd.DataFrame()
-    filenames_without_background = []
+    for tile, (y_true, y_pred_tile, filename) in enumerate(
+        zip(y_test_argmax, y_pred, filenames)
+    ):
+        if filename.endswith("background"):
+            continue
+        tile_metrics = calculate_metrics(
+            y_true, np.argmax(y_pred_tile, axis=-1), class_names
+        )
+        tile_metrics["tile"] = filename
+        metrics_df = pd.concat([metrics_df, tile_metrics], ignore_index=True)
 
-    for tile in range(len(y_test_argmax)):
-        y_true = y_test_argmax[tile]
-        y_single_pred = np.argmax(y_pred[tile], axis=-1)
-
-        if not filenames[tile].endswith("background"):
-            tile_metrics = calculate_metrics(y_true, y_single_pred, class_names)
-            tile_metrics.index = tile_metrics.index + 1
-            tile_metrics = tile_metrics.stack()
-            tile_metrics.index = tile_metrics.index.map("{0[1]}_{0[0]}".format)
-            tile_metrics.to_frame().T
-            filenames_without_background.append(filenames[tile])
-            metrics_df = pd.concat(
-                [metrics_df, tile_metrics], axis=1, ignore_index=True
-            )
-
-    metrics_df = metrics_df.T
-    metrics_df.insert(0, "tile", filenames_without_background)
-
-    # rename columns
-    metrics_df.rename(
-        columns={
-            "Precision_1": "precision_background",
-            "Recall_1": "recall_background",
-            "F1-score_1": "F1-score_background",
-            "Accuracy_1": "accuracy_background",
-            "Precision_2": "precision_building",
-            "Recall_2": "recall_building",
-            "F1-score_2": "F1-score_building",
-            "Accuracy_2": "accuracy_building",
-            "Precision_3": "precision_tent",
-            "Recall_3": "recall_tent",
-            "F1-score_3": "F1-score_tent",
-            "Accuracy_3": "accuracy_tent",
-            "Precision_4": "precision_building_border",
-            "Recall_4": "recall_building_border",
-            "F1-score_4": "F1-score_building_border",
-            "Accuracy_4": "accuracy_building_border",
-            "Precision_5": "precision_tent_border",
-            "Recall_5": "recall_tent_border",
-            "F1-score_5": "F1-score_tent_border",
-            "Accuracy_5": "accuracy_tent_border",
-        },
-        inplace=True,
-    )
-
-    # drop class number columns
-    metrics_df = metrics_df.drop(
-        ["Class_1", "Class_2", "Class_3", "Class_4", "Class_5"], axis=1
-    )
+    metrics_df = metrics_df.pivot_table(index="tile", columns="Class", aggfunc="last")
+    metrics_df.columns = [
+        f"{metric}_{class_name}" for metric, class_name in metrics_df.columns
+    ]
 
     return metrics_df
 

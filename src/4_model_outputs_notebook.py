@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.16.1
 #   kernelspec:
-#     display_name: venv-somalia-gcp
+#     display_name: venv-somalia-gcp (Local)
 #     language: python
 #     name: venv-somalia-gcp
 # ---
@@ -126,7 +126,7 @@ footprints_dir = Path(folder_dict["footprints_dir"])
 
 # %%
 # Set runid for outputs
-runid = "qa_testing_2024-02-20_1247"
+runid = "qa_testing_2024-03-27_0955"
 
 
 # %% [markdown]
@@ -267,7 +267,7 @@ grouped_tiles_df
 # ### Plotting individual tiles
 
 # %%
-index_number = 196
+index_number = 1
 test_img = X_test[index_number]
 
 # mask
@@ -302,7 +302,7 @@ plt.show()
 # finding number of classes
 unique_classes = np.unique(predicted_img)
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 all_results = []
 
 for idx, (tile, filename) in enumerate(zip(X_test, filenames)):
@@ -361,7 +361,7 @@ plot_confusion_matrix(y_true, y_pred_arg, class_names)
 
 # %%
 tile_metrics_df = calculate_tile_metrics(y_pred, y_test_argmax, class_names, filenames)
-tile_metrics_df = tile_metrics_df.set_index("tile")
+tile_metrics_df
 
 # %% [markdown]
 # ## Quality Assuring tiles <a name="qatiles"></a>
@@ -478,7 +478,7 @@ plt.show()
 # - Need to combine training and validation geojsons (think this is done in notebook #5)
 # - Currently just exporting one shapefile as a test but we'll need a better solution for all outputs
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 test_index_num = 196
 filtered_gdf = all_polygons_gdf[all_polygons_gdf["index_num"] == test_index_num]
 filtered_gdf
