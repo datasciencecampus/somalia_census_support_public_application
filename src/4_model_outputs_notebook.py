@@ -267,7 +267,7 @@ grouped_tiles_df
 # ### Plotting individual tiles
 
 # %%
-index_number = 196
+index_number = 1
 test_img = X_test[index_number]
 
 # mask
@@ -308,7 +308,7 @@ for row in y_test_argmax:
         max_unique_classes = row_classes
         unique_classes = np.unique(row)
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 all_results = []
 
 for idx, (tile, filename) in enumerate(zip(X_test, filenames)):
@@ -367,7 +367,7 @@ plot_confusion_matrix(y_true, y_pred_arg, class_names)
 
 # %%
 tile_metrics_df = calculate_tile_metrics(y_pred, y_test_argmax, class_names, filenames)
-tile_metrics_df = tile_metrics_df.set_index("tile")
+tile_metrics_df
 
 # %% [markdown]
 # ## Quality Assuring tiles <a name="qatiles"></a>
@@ -484,7 +484,7 @@ plt.show()
 # - Need to combine training and validation geojsons (think this is done in notebook #5)
 # - Currently just exporting one shapefile as a test but we'll need a better solution for all outputs
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 test_index_num = 196
 filtered_gdf = all_polygons_gdf[all_polygons_gdf["index_num"] == test_index_num]
 filtered_gdf
