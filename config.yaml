@@ -20,7 +20,7 @@ models_dir: ../models
 outputs_dir: ../outputs
 
 camp_tiles_dir: ../data/camp_tiles
-footprints_dir: ../footprints
+footprints_dir: ../data/footprints
 
 wip_bucket: ons-net-zero-analysis-prod-somalia-wip
 review_bucket: ons-net-zero-analysis-prod-somalia-review
