@@ -59,7 +59,7 @@ folder_dict = get_folder_paths()
 # rather than the specific timestamp.
 training_data_dir = Path(folder_dict["training_dir"])
 validation_data_dir = Path(folder_dict["validation_dir"])
-camp_tiles_data_dir = Path(folder_dict["camp_tiles_dir"])
+camp_tiles_dir = Path(folder_dict["camp_tiles_dir"])
 
 # %%
 # Initialise client and note bucket location
@@ -71,7 +71,7 @@ bucket_prefix = "ons-des-prod-net-zero-somalia-ingress/"
 # ### Select whether you want to download the latest training/validation
 
 # %%
-folders = ["validation_data", "training_data", "camp_tiles_data"]
+folders = ["validation_data", "training_data", "camp_tiles", "baidoa_tiles"]
 folder_dropdown = widgets.Dropdown(options=folders, description="select folder:")
 display(folder_dropdown)
 
@@ -106,7 +106,7 @@ for blob in bucket.list_blobs(prefix=bucket_prefix):
 path_components = latest_object.split("/")
 latest_folder = path_components[1] + "/"
 
-# %%
+# %% jupyter={"outputs_hidden": true}
 # Get all blobs in ingress area
 # - Blob is a Binary Large OBject (BLOB) is a collection of binary data stored as a single entity
 blobs = list(bucket.list_blobs(prefix=bucket_prefix))
@@ -126,8 +126,10 @@ if folder_dropdown.value == "training_data":
     data_dir = training_data_dir
 elif folder_dropdown.value == "validation_data":
     data_dir = validation_data_dir
-elif folder_dropdown.value == "camp_tiles_data":
-    data_dir = camp_tiles_data_dir
+elif folder_dropdown.value == "camp_tiles":
+    data_dir = camp_tiles_dir
+elif folder_dropdown.value == "baidoa_tiles":
+    data_dir = camp_tiles_dir.joinpath("baidoa_tiles")
 
 # %%
 # removes folder and its contents from directory
@@ -136,7 +138,7 @@ rm_tree(data_dir)
 # %% [markdown]
 # ### Download data <a name="download"></a>
 
-# %%
+# %% jupyter={"outputs_hidden": true}
 # Examine each blob
 for blob in blobs:
     # Get file name
