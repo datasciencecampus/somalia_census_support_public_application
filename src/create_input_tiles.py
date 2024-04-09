@@ -15,6 +15,7 @@ from functions_library import generate_tiles
 data_dir = Path.cwd().parent.joinpath("data")
 planet_images_dir = data_dir.joinpath("planet_images")  # might not be necessary
 
+# change variable for dir name as required
 baidoa_dir = planet_images_dir.joinpath("Baidoa")
 tile_dir = baidoa_dir.joinpath("tiles")
 
@@ -23,22 +24,26 @@ tile_dir = baidoa_dir.joinpath("tiles")
 # #### Import raster and geojson
 
 # %%
-baidoa_holwadag_img = baidoa_dir.joinpath(
-    "20230302_064032_ssc2_u0001_pansharpened_clip.tif"
+# make sure matches geojson file name
+area_name = "baidoa_ishaholwada"
+
+# %%
+# tif file
+img_file = baidoa_dir.joinpath(
+    "20230302_064032_ssc2_u0001_pansharpened_clip_cloudy.tif"
 )
-baidoa_holwaday_polygons = baidoa_dir.joinpath("baidoa_holwadag_camp_extents.geojson")
+
+# geojson file
+polygon_file = baidoa_dir.joinpath(f"{area_name}_camp_extents.geojson")
 
 # %% [markdown]
 # ## Creating polygons & tiles for input
 
-# %% [markdown]
-# ### Create clipped polygons
-
 # %%
-polygons_gdf = gpd.read_file(baidoa_holwaday_polygons)
+polygons_gdf = gpd.read_file(polygon_file)
 
 # this creates clipped rasters of the larger polygons - import these into GCP as well as I want to see if we can just run these
-with rio.open(baidoa_holwadag_img) as src:
+with rio.open(img_file) as src:
     for idx, polygon in polygons_gdf.iterrows():
         if not polygon.geometry.is_empty:
             out_image, out_transform = mask(src, [polygon.geometry], crop=True)
@@ -53,7 +58,7 @@ with rio.open(baidoa_holwadag_img) as src:
                 }
             )
 
-            output_file = tile_dir / f"baidoa_holwadag_polygons_{idx}.tif"
+            output_file = tile_dir / f"{area_name}_polygons_{idx}.tif"
 
             with rio.open(output_file, "w", **out_meta) as dst:
                 dst.write(out_image)
@@ -61,6 +66,8 @@ with rio.open(baidoa_holwadag_img) as src:
         else:
             print(f"Skipping empty geometry for index {idx}")
 
+# %% [markdown]
+# ### Create clipped polygons
 
 # %% [markdown]
 # ### Create tiles
