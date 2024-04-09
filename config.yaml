@@ -6,8 +6,6 @@ validation_dir: ../data/validation_data
 validation_img_dir: ../data/validation_data/img
 validation_mask_dir: ../data/validation_data/mask
 
-camp_tiles_dir: ../data/camp_tiles
-
 ramp_dir: ../data/ramp_bentiu_south_sudan
 ramp_mask: ../data/ramp_bentiu_south_sudan/mask
 ramp_img: ../data/ramp_bentiu_south_sudan/img
@@ -21,6 +19,7 @@ json_dir: ../data/json_dir
 models_dir: ../models
 outputs_dir: ../outputs
 
+camp_tiles_dir: ../data/camp_tiles
 footprints_dir: ../footprints
 
 wip_bucket: ons-net-zero-analysis-prod-somalia-wip
