@@ -15,6 +15,10 @@
 # %% [markdown]
 # # Download data from ingress
 #
+# <div class="alert alert-block altert-danger">
+#     <i class="fa fa-exclamation-triangle"></i> check the kernel in the above right is `python3` <b>not</b> `venv-somalia-gcp`
+# </div>
+#
 # #### Purpose
 # To download data from the ingress bucket to local GCP storage.
 #
@@ -68,7 +72,7 @@ bucket = client.bucket("ons-net-zero-data-prod-net-zero-somalia-des-ingress")
 bucket_prefix = "ons-des-prod-net-zero-somalia-ingress/"
 
 # %% [markdown]
-# ### Select whether you want to download the latest training/validation
+# ### Select which datasets you want to download
 
 # %%
 folders = ["validation_data", "training_data", "camp_tiles", "baidoa_tiles"]
@@ -122,14 +126,14 @@ out = [print(blob.name) for blob in blobs]
 # ### Remove existing files from local folders <a name="remove"></a>
 
 # %%
-if folder_dropdown.value == "training_data":
-    data_dir = training_data_dir
-elif folder_dropdown.value == "validation_data":
-    data_dir = validation_data_dir
-elif folder_dropdown.value == "camp_tiles":
-    data_dir = camp_tiles_dir
-elif folder_dropdown.value == "baidoa_tiles":
-    data_dir = camp_tiles_dir.joinpath("baidoa_tiles")
+dropdown_to_dir = {
+    "training_data": training_data_dir,
+    "validation_data": validation_data_dir,
+    "camp_tiles": camp_tiles_dir,
+    "baidoa_tiles": camp_tiles_dir.joinpath("baidoa_tiles"),
+}
+
+data_dir = dropdown_to_dir.get(folder_dropdown.value)
 
 # %%
 # removes folder and its contents from directory
@@ -160,7 +164,7 @@ for blob in blobs:
 
 
 # %% [markdown]
-# ### Check files <a name="checkfiles"></a>
+# ### Check folders <a name="checkfiles"></a>
 
 # %%
 # Check files are present
