@@ -98,7 +98,7 @@ training_img_dir, training_mask_dir, validation_img_dir, validation_mask_dir = [
 ]
 
 
-def get_data_paths(selected_folder):
+def get_data_paths(training_dir, selected_folder):
     """
     Get paths for img and mask files sub_dir based on selected folder
 
@@ -110,8 +110,8 @@ def get_data_paths(selected_folder):
         img_files (list): list of paths to image files
         mask_files (list): list of paths to mask files
     """
-    img_dir = data_dir / selected_folder / "img"
-    mask_dir = data_dir / selected_folder / "mask"
+    img_dir = training_dir / selected_folder / "img"
+    mask_dir = training_dir / selected_folder / "mask"
 
     return img_dir, mask_dir
 
