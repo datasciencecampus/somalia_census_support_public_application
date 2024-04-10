@@ -6,14 +6,37 @@
 
 # Somalia UNFPA Census Support
 
-## Description
+## Background
 
-UNet modelling of very high-resolution satellite imagery (0.5 m/px) to automate the detection of structures (tents, temporary structures, and buildings) in Somali Internally Displaced People (IDP) camps.
+Planning for a census requires understanding where populations are distributed so that enumeration areas can be successfully designed.
 
-This project feeds into the work of UNFPA on census planning for the Somali Government. The outcomes would be building footprints, for IDP camps, fed into planning for enumeration areas.
+The last census in Somalia was 50 years ago, meaning that this data is no longer relevant for designing enumeration areas.
 
+Instead, the Somali National Bureau of Statistics (SNBS) and the other Federal Member States inconjunction with the United Nations Population Fund (UNFPA) are looking to novel techniques to plan for the census in a resource-efficient way.
 
-![](image.png)
+The [WorldPop pre-enumeration tool](https://www.worldpop.org/current-projects/completed-projects/exploring-the-automatic-pre-enumeration-areas-tool-for-surveys-on-forced-displacement-refugees/) is being used in a pilot for census mapping in Somalia. This phase is being funded by the Bill and Melinda Gates Foundation.
+
+The pre-EA tool takes in multiple layers of data to design enumeration areas. It's estimated nearly 3 million people have been internally displaced in Somalia, seeking refugee in over 2,700 camps.
+
+These camps change size and structure frequently due to external factors such as forced evictions from private lands, flooding, and camp re-organisation. Manually counting camp shelters from very high-resolution (VHR) satellite imagery is a time-consuing process. It would take 1 person 2 years to manually count all tents, a quarter of the way through they would need to start again.
+
+The DSC at the ONS have automated the detection of shelters in Somali IDP camps. Combining UNet modelling with VHR Planet SkySat imagery (0.5m/px), shelters (tents and buildings) can be detected within minutes to a high degree of accuracy.
+
+![Diagram showing project network](image-1.png)
+
+## How to use this repo
+This repository has been specifically built for the purpose of training a multi-class UNet model to create shelters (tents and buildings) footprints for IDP camps in Somalia. The workflow also contains code to evaluate model outputs and run trained models on unseen imagery.
+
+The workflow was built and optimised using Planet SkySat 0.5m/pixel imagery.
+
+Training data consists of `geoTIF` image rasters with corresponding `geoJSON` masks of polygons. The masks have been manually created for this project. Both inputs are ~384 x 384 in size.
+
+Code is written in python with the intention of being run in Jupyter notebooks.
+
+The work was developed in Google Cloud Platform (GCP) infrastructure using a NVIDI T4 X 1 notebook with 16 vCPUs, 104 GB RAM, and 1 GPU.
+
+GCP specific notebooks are highlighted below. All packages are provided in a `requirements.txt`, for a dedicated user to generalise this workflow in other environments.
+
 
 ## Workflow
 
@@ -29,7 +52,7 @@ flowchart LR
     sharepoint-->|mask<br>file|ingress{GCP<br>ingress<br>area}
     sharepoint-->|img<br>file|ingress
 ```
-Modelling
+Model training
 ```mermaid
 flowchart LR
     ingress{GCP<br>ingress<br>area}-->download[/download data<br>from ingress<br>notebook\]
@@ -47,7 +70,7 @@ flowchart LR
 ```
 ## Training data
 
-Follow the [wiki guide](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Using-QGIS-to-create-Training-Data) to create training data and export as `.geojson` files - using project naming structure:
+Follow the [wiki guide](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Using-QGIS-to-create-Training-Data) to create training data and export as `.geoJSON` files - using project naming structure:
 
 `training_data_<area>_<unique int>_<your initials>`
 
@@ -56,8 +79,6 @@ Follow the [wiki guide](https://github.com/datasciencecampus/somalia_unfpa_censu
 The training data needs to be processed and outputted as `.npy` files when first uploaded to GCP. This is done in the `1_premodelling_notebook.py`.
 
 ## Getting set-up (GCP):
-
-This project is being developed in Google Cloud Platform (GCP), and so instructions are specific to this environment. A determined user can hopefully generalise these across other tools.
 
 Users should clone the repo within their personal GCP notebooks, which are accessed via the Vertex AI Workbench.
 
@@ -121,31 +142,76 @@ Once pre-commits are activated, whenever you commit to this repository a series 
 Successful running of the scripts assumes a certain structure in how where data and other auxiliary inputs need to be located.
 The below tree demonstrates where each file/folder needs to be for successful execution or where files will be located following execution.
 
+### Overview
 ```
 📦somalia_unfpa_census_support
  ┣ 📂data
- ┃ ┣ 📂training_data
- ┃ ┃ ┗ 📂img
- ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.tif
- ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.npy
- ┃ ┃ ┗ 📂mask
- ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.geojson
- ┃ ┃ ┃ ┣ 📜training_data_<area>_<initial>.npy
- ┃ ┣ 📂validation_data
- ┃ ┃ ┗ 📂img
- ┃ ┃ ┃ ┣ 📜validation_data_<area>_<initial>.tif
- ┃ ┃ ┃ ┣ 📜validation_data_<area>_<initial>.npy
- ┃ ┃ ┗ 📂mask
- ┃ ┃ ┃ ┣ 📜validation_data_<area>_<initial>.geojson
- ┃ ┃ ┃ ┣ 📜validation_data_<area>_<initial>.npy
+ ┣ 📂models
+ ┣ 📂outputs
+ ┣ 📂src
+ ┣ 📂venv-somalia-gcp
+ ┣ 📜config.yaml
+ ┣ 📜.gitignore
+ ┣ 📜requirements.text
+ ┗ 📜README.md
+
+```
+### Data
+```
+📦somalia_unfpa_census_support
+ ┣ 📂data
+ ┃ ┣ 📂camp_tiles
+ ┃ ┃ ┗ 📂baidoa
+ ┃ ┣ 📂footprints
+ ┃ ┃ ┗ 📜<area>_<sub_area>.geojson
+ ┃ ┣ 📂outputs
+ ┃ ┣ 📂training
+ ┃ ┃ ┣ 📂json_dir
+ ┃ ┃ ┃  ┗ 📜t<data_type>_features_dict.json
+ ┃ ┃ ┣ 📂training_data
+ ┃ ┃ ┃  ┣ 📂img
+ ┃ ┃ ┃  ┃   ┣ 📜training_data_<area>_<initial>.tif
+ ┃ ┃ ┃  ┃   ┗ 📜training_data_<area>_<initial>.npy
+ ┃ ┃ ┃  ┣ 📂mask
+ ┃ ┃ ┃  ┃   ┣ 📜training_data_<area>_<initial>.geojson
+ ┃ ┃ ┃  ┃   ┗ 📜training_data_<area>_<initial>.npy
+ ┃ ┃ ┣ 📂validation_data
+ ┃ ┃ ┃  ┣ 📂img
+ ┃ ┃ ┃  ┃   ┣ 📜validation_data_<area>_<initial>.tif
+ ┃ ┃ ┃  ┃   ┗ 📜validation_data_<area>_<initial>.npy
+ ┃ ┃ ┃  ┣ 📂mask
+ ┃ ┃ ┃  ┃   ┣ 📜validation_data_<area>_<initial>.geojson
+ ┃ ┃ ┃  ┃   ┗ 📜validation_data_<area>_<initial>.npy
+ ┃ ┃ ┣ 📂ramp_bentiu_south_sudan
+ ┃ ┃ ┃  ┣ 📂img
+ ┃ ┃ ┃  ┃   ┣ 📜ramp_bentiu_south_sudan_<area>_<initial>.tif
+ ┃ ┃ ┃  ┃   ┗ 📜vramp_bentiu_south_sudan_<area>_<initial>.npy
+ ┃ ┃ ┃  ┣ 📂mask
+ ┃ ┃ ┃  ┃   ┣ 📜ramp_bentiu_south_sudan_<area>_<initial>.geojson
+ ┃ ┃ ┃  ┃   ┗ 📜ramp_bentiu_south_sudan_<area>_<initial>.npy
+ ┃ ┃ ┣ 📂stacked_arrays
+ ┃ ┃ ┃  ┣ 📂img
+ ┃ ┃ ┃  ┃   ┣ 📜<data_type>_all_stacked_images.npy
+ ┃ ┃ ┃  ┃   ┗ 📜<data_type>_all_stacked_filenames.npy
+ ┃ ┃ ┃  ┣ 📂mask
+ ┗ ┗ ┗  ┗   ┗ 📜<data_type>_all_stacked_masks.npy
+
+```
+### Code
+```
+📦somalia_unfpa_census_support
  ┣ 📂src
  ┃ ┣ 📜1_premodelling_notebook.py
  ┃ ┣ 📜2_data_augmentation_notebook.py
  ┃ ┣ 📜3_model_train_notebook.py
  ┃ ┣ 📜4_model_outputs_notebook.py
+ ┃ ┣ 📜5_model_run_evaluation.py
  ┃ ┣ 📜bucket_access_functions.py
  ┃ ┣ 📜bucket_export_notebook.py
- ┃ ┣ 📜bucket_eimport_notebook.py
+ ┃ ┣ 📜bucket_import_notebook.py
+ ┃ ┣ 📜create_footprints.py
+ ┃ ┣ 📜create_footprints_functions.py
+ ┃ ┣ 📜create_input_tiles.py
  ┃ ┣ 📜data_augmentation_functions.py
  ┃ ┣ 📜download_data_from_ingress.py
  ┃ ┣ 📜functions_library.py
