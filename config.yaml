@@ -10,9 +10,9 @@ ramp_dir: ../data/training/ramp_bentiu_south_sudan
 ramp_mask: ../data/training/ramp_bentiu_south_sudan/mask
 ramp_img: ../data/training/ramp_bentiu_south_sudan/img
 
-stacked_dir: ../data/stacked_arrays
-stacked_img_dir: ../data/stacked_arrays/img
-stacked_mask_dir: ../data/stacked_arrays/mask
+stacked_dir: ../data/training/stacked_arrays
+stacked_img_dir: ../data/training/stacked_arrays/img
+stacked_mask_dir: ../data/training/stacked_arrays/mask
 
 json_dir: ../data/training/json_dir
 
