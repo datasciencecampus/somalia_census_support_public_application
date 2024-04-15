@@ -23,7 +23,7 @@
 # Processes locally stored img and mask files and outputs as `.npy`, which are saved in the same folder location.
 #
 # #### Things to note
-# * Only has to be run if `download_data_from_ingress` has been run - as `.npy` files are saved
+# * Only has to be run if new data added with the`download_data_from_ingress` notebook.
 # * Check kernel
 # * Run final cell to clear variables and outputs
 #
@@ -53,6 +53,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 import json
+import pandas as pd
 import ipywidgets as widgets
 from IPython.display import display
 
@@ -67,6 +68,7 @@ from image_processing_functions import (
 from mask_processing_functions import (
     rasterize_training_data,
     process_geojson_file,
+    empty_geometries,
     data_summary,
 )
 
@@ -76,9 +78,10 @@ from mask_processing_functions import (
 # %%
 # set data directory
 data_dir = Path.cwd().parent.joinpath("data")
+training_dir = data_dir.joinpath("training")
 
 # get all sub directories within data forlder
-sub_dir = [subdir.name for subdir in data_dir.iterdir() if subdir.is_dir()]
+sub_dir = [subdir.name for subdir in training_dir.iterdir() if subdir.is_dir()]
 
 # %% [markdown]
 # ### Select sub directory
@@ -89,7 +92,7 @@ display(folder_dropdown)
 
 # %%
 # set img and mask directories based on selected folder above
-img_dir, mask_dir = get_data_paths(folder_dropdown.value)
+img_dir, mask_dir = get_data_paths(training_dir, folder_dropdown.value)
 # checking directories
 print(img_dir)
 print(mask_dir)
@@ -145,39 +148,47 @@ features_dict = {}
 
 
 # %%
-# loop through the GeoJSON files
+# Loop through the GeoJSON files
 for mask_path in mask_dir.glob("*.geojson"):
-    rasterize_training_data(
-        mask_path, mask_dir, img_dir, building_class_list, img_size, features_dict
-    )
+    if empty_geometries(mask_path):
+        print(
+            f"The file {mask_path} has empty geometries. Mask and image should be removed from directories."
+        )
+    else:
+        rasterize_training_data(
+            mask_path, mask_dir, img_dir, building_class_list, img_size, features_dict
+        )
+
 
 # %%
 # save json file
 folder_name = folder_dropdown.value
-file_path = data_dir / "json_dir" / f"{folder_name}_features_dict.json"
+file_path = training_dir / "json_dir" / f"{folder_name}_features_dict.json"
 file_path.parent.mkdir(parents=True, exist_ok=True)
 with open(file_path, "w") as json_file:
     json.dump(features_dict, json_file)
 
 # %% [markdown]
-# ## Data summary<a name="trainingsummary"></a>
+# ## Data summary (optional) <a name="trainingsummary"></a>
 #
 
 # %%
-# joining masks together to count building types
-training_data = None
-
-for mask_path in mask_dir.glob("*.geojson"):
-    mask_gdf = process_geojson_file(mask_path)
-    mask_gdf = mask_gdf.to_crs("WGS 84")
-
-    if training_data is None:
-        training_data = mask_gdf
-    else:
-        training_data = training_data._append(mask_gdf)
+training_data = []
 
 # %%
-training_data, value_counts, structure_stats = data_summary(training_data)
+for mask_path in mask_dir.glob("*.geojson"):
+    training_data.append(process_geojson_file(mask_path))
+
+common_crs = "EPSG:32638"
+for i, gdf in enumerate(training_data):
+    training_data[i] = gdf.to_crs(common_crs)
+
+training_data = pd.concat(training_data, ignore_index=True)
+
+# %%
+training_data_filtered, value_counts, structure_stats, removed_rows = data_summary(
+    training_data
+)
 
 # %%
 value_counts
@@ -186,7 +197,7 @@ value_counts
 structure_stats
 
 # %% [markdown]
-# ### Visual checking
+# ## Visual checking (optional)
 
 # %%
 # finding all img .npy files - those converted above

@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.6
+#       jupytext_version: 1.16.1
 #   kernelspec:
-#     display_name: venv-somalia-gcp
+#     display_name: venv-somalia-gcp (Local)
 #     language: python
 #     name: venv-somalia-gcp
 # ---
@@ -28,10 +28,6 @@
 #
 # * This notebook assumes the `1_premodelling_notebook` has already been run and all the training data has been converted into `.npy` arrays.
 # * Run final cell to clear variables and outputs
-#
-# <div class="alert alert-block alert-danger">
-#     <i class="fa fa-exclamation-triangle"></i> make sure there are no `stacked_arrays` in your `img_dir
-# </div>
 #
 # <div class="alert alert-block alert-danger">
 #     <i class="fa fa-exclamation-triangle"></i> don't run `hue` on `ramp` data as it uses the 4th channel and so won't work
@@ -103,9 +99,10 @@ stacked_mask = Path(folder_dict["stacked_mask_dir"])
 # %%
 # set data directory
 data_dir = Path.cwd().parent.joinpath("data")
+training_dir = data_dir.joinpath("training")
 
 # get all sub directories within data forlder
-sub_dir = [subdir.name for subdir in data_dir.iterdir() if subdir.is_dir()]
+sub_dir = [subdir.name for subdir in training_dir.iterdir() if subdir.is_dir()]
 
 # %% [markdown]
 # ### Select sub directory
@@ -116,7 +113,7 @@ display(folder_dropdown)
 
 # %%
 # set img and mask directories based on seelcted folder above
-img_dir, mask_dir = get_data_paths(folder_dropdown.value)
+img_dir, mask_dir = get_data_paths(training_dir, folder_dropdown.value)
 print(img_dir)
 print(mask_dir)
 
