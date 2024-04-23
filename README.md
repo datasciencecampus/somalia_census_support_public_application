@@ -249,10 +249,7 @@ Note the directory structure, which mirrors that of local GCP (shown above).
 
 To download files from the ingress bucket into the local GCP environment run the `download_from_bucket.py` script with the below line:
 
-`python download_from_bucket.py gs://somalia-census-support-ingress/training/ data/training/`
-
-This should be run from the terminal when in the base folder. To change the data type swap out `training` for `validation` in the line above.
-
+`python src/download_from_bucket.py gs://somalia-census-support-ingress/training/ data/training/`
 
 ## Things of note
 The [wiki page attached to this repo](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Somalia-UNFPA-Census-support) contains useful resources and other relevant notes.
