@@ -111,8 +111,6 @@ def generate_shapes(mask_gdf, img_dir, mask_filename):
 
     # Open raster image file
     with rio.open(image_file) as raster_tif:
-        # Reproject mask_gdf to match raster image CRS
-        mask_gdf = mask_gdf.to_crs(raster_tif.crs)
 
         # Create a generator of geom, value pairs to use in rasterizing
         shapes = (
