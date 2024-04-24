@@ -7,7 +7,7 @@ segmentation_models
 scikit-learn
 jupytext==1.14.5
 jupyter
-tensorflow
+tensorflow[and-cuda]
 keras==3.2.1
 Path
 datetime
