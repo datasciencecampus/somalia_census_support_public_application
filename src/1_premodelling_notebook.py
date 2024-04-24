@@ -23,7 +23,7 @@
 # Processes locally stored img and mask files and outputs as `.npy`, which are saved in the same folder location.
 #
 # #### Things to note
-# * Only has to be run if new data added with the`download_data_from_ingress` notebook.
+# * To be run every time new data is ingressed
 # * Check kernel
 # * Run final cell to clear variables and outputs
 #
@@ -46,7 +46,6 @@
 # ### Import libraries & functions
 
 # %%
-# import libraries
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -68,8 +67,8 @@ from image_processing_functions import (
 from mask_processing_functions import (
     rasterize_training_data,
     process_geojson_file,
-    empty_geometries,
     data_summary,
+    empty_geometries,
 )
 
 # %% [markdown]
@@ -80,14 +79,12 @@ from mask_processing_functions import (
 data_dir = Path.cwd().parent.joinpath("data")
 training_dir = data_dir.joinpath("training")
 
-# get all sub directories within data forlder
-sub_dir = [subdir.name for subdir in training_dir.iterdir() if subdir.is_dir()]
-
 # %% [markdown]
 # ### Select sub directory
 
 # %%
-folder_dropdown = widgets.Dropdown(options=sub_dir, description="select folder:")
+folder_options = ("training_data", "validation_data")
+folder_dropdown = widgets.Dropdown(options=folder_options, description="select folder:")
 display(folder_dropdown)
 
 # %%
