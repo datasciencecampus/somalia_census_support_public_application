@@ -27,7 +27,7 @@
 # **Things to note**
 #
 # * This notebook assumes the `1_premodelling_notebook` has already been run and all the training data has been converted into `.npy` arrays.
-# * Run final cell to clear variables and outputs
+# * Run final cells to clear variables and outputs, then stop the kernel
 #
 # <div class="alert alert-block alert-danger">
 #     <i class="fa fa-exclamation-triangle"></i> don't run `hue` on `ramp` data as it uses the 4th channel and so won't work
@@ -36,7 +36,9 @@
 # ### Contents
 # 1. ##### [Set-up](#setup)
 # 1. ##### [Data augmentation](#imageaug)
+# 1. ##### [Delete original files](#delete)
 # 1. ##### [Clear outputs & variables](#clear)
+# 1. ##### [Stop kernel](#stop)
 
 # %% [markdown]
 # ### Checking memory usage of notebook
@@ -66,6 +68,7 @@ print("Memory usage (gb):", memory_usage_gb)
 
 # %%
 from pathlib import Path
+import sys
 
 # %%
 import numpy as np
@@ -73,7 +76,11 @@ import ipywidgets as widgets
 from IPython.display import display
 
 # %%
-from functions_library import get_data_paths, get_folder_paths
+from functions_library import (
+    get_data_paths,
+    setup_sub_dir,
+    delete_files_with_extensions,
+)
 
 from data_augmentation_functions import (
     stack_array,
@@ -91,24 +98,16 @@ from data_augmentation_functions import (
 # ### Set-up directories
 
 # %%
-# directories for saving stacked arrays at the end
-folder_dict = get_folder_paths()
-stacked_img = Path(folder_dict["stacked_img_dir"])
-stacked_mask = Path(folder_dict["stacked_mask_dir"])
-
-# %%
 # set data directory
 data_dir = Path.cwd().parent.joinpath("data")
 training_dir = data_dir.joinpath("training")
-
-# get all sub directories within data forlder
-sub_dir = [subdir.name for subdir in training_dir.iterdir() if subdir.is_dir()]
 
 # %% [markdown]
 # ### Select sub directory
 
 # %%
-folder_dropdown = widgets.Dropdown(options=sub_dir, description="select folder:")
+folder_options = ("training_data", "validation_data")
+folder_dropdown = widgets.Dropdown(options=folder_options, description="select folder:")
 display(folder_dropdown)
 
 # %%
@@ -417,10 +416,13 @@ all_padded_borders.shape
 # #### Saving image array
 
 # %%
+stacked_dir = setup_sub_dir(training_dir, "stacked_arrays")
+
+# %%
 img_filename = f"{folder_dropdown.value}_all_stacked_images.npy"
 
 # %%
-np.save(stacked_img / img_filename, all_padded_images)
+np.save(stacked_dir / img_filename, all_padded_images)
 
 # %% [markdown]
 # #### Saving mask array
@@ -429,7 +431,7 @@ np.save(stacked_img / img_filename, all_padded_images)
 mask_filename = f"{folder_dropdown.value}_all_stacked_masks.npy"
 
 # %%
-np.save(stacked_mask / mask_filename, all_padded_masks)
+np.save(stacked_dir / mask_filename, all_padded_masks)
 
 # %% [markdown]
 # #### Saving border array
@@ -438,20 +440,38 @@ np.save(stacked_mask / mask_filename, all_padded_masks)
 edge_filename = f"{folder_dropdown.value}_all_stacked_edges.npy"
 
 # %%
-np.save(stacked_mask / edge_filename, all_padded_borders)
+np.save(stacked_dir / edge_filename, all_padded_borders)
 
 # %% [markdown]
 # #### Saving filenames array
 
 # %%
 file_save = f"{folder_dropdown.value}_all_stacked_filenames.npy"
-np.save(stacked_img / file_save, filesnames)
+np.save(stacked_dir / file_save, filesnames)
 
 # %% [markdown]
-# ## Clear outputs and remove variables<a name="clear"></a>
+# ## Delete original `.geoTIF` and `.geoJSON` files (optional) <a name="delete"></a>
+
+# %%
+# extensions to delete
+extensions_to_delete = [".tif", ".geojson"]
+# delete imgs
+delete_files_with_extensions(img_dir, extensions_to_delete)
+delete_files_with_extensions(mask_dir, extensions_to_delete)
+
+# %%
+# delete masks
+delete_files_with_extensions(mask_dir, extensions_to_delete)
+
+# %% [markdown]
+# ## Clear outputs<a name="clear"></a>
 
 # %%
 # %reset -f
 
 
+# %% [markdown]
+# ## Stop kernel<a name="stop"></a>
+
 # %%
+sys.exit()
