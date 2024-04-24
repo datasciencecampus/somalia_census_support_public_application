@@ -7,8 +7,8 @@ segmentation_models
 scikit-learn
 jupytext==1.14.5
 jupyter
-tensorflow[and-cuda]
-keras==2.1.5
+tensorflow[and-cuda]==2.15.0
+keras==2.15.0
 Path
 datetime
 google.cloud
