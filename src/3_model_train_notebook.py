@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.16.1
 #   kernelspec:
-#     display_name: venv-somalia-gcp
+#     display_name: venv-somalia-gcp (Local)
 #     language: python
 #     name: venv-somalia-gcp
 # ---
@@ -81,7 +81,6 @@ from tensorflow.keras.utils import Sequence
 from functions_library import get_folder_paths
 from multi_class_unet_model_build import jacard_coef, get_model
 from loss_functions import get_sm_loss, get_combined_loss, get_tversky_loss
-from weight_functions import calculate_distance_weights
 
 # %% [markdown]
 # #### GPU Availability check
@@ -156,8 +155,8 @@ else:
 # %%
 # for importing stacked arrays
 folder_dict = get_folder_paths()
-stacked_img = Path(folder_dict["stacked_img_dir"])
-stacked_mask = Path(folder_dict["stacked_mask_dir"])
+stacked_dir = Path(folder_dict["stacked_dir"])
+
 
 # set model and output directories
 models_dir = Path(folder_dict["models_dir"])
@@ -172,16 +171,16 @@ outputs_dir = Path(folder_dict["outputs_dir"])
 # %%
 ramp = False
 if ramp:
-    ramp_masks = np.load(stacked_mask / "ramp_bentiu_south_sudan_all_stacked_masks.npy")
+    ramp_masks = np.load(stacked_dir / "ramp_bentiu_south_sudan_all_stacked_masks.npy")
 else:
     ramp_masks = None
 
 # %%
-training_masks = np.load(stacked_mask / "training_data_all_stacked_masks.npy")
+training_masks = np.load(stacked_dir / "training_data_all_stacked_masks.npy")
 training_masks.shape
 
 # %%
-validation_masks = np.load(stacked_mask / "validation_data_all_stacked_masks.npy")
+validation_masks = np.load(stacked_dir / "validation_data_all_stacked_masks.npy")
 validation_masks.shape
 
 # %%
@@ -223,17 +222,17 @@ stacked_masks_cat.shape
 # %%
 if ramp:
     ramp_images = np.load(
-        stacked_img / "ramp_bentiu_south_sudan_all_stacked_images.npy"
+        stacked_dir / "ramp_bentiu_south_sudan_all_stacked_images.npy"
     )
 else:
     ramp_images = None
 
 # %%
-training_images = np.load(stacked_img / "training_data_all_stacked_images.npy")
+training_images = np.load(stacked_dir / "training_data_all_stacked_images.npy")
 training_images.shape
 
 # %%
-validation_images = np.load(stacked_img / "validation_data_all_stacked_images.npy")
+validation_images = np.load(stacked_dir / "validation_data_all_stacked_images.npy")
 validation_images.shape
 
 # %%
@@ -266,17 +265,17 @@ validation_images = []
 # %%
 if ramp:
     ramp_filenames = np.load(
-        stacked_img / "ramp_bentiu_south_sudan_all_stacked_filenames.npy"
+        stacked_dir / "ramp_bentiu_south_sudan_all_stacked_filenames.npy"
     )
 else:
     ramp_filenames = None
 
 # %%
-training_filenames = np.load(stacked_img / "training_data_all_stacked_filenames.npy")
+training_filenames = np.load(stacked_dir / "training_data_all_stacked_filenames.npy")
 
 # %%
 validation_filenames = np.load(
-    stacked_img / "validation_data_all_stacked_filenames.npy"
+    stacked_dir / "validation_data_all_stacked_filenames.npy"
 )
 
 # %%
@@ -296,11 +295,11 @@ stacked_filenames.shape
 # #### Borders
 
 # %%
-training_edges = np.load(stacked_mask / "training_data_all_stacked_edges.npy")
+training_edges = np.load(stacked_dir / "training_data_all_stacked_edges.npy")
 training_edges.shape
 
 # %%
-validation_edges = np.load(stacked_mask / "validation_data_all_stacked_edges.npy")
+validation_edges = np.load(stacked_dir / "validation_data_all_stacked_edges.npy")
 validation_edges.shape
 
 # %%
@@ -319,15 +318,6 @@ validation_edges = []
 
 # %% [markdown]
 # ## Training parameters <a name="trainingparameters"></a>
-
-# %%
-# X_train, X_test, y_train, y_test, filenames_train, filenames_test = train_test_split(
-#     stacked_images,
-#     stacked_masks_cat,
-#     stacked_filenames,
-#     test_size=0.20,
-#     random_state=42,
-# )
 
 # %% [markdown]
 # ### Adding edges as model in/outputs
@@ -350,21 +340,12 @@ X_train, X_test, y_train, y_test, filenames_train, filenames_test = train_test_s
 # ## Weights <a name="weights"></a>
 
 # %%
-google_weights = calculate_distance_weights(stacked_masks_cat)
-print(google_weights)
-
-# %%
 frequency_weights = compute_class_weight(
     "balanced",
     classes=np.unique(stacked_masks),
     y=np.ravel(stacked_masks, order="C"),
 )
 print(frequency_weights)
-
-# %%
-# weights = [0.2, 0.2, 0.2, 0.2, 0.2]
-# frequency_weights = np.array(weights, dtype=np.float64)
-# print(frequency_weights)
 
 # %% [markdown]
 # ## Model parameters <a name="modelparameters"></a>
@@ -406,7 +387,7 @@ batch_size = 50
 
 # %%
 callbacks = [
-    tf.keras.callbacks.EarlyStopping(patience=4, monitor="val_loss"),
+    tf.keras.callbacks.EarlyStopping(patience=10, monitor="val_loss"),
     tf.keras.callbacks.TensorBoard(log_dir="logs"),
 ]
 
@@ -429,7 +410,7 @@ if loss_function == "segmentation_models":
 
 elif loss_function == "combined":
     loss = get_combined_loss()
-    loss_weights = google_weights
+
 
 elif loss_function == "focal_tversky":
     loss = get_tversky_loss()
