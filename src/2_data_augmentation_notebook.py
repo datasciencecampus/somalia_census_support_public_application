@@ -459,10 +459,6 @@ extensions_to_delete = [".tif", ".geojson"]
 delete_files_with_extensions(img_dir, extensions_to_delete)
 delete_files_with_extensions(mask_dir, extensions_to_delete)
 
-# %%
-# delete masks
-delete_files_with_extensions(mask_dir, extensions_to_delete)
-
 # %% [markdown]
 # ## Clear outputs<a name="clear"></a>
 
