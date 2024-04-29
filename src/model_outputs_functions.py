@@ -440,20 +440,21 @@ def building_stats(building_polygon_counts):
     Returns:
     - pd.DataFrame: Preprocessed DataFrame with the specified modifications.
     """
-    # Create a copy of the DataFrame
+
     building_polygon_copy = building_polygon_counts.copy()
 
-    # Fill NaN values in 'building_actual' and 'tent_actual' columns with zeros
-    building_polygon_copy["building_actual"].fillna(0, inplace=True)
-    building_polygon_copy["tent_actual"].fillna(0, inplace=True)
+    building_polygon_copy["building_actual"] = building_polygon_copy[
+        "building_actual"
+    ].fillna(0)
+    building_polygon_copy["tent_actual"] = building_polygon_copy["tent_actual"].fillna(
+        0
+    )
 
-    # Set specified numerical columns to whole numbers
     numerical_columns = ["building_actual", "tent_actual"]
-    building_polygon_copy.loc[:, numerical_columns] = building_polygon_copy.loc[
-        :, numerical_columns
-    ].astype(int)
+    building_polygon_copy[numerical_columns] = (
+        building_polygon_copy[numerical_columns].astype(float).fillna(0).astype(int)
+    )
 
-    # Create columns to show count difference between actual and computed polygons
     building_polygon_copy["building_diff"] = (
         building_polygon_copy["buildings"] - building_polygon_copy["building_actual"]
     )
@@ -461,7 +462,6 @@ def building_stats(building_polygon_counts):
         building_polygon_copy["tents"] - building_polygon_copy["tent_actual"]
     )
 
-    # Create columns to show accuracy percentage difference between actual and computed polygons
     building_polygon_copy["accuracy_percentage_tent"] = (
         (
             1
@@ -491,12 +491,14 @@ def building_stats(building_polygon_counts):
     ]
     building_polygon_copy["tent_rank"] = (
         building_polygon_copy.groupby("filename")["accuracy_percentage_tent"]
-        .rank(ascending=False)
+        .rank(ascending=False, na_option="keep")
+        .fillna(0)
         .astype(int)
     )
     building_polygon_copy["building_rank"] = (
         building_polygon_copy.groupby("filename")["accuracy_percentage_building"]
-        .rank(ascending=False)
+        .rank(ascending=False, na_option="keep")
+        .fillna(0)
         .astype(int)
     )
 
