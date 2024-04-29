@@ -253,5 +253,12 @@ To download files from the ingress bucket into the local GCP environment run the
 python src/download_from_bucket.py gs://somalia-census-support-ingress/training/ data/training/
 ```
 
+### Moving data from local GCP storage
+
+To upload files from local storage into the egress bucket run the `upload_to_bucket.py` script with the below line:
+```
+python src/upload_to_bucket.py data/outputs/figures gs://somalia-census-egress/
+```
+
 ## Things of note
 The [wiki page attached to this repo](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Somalia-UNFPA-Census-support) contains useful resources and other relevant notes.
