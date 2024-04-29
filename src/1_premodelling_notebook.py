@@ -106,13 +106,39 @@ print(mask_dir)
 img_size = 384
 
 # %% [markdown]
-# ## Image files <a name="images"></a>
+# #### Removing areas where training is coming up bad
 #
-# Reading in all `.tif` files in the `img_dir`.
+# > To keep only these areas change to `filtered_img_files = [file for file in img_files if "bossaso" not in file.name]'
 
 # %%
 # list all .tif files in directoy
 img_files = list(img_dir.glob("*.tif"))
+mask_files = list(mask_dir.glob("*.geojson"))
+
+# %%
+words_to_remove = ["hargesia", "bossaso"]
+
+filtered_img_files = [
+    file for file in img_files if not any(word in file.name for word in words_to_remove)
+]
+filtered_mask_files = [
+    file
+    for file in mask_files
+    if not any(word in file.name for word in words_to_remove)
+]
+
+for file in img_files:
+    if file not in filtered_img_files:
+        file.unlink()
+
+for file in mask_files:
+    if file not in filtered_mask_files:
+        file.unlink()
+
+# %% [markdown]
+# ## Image files <a name="images"></a>
+#
+# Reading in all `.tif` files in the `img_dir`.
 
 # %% [markdown]
 # ### Image processing
