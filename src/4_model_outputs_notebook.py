@@ -126,7 +126,7 @@ footprints_dir = Path(folder_dict["footprints_dir"])
 
 # %%
 # Set runid for outputs
-runid = "qa_testing_2024-03-27_0955"
+runid = "development_testing_2024-04-24_1326"
 
 
 # %% [markdown]
@@ -160,7 +160,7 @@ history = pd.read_csv(outputs_dir.joinpath(csv_filename))
 X_test_filename = f"{runid}_xtest.npy"
 y_pred_filename = f"{runid}_ypred.npy"
 y_test_filename = f"{runid}_ytest.npy"
-filenames_filename = f"{runid}_filenamestest.npy"
+filenames_filename = f"{runid}_filenames.npy"
 
 X_test = np.load(outputs_dir.joinpath(X_test_filename))
 y_pred = np.load(outputs_dir.joinpath(y_pred_filename))
@@ -267,7 +267,7 @@ grouped_tiles_df
 # ### Plotting individual tiles
 
 # %%
-index_number = 1
+index_number = 342
 test_img = X_test[index_number]
 
 # mask
@@ -283,6 +283,14 @@ test_img = test_img[:, :, ::-1]
 print(filenames[index_number])
 
 # %%
+figures_dir = outputs_dir / "figures"
+figures_dir.mkdir(parents=True, exist_ok=True)
+
+# Adjust the DPI for high resolution and save in the figures_dir
+filename = figures_dir / "validation_data_baidoa_2.png"
+
+
+# %%
 plt.figure(figsize=(12, 8))
 plt.subplot(231)
 plt.title("Testing Image")
@@ -293,6 +301,7 @@ plt.imshow(ground_truth)
 plt.subplot(233)
 plt.title("Prediction on test image")
 plt.imshow(predicted_img)
+plt.savefig(filename, dpi=300)
 plt.show()
 
 # %% [markdown]
@@ -308,7 +317,7 @@ for row in y_test_argmax:
         max_unique_classes = row_classes
         unique_classes = np.unique(row)
 
-# %%
+# %% jupyter={"outputs_hidden": true}
 all_results = []
 
 for idx, (tile, filename) in enumerate(zip(X_test, filenames)):
@@ -365,7 +374,7 @@ plot_confusion_matrix(y_true, y_pred_arg, class_names)
 # %% [markdown]
 # ### Individual tile metrics
 
-# %%
+# %% jupyter={"outputs_hidden": true}
 tile_metrics_df = calculate_tile_metrics(y_pred, y_test_argmax, class_names, filenames)
 tile_metrics_df
 
@@ -459,53 +468,32 @@ plt.tight_layout()
 plt.show()
 
 # %%
+
 fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
-tent_best_df.boxplot(column="accuracy_percentage_tent", by="area", ax=axes[0])
+# Boxplot for "tent" area
+tent_boxplot = tent_best_df.boxplot(
+    column="accuracy_percentage_tent", by="area", ax=axes[0]
+)
 axes[0].set_title("tent")
 axes[0].set_xlabel("")
 axes[0].set_ylabel("")
 axes[0].grid(False)
 axes[0].set_ylim(-10)
 
-building_best_df.boxplot(column="accuracy_percentage_building", by="area", ax=axes[1])
+# Boxplot for "building" area
+building_boxplot = building_best_df.boxplot(
+    column="accuracy_percentage_building", by="area", ax=axes[1]
+)
 axes[1].set_title("building")
 axes[1].set_xlabel("")
 axes[1].set_ylabel("")
 axes[1].grid(False)
 axes[1].set_ylim(-10)
 
+# Rotate x-axis labels by 90 degrees for both plots
+for ax in axes:
+    ax.tick_params(axis="x", rotation=270)
+
 plt.tight_layout()
 plt.show()
-
-# %% [markdown]
-# ## Georeferencing <a name="georeference"></a>
-#
-# - Need to combine training and validation geojsons (think this is done in notebook #5)
-# - Currently just exporting one shapefile as a test but we'll need a better solution for all outputs
-
-# %%
-test_index_num = 196
-filtered_gdf = all_polygons_gdf[all_polygons_gdf["index_num"] == test_index_num]
-filtered_gdf
-
-# %%
-import geopandas as gpd
-
-filename = "training_data_baidoa_10_jo"
-mask_dir = Path(folder_dict["training_mask_dir"])
-geojson_path = mask_dir / f"{filename}.geojson"
-geojson_data = gpd.read_file(geojson_path)
-
-# %%
-crs = geojson_data.crs
-filtered_gdf.crs = crs
-
-# %%
-merged_gdf = gpd.sjoin(filtered_gdf, geojson_data, how="left", predicate="intersects")
-
-# %%
-output_file = str(footprints_dir / (filename + ".geojson"))
-
-# %%
-merged_gdf.to_file(output_file, driver="GeoJSON")
