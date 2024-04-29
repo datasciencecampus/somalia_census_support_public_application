@@ -253,13 +253,17 @@ To download files from the ingress bucket into the local GCP environment run the
 python src/download_from_bucket.py gs://somalia-census-support-ingress/training/ data/training/
 ```
 
+or moving model files from the `wip` bucket to local storage:
+```
+python src/download_from_bucket.py gs://somalia-census-support-wip/models/ models/
+```
+
 ### Moving data from local GCP storage
 
 To upload files from local storage into the egress bucket run the `upload_to_bucket.py` script with the below line:
 ```
 python src/upload_to_bucket.py data/outputs/figures gs://somalia-census-support-egress/
 ```
-
 or moving model files into the `wip` bucket, it's the same script but different bucket location:
 ```
 python src/upload_to_bucket.py models/ gs://somalia-census-support-wip/models
