@@ -80,7 +80,7 @@ from tensorflow.keras.utils import Sequence
 # %%
 from functions_library import get_folder_paths
 from multi_class_unet_model_build import jacard_coef, get_model
-from loss_functions import get_sm_loss, get_combined_loss, get_tversky_loss
+from loss_functions import get_combined_loss
 
 # %% [markdown]
 # #### GPU Availability check
@@ -395,30 +395,18 @@ callbacks = [
 # ### Loss functions
 
 # %%
-# choose loss function
-loss_function = "combined"  # specify the loss function you want to use: "combined", "segmentation_models, focal_tversky"
-
 optimizer = "adam"  # specify the optimizer you want to use
 
 metrics = ["accuracy", jacard_coef]  # specific the metrics
 
 # %%
-loss_weights = frequency_weights
-
-if loss_function == "segmentation_models":
-    loss = get_sm_loss(frequency_weights)
-
-elif loss_function == "combined":
-    loss = get_combined_loss()
-
-
-elif loss_function == "focal_tversky":
-    loss = get_tversky_loss()
-
-# %%
 model.compile(
-    optimizer=optimizer, loss=loss, loss_weights=loss_weights, metrics=metrics
+    optimizer=optimizer,
+    loss=get_combined_loss(),
+    loss_weights=[0.7, 0.3],
+    metrics=metrics,
 )
+
 
 # %% [markdown]
 # ### Saving model parameters
@@ -431,11 +419,11 @@ current_datetime = datetime.datetime.now()
 formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H%M")
 
 # %%
-runid = f"qa_testing_{formatted_datetime}"
+runid = f"development_testing_{formatted_datetime}"
 runid
 
 # %%
-conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_array_num = {stacked_masks.shape[0]},\nloss_function = {loss_function},\nweight = {loss_weights}"
+conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_array_num = {stacked_masks.shape[0]},\nloss_function = sm"
 print(conditions)
 
 # %%
@@ -482,20 +470,6 @@ history1 = model.fit(
 )
 
 # %%
-# model.summary()
-
-# history1 = model.fit(
-#     X_train,
-#     y_train,
-#     batch_size=batch_size,
-#     verbose=1,
-#     epochs=num_epochs,
-#     validation_data=(X_test, y_test),
-#     shuffle=False,
-#     # callbacks=callbacks,
-# )
-
-# %%
 # optional
 # #%load_ext tensorboard
 # #%tensorboard --logdir logs/
@@ -508,7 +482,7 @@ history1 = model.fit(
 
 # %%
 # saving model run conditions
-model_filename = f"{runid}.hdf5"
+model_filename = f"{runid}.keras"
 
 # save model output into models_dir
 model.save(models_dir.joinpath(model_filename))
@@ -539,7 +513,7 @@ with tf.device("/cpu:0"):
 X_test_filename = f"{runid}_xtest.npy"
 y_pred_filename = f"{runid}_ypred.npy"
 y_test_filename = f"{runid}_ytest.npy"
-filenames_test_filename = f"{runid}_filenamestest.npy"
+filenames_test_filename = f"{runid}_filenames.npy"
 
 
 np.save(outputs_dir.joinpath(X_test_filename), X_test)
