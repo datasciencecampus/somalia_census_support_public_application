@@ -107,8 +107,6 @@ img_size = 384
 
 # %% [markdown]
 # #### Removing areas where training is coming up bad
-#
-# > To keep only these areas change to `filtered_img_files = [file for file in img_files if "bossaso" not in file.name]'
 
 # %%
 # list all .tif files in directoy
