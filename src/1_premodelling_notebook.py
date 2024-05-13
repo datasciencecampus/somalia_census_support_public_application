@@ -133,6 +133,11 @@ for file in mask_files:
     if file not in filtered_mask_files:
         file.unlink()
 
+# %%
+# list all .tif files in directoy
+img_files = list(img_dir.glob("*.tif"))
+mask_files = list(mask_dir.glob("*.geojson"))
+
 # %% [markdown]
 # ## Image files <a name="images"></a>
 #
