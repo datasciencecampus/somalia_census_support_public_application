@@ -5,7 +5,7 @@ from pathlib import Path
 
 import geopandas as gpd
 
-# import pandas as pd
+import pandas as pd
 import numpy as np
 import rasterio as rio
 from rasterio import features
@@ -81,7 +81,7 @@ def create_integer_pairings(mask_gdf, building_class_list):
     )
 
     # create column of integer representations of the categorical building classes
-    # pd.set_option("future.no_silent_downcasting", True)
+    pd.set_option("future.no_silent_downcasting", True)
     mask_gdf["building_class_int"] = mask_gdf["type"].replace(
         building_class_numerical_lookups
     )
