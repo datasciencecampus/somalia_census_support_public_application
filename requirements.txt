@@ -7,7 +7,8 @@ segmentation_models
 scikit-learn
 jupytext==1.14.5
 jupyter
-tensorflow[and-cuda]==2.15.0
+tensorflow==2.15.0
+tensorflow-gpu==2.15.0
 keras==2.15.0
 Path
 datetime
@@ -16,3 +17,5 @@ pytz
 pynvml
 numba
 opencv-python
+folium
+segmentation_models
