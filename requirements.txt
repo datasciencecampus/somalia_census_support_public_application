@@ -8,7 +8,6 @@ scikit-learn
 jupytext==1.14.5
 jupyter
 tensorflow==2.15.0
-tensorflow-gpu==2.15.0
 keras==2.15.0
 Path
 datetime
