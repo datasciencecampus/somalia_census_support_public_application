@@ -69,18 +69,20 @@ import datetime
 
 import numpy as np
 import pandas as pd
+import ipywidgets as widgets
+from IPython.display import display
 import tensorflow as tf
 import pynvml
 from numba import cuda
 from keras.utils import to_categorical
-from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import Sequence
 
 # %%
 from functions_library import get_folder_paths
 from multi_class_unet_model_build import jacard_coef, get_model
-from loss_functions import get_combined_loss
+from loss_functions import get_loss_function
+from weight_functions import get_weights, calculate_weight_stats
 
 # %% [markdown]
 # #### GPU Availability check
@@ -337,17 +339,6 @@ X_train, X_test, y_train, y_test, filenames_train, filenames_test = train_test_s
 )
 
 # %% [markdown]
-# ## Weights <a name="weights"></a>
-
-# %%
-frequency_weights = compute_class_weight(
-    "balanced",
-    classes=np.unique(stacked_masks),
-    y=np.ravel(stacked_masks, order="C"),
-)
-print(frequency_weights)
-
-# %% [markdown]
 # ## Model parameters <a name="modelparameters"></a>
 
 # %%
@@ -392,19 +383,69 @@ callbacks = [
 ]
 
 # %% [markdown]
+# ### Class weights <a name="weights"></a>
+
+# %%
+weight_options = ("frequency", "google", "size", "building")
+weight_dropdown = widgets.Dropdown(
+    options=weight_options, description="select weight function:"
+)
+display(weight_dropdown)
+
+# %%
+weights = get_weights(
+    weight_dropdown.value, stacked_masks, stacked_masks_cat, alpha=1.0, sigma=3, c=200
+)
+weight_stats = calculate_weight_stats(weights)
+print(weights)
+print(weight_stats)
+
+# %% [markdown]
 # ### Loss functions
 
 # %%
-optimizer = "adam"  # specify the optimizer you want to use
+loss_options = (
+    "dice",
+    "focal",
+    "combined",
+    "segmentation_models",
+    "custom",
+    "tversky",
+    "focal_tversky",
+    "weighted_multi_class",
+)
+loss_dropdown = widgets.Dropdown(
+    options=loss_options, description="select loss function:"
+)
+display(loss_dropdown)
 
-metrics = ["accuracy", jacard_coef]  # specific the metrics
+# %%
+weights_distance = 1
+weights_size = 1
+weights_ce = 0
+weights_dice = 0.7
+weights_focal = 0.3
+
+# %%
+loss, loss_weights = get_loss_function(
+    loss_dropdown.value,
+    weights,
+    weights_distance,
+    weights_size,
+    weights_ce,
+    weights_dice,
+    weights_focal,
+)
+
+# %% [markdown]
+# ### Model compile
 
 # %%
 model.compile(
-    optimizer=optimizer,
-    loss=get_combined_loss(),
-    loss_weights=[0.7, 0.3],
-    metrics=metrics,
+    optimizer="adam",
+    loss=loss,
+    loss_weights=loss_weights,
+    metrics=["accuracy", jacard_coef],
 )
 
 
@@ -419,11 +460,11 @@ current_datetime = datetime.datetime.now()
 formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H%M")
 
 # %%
-runid = f"development_testing_{formatted_datetime}"
+runid = f"footprint_runs_{formatted_datetime}"
 runid
 
 # %%
-conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_array_num = {stacked_masks.shape[0]},\nloss_function = sm"
+conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_array_num = {stacked_masks.shape[0]},\nloss_function = {loss},\nloss_weights = {loss_weights}, "
 print(conditions)
 
 # %%
@@ -468,11 +509,6 @@ history1 = model.fit(
     shuffle=False,
     # callbacks=callbacks,
 )
-
-# %%
-# optional
-# #%load_ext tensorboard
-# #%tensorboard --logdir logs/
 
 # %% [markdown]
 # ### Saving files
