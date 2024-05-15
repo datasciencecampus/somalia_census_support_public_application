@@ -10,24 +10,22 @@
 
 Planning for a census requires understanding where populations are distributed so that enumeration areas can be successfully designed.
 
-The last census in Somalia was 50 years ago, meaning that this data is no longer relevant for designing enumeration areas.
+The last census in Somalia was 50 years ago, before a Civil War and protracted conflict, meaning that this data is no longer relevant for designing enumeration areas.
 
-Instead, the Somali National Bureau of Statistics (SNBS) and the other Federal Member States inconjunction with the United Nations Population Fund (UNFPA) are looking to novel techniques to plan for the census in a resource-efficient way.
+In addition, it's estimated nearly 3 million people have been internally displaced in Somalia, seeking refugee in over 2,700 camps. These informal camps are prone to rapid changes in their size and structure, making them an area where population estimates are difficult to obtain.
 
-The [WorldPop pre-enumeration tool](https://www.worldpop.org/current-projects/completed-projects/exploring-the-automatic-pre-enumeration-areas-tool-for-surveys-on-forced-displacement-refugees/) is being used in a pilot for census mapping in Somalia. This phase is being funded by the Bill and Melinda Gates Foundation.
+The UKs Foreign, Commonwealth, and Development Office (FCDO) are working the Somali Government and the United Nations Population Fund (UNFPA) to lay the foundations for a census in Somalia. As part of this they wanted to know if novel data science techniques could be used to support census planning in a resource-efficient way.
 
-The pre-EA tool takes in multiple layers of data to design enumeration areas. It's estimated nearly 3 million people have been internally displaced in Somalia, seeking refugee in over 2,700 camps.
-
-These camps change size and structure frequently due to external factors such as forced evictions from private lands, flooding, and camp re-organisation. Manually counting camp shelters from very high-resolution (VHR) satellite imagery is a time-consuing process. It would take 1 person 2 years to manually count all tents, a quarter of the way through they would need to start again.
-
-The DSC at the ONS have automated the detection of shelters in Somali IDP camps. Combining UNet modelling with VHR Planet SkySat imagery (0.5m/px), shelters (tents and buildings) can be detected within minutes to a high degree of accuracy.
-
-![Diagram showing project network](image-1.png)
+The Data Science Campus at the Office for National Statistics (ONS) worked to automate the detection of shelter footprints in Somali internally displaced people (IDP) camps. We used very high-resolution (VHR) Planet SkySat 0.5 m/px satellite imagery to train our model. The model is capable of detecting tents, informal, and formal buildings to a high degree of accuracy (>70 % percentage accuracy). The DSC work means IDP camp footprints can be created in minutes compared to months.
 
 ## How to use this repo
-This repository has been specifically built for the purpose of training a multi-class UNet model to create shelters (tents and buildings) footprints for IDP camps in Somalia. The workflow also contains code to evaluate model outputs and run trained models on unseen imagery.
 
-The workflow was built and optimised using Planet SkySat 0.5m/pixel imagery.
+This repository has three primary functions:
+1. train a multi-class UNet model
+2. evaluate model outputs
+3. create footprints from unseen satellite images
+
+The workflow was built and optimised using Planet SkySat 0.5m/pixel imagery, with training tiles 384 x 384 pixels in size and utilising a 4th NIR channel. Any VHR satellite imagery 384 x 384 px (or larger) should be able to be used in this project, although this has not been tested.
 
 Training data consists of `geoTIF` image rasters with corresponding `geoJSON` masks of polygons. The masks have been manually created for this project. Both inputs are ~384 x 384 in size.
 
@@ -268,6 +266,10 @@ or moving model files into the `wip` bucket, it's the same script but different 
 ```
 python src/upload_to_bucket.py models/ gs://somalia-census-support-wip/models
 ```
+
+## Creating shelter footprints
+
+In the scenario where you want to use pre-trained models to create building footprints, only the `create_footprints.py` script is required to be run. Pre-trained models are available in the `somalia-census-support-wip` bucket, these should be downloaded locally to run the notebook (see `Moving data from local GCP storage` section above).
 
 ## Things of note
 The [wiki page attached to this repo](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Somalia-UNFPA-Census-support) contains useful resources and other relevant notes.
