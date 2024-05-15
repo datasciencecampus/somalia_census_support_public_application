@@ -5,6 +5,8 @@ from rasterio.mask import mask
 from pathlib import Path
 import geopandas as gpd
 import rasterio as rio
+import ipywidgets as widgets
+from IPython.display import display
 from functions_library import generate_tiles
 
 # %% [markdown]
@@ -13,10 +15,9 @@ from functions_library import generate_tiles
 # %%
 # set directories - note this is local so yours might look different!
 data_dir = Path.cwd().parent.joinpath("data")
-planet_images_dir = data_dir.joinpath("planet_images")  # might not be necessary
 
 # change variable for dir name as required
-baidoa_dir = planet_images_dir.joinpath("Baidoa")
+baidoa_dir = data_dir.joinpath("Baidoa")
 tile_dir = baidoa_dir.joinpath("tiles")
 
 
@@ -24,17 +25,36 @@ tile_dir = baidoa_dir.joinpath("tiles")
 # #### Import raster and geojson
 
 # %%
-# make sure matches geojson file name
-area_name = "baidoa_ishaholwada"
+pattern = "*_camp_extents.geojson"
+matching_files = list(baidoa_dir.glob(pattern))
+
+# %%
+folder_dropdown = widgets.Dropdown(options=matching_files, description="select folder:")
+display(folder_dropdown)
+
+# %%
+if folder_dropdown.value.stem == "baidoa_central_camp_extents":
+    planet_file = "20230320_104520_ssc11_u0001_pansharpened_clip.tif"
+
+elif folder_dropdown.value.stem == "baidoa_east_camp_extents":
+    planet_file = "20230320_064000_ssc2_u0001_pansharpened_clip.tif"
+
+elif folder_dropdown.value.stem == "baidoa_west_camp_extents":
+    planet_file = "20230113_104649_ssc6_u0001_pansharpened_clip.tif"
+
+elif folder_dropdown.value.stem == "baidoa_holwadag_camp_extents":
+    planet_file = "20230302_064032_ssc2_u0001_pansharpened_clip.tif"
+
+# baidoa_ishaholwada
+else:
+    planet_file = "20230302_064032_ssc2_u0001_pansharpened_clip_cloudy.tif"
 
 # %%
 # tif file
-img_file = baidoa_dir.joinpath(
-    "20230302_064032_ssc2_u0001_pansharpened_clip_cloudy.tif"
-)
+img_file = baidoa_dir.joinpath(planet_file)
 
 # geojson file
-polygon_file = baidoa_dir.joinpath(f"{area_name}_camp_extents.geojson")
+polygon_file = baidoa_dir.joinpath(f"{folder_dropdown.value.stem}.geojson")
 
 # %% [markdown]
 # ## Creating polygons & tiles for input
@@ -58,7 +78,7 @@ with rio.open(img_file) as src:
                 }
             )
 
-            output_file = tile_dir / f"{area_name}_polygons_{idx}.tif"
+            output_file = tile_dir / f"{folder_dropdown.value.stem}_polygons_{idx}.tif"
 
             with rio.open(output_file, "w", **out_meta) as dst:
                 dst.write(out_image)
