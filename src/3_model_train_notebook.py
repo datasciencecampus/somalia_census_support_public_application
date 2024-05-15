@@ -66,7 +66,6 @@ from pathlib import Path
 import datetime
 
 # %%
-
 import numpy as np
 import pandas as pd
 import ipywidgets as widgets
@@ -351,11 +350,6 @@ img_height, img_width, img_channels = (
 print(img_height, img_width, img_channels)
 
 # %%
-stacked_images = []
-stacked_masks_cat = []
-stacked_filenames = []
-
-# %%
 # defined under training parameters
 model = get_model(n_classes, img_height, img_width, img_channels)
 
@@ -393,11 +387,11 @@ weight_dropdown = widgets.Dropdown(
 display(weight_dropdown)
 
 # %%
-weights = get_weights(
+class_weights = get_weights(
     weight_dropdown.value, stacked_masks, stacked_masks_cat, alpha=1.0, sigma=3, c=200
 )
-weight_stats = calculate_weight_stats(weights)
-print(weights)
+weight_stats = calculate_weight_stats(class_weights)
+print(class_weights)
 print(weight_stats)
 
 # %% [markdown]
@@ -409,10 +403,8 @@ loss_options = (
     "focal",
     "combined",
     "segmentation_models",
-    "custom",
     "tversky",
     "focal_tversky",
-    "weighted_multi_class",
 )
 loss_dropdown = widgets.Dropdown(
     options=loss_options, description="select loss function:"
@@ -420,22 +412,20 @@ loss_dropdown = widgets.Dropdown(
 display(loss_dropdown)
 
 # %%
-weights_distance = 1
-weights_size = 1
-weights_ce = 0
-weights_dice = 0.7
-weights_focal = 0.3
+weights_ce = 1.0
+weights_dice = 1.0
+weights_focal = 1.0
 
 # %%
-loss, loss_weights = get_loss_function(
-    loss_dropdown.value,
-    weights,
-    weights_distance,
-    weights_size,
-    weights_ce,
-    weights_dice,
-    weights_focal,
-)
+loss = get_loss_function(loss_dropdown.value, class_weights)
+
+# %%
+if loss_dropdown.value == "combined":
+    loss_weights = [weights_dice, weights_focal]
+elif loss_dropdown.value == "weighted_multi_class":
+    loss_weights = [weights_ce, weights_dice, weights_focal]
+else:
+    loss_weights = None
 
 # %% [markdown]
 # ### Model compile
@@ -464,13 +454,8 @@ runid = f"footprint_runs_{formatted_datetime}"
 runid
 
 # %%
-conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_array_num = {stacked_masks.shape[0]},\nloss_function = {loss},\nloss_weights = {loss_weights}, "
+conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_array_num = {stacked_masks.shape[0]},\nweights = {class_weights},\nloss_function = {loss},\nloss_weights = {loss_weights}, "
 print(conditions)
-
-# %%
-conditions_filename = outputs_dir / f"{runid}_conditions.txt"
-with open(conditions_filename, "w") as f:
-    f.write(conditions)
 
 
 # %% [markdown]
@@ -507,18 +492,26 @@ history1 = model.fit(
     epochs=num_epochs,
     validation_data=test_gen,
     shuffle=False,
-    # callbacks=callbacks,
+    callbacks=callbacks,
 )
 
 # %% [markdown]
 # ### Saving files
 
 # %% [markdown]
+# #### Saving conditions
+
+# %%
+conditions_filename = outputs_dir / f"{runid}_conditions.txt"
+with open(conditions_filename, "w") as f:
+    f.write(conditions)
+
+# %% [markdown]
 # #### Saving model
 
 # %%
 # saving model run conditions
-model_filename = f"{runid}.keras"
+model_filename = f"{runid}.h5"
 
 # save model output into models_dir
 model.save(models_dir.joinpath(model_filename))
