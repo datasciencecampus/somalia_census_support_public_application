@@ -84,8 +84,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import ipywidgets as widgets
 
-
-import h5py
 from pathlib import Path
 from keras.metrics import MeanIoU
 import tensorflow as tf
@@ -93,7 +91,7 @@ from IPython.display import display
 
 # %%
 from functions_library import get_folder_paths
-from loss_functions import get_combined_loss
+from loss_functions import get_loss_function
 from multi_class_unet_model_build import jacard_coef
 from model_outputs_functions import (
     calculate_metrics,
@@ -126,25 +124,11 @@ footprints_dir = Path(folder_dict["footprints_dir"])
 
 # %%
 # Set runid for outputs
-runid = "development_testing_2024-04-24_1326"
+runid = "footprint_runs_2024-05-15_0715"
 
 
 # %% [markdown]
 # ## Import data <a name="importdata"></a>
-
-# %% [markdown]
-# ### Model conditions
-
-# %%
-# set model input read depending on when model was run
-model_folder = True
-if model_folder:
-    model_filename = f"{runid}.hdf5"
-    model_phase = h5py.File(models_dir.joinpath(model_filename), "r")
-else:
-    model_filename = runid
-    model_phase = models_dir.joinpath(model_filename)
-
 
 # %% [markdown]
 # ### History (epochs)
@@ -169,14 +153,38 @@ filenames = np.load(outputs_dir.joinpath(filenames_filename))
 
 
 # %% [markdown]
-# ### Set loss
-
-# %%
-# check total loss has loaded successfully
-total_loss = get_combined_loss()
+# ### Model conditions
 
 # %% [markdown]
-# ### Set classes
+# #### Set loss
+
+# %%
+# find what loss functions was used
+conditions_path = outputs_dir / f"{runid}_conditions.txt"
+with open(conditions_path, "r") as file:
+    text = file.read()
+print(text)
+
+# %%
+loss_options = (
+    "dice",
+    "focal",
+    "combined",  # if loss_function = [<function focal_loss at 0x7fb29123d1b0>, <function dice_loss at 0x7fb29154c550>]
+    "segmentation_models",
+    "tversky",
+    "focal_tversky",
+    "weighted_multi_class",
+)
+loss_dropdown = widgets.Dropdown(
+    options=loss_options, description="select loss function:"
+)
+display(loss_dropdown)
+
+# %%
+loss = get_loss_function(loss_dropdown.value)
+
+# %% [markdown]
+# #### Set classes
 
 # %%
 # number of classes
@@ -188,21 +196,22 @@ n_classes
 class_names = generate_class_names(n_classes)
 print(class_names)
 
+# %%
+model_filename = f"{runid}.h5"
+model_phase = models_dir / model_filename
+
 # %% [markdown]
 # ## Load model <a name="loadmodel"></a>
 
-# %%
+# %% jupyter={"outputs_hidden": true}
 model = keras.models.load_model(
     model_phase,
     custom_objects={
-        "dice_loss_plus_1focal_loss": total_loss,
-        "dice_loss_plus_focal_loss": total_loss,
-        "focal_loss": total_loss[0],
-        "dice_loss": total_loss[1],
+        "focal_loss": loss,
+        "dice_loss": loss,
         "jacard_coef": jacard_coef,
     },
 )
-
 
 # %% [markdown]
 # ## Training and validation changes <a name="trainingvalidationchanges"></a>
@@ -245,7 +254,6 @@ with tf.device("/cpu:0"):
     y_test_argmax = np.argmax(y_test, axis=3)
 
 # %%
-# calculating mean IoU
 with tf.device("/cpu:0"):
     IOU_keras = MeanIoU(num_classes=n_classes)
     IOU_keras.update_state(y_test_argmax, y_pred_argmax)
@@ -267,7 +275,7 @@ grouped_tiles_df
 # ### Plotting individual tiles
 
 # %%
-index_number = 342
+index_number = 3
 test_img = X_test[index_number]
 
 # mask
@@ -283,14 +291,6 @@ test_img = test_img[:, :, ::-1]
 print(filenames[index_number])
 
 # %%
-figures_dir = outputs_dir / "figures"
-figures_dir.mkdir(parents=True, exist_ok=True)
-
-# Adjust the DPI for high resolution and save in the figures_dir
-filename = figures_dir / "validation_data_baidoa_2.png"
-
-
-# %%
 plt.figure(figsize=(12, 8))
 plt.subplot(231)
 plt.title("Testing Image")
@@ -301,7 +301,6 @@ plt.imshow(ground_truth)
 plt.subplot(233)
 plt.title("Prediction on test image")
 plt.imshow(predicted_img)
-plt.savefig(filename, dpi=300)
 plt.show()
 
 # %% [markdown]
@@ -374,7 +373,7 @@ plot_confusion_matrix(y_true, y_pred_arg, class_names)
 # %% [markdown]
 # ### Individual tile metrics
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 tile_metrics_df = calculate_tile_metrics(y_pred, y_test_argmax, class_names, filenames)
 tile_metrics_df
 

@@ -203,7 +203,6 @@ def check_shapes(directory):
 
     if len(shapes) == 1:
         print("All npy files have the same shape:", shapes.pop())
-        return shapes.pop()
     else:
         return None
 

@@ -34,12 +34,11 @@
 # %%
 import numpy as np
 
-# from keras.models import load_model
+import keras
 from pathlib import Path
 import pandas as pd
 import ipywidgets as widgets
 from IPython.display import display
-import matplotlib.pyplot as plt
 import rasterio as rio
 import folium
 import shutil
@@ -70,7 +69,10 @@ footprints_dir = Path(folder_dict["footprints_dir"])
 # ## Load model
 
 # %%
-runid = "footprint_runs_2024-05-14_1258"
+n_classes = 3
+
+# %%
+runid = "footprint_runs_2024-05-15_0715"
 
 # %%
 # find what loss functions was used
@@ -99,17 +101,13 @@ loss = get_loss_function(loss_dropdown.value)
 
 
 # %%
-model_path = models_dir / f"{runid}.keras"
-model_path
+model_filename = f"{runid}.h5"
+model_phase = models_dir / model_filename
 
 # %%
-import tensorflow as tf
-
-model = tf.keras.models.load_model(
-    model_path,
+model = keras.models.load_model(
+    model_phase,
     custom_objects={
-        "dice_loss_plus_1focal_loss": loss,
-        "dice_loss_plus_focal_loss": loss,
         "focal_loss": loss,
         "dice_loss": loss,
         "jacard_coef": jacard_coef,
@@ -225,8 +223,8 @@ print(unseen_filenames.shape)
 
 # %%
 # delete npy arrays now stacked
-# for file in Path(area_dir).glob("*npy"):
-# file.unlink()
+for file in Path(area_dir).glob("*npy"):
+    file.unlink()
 
 # %% [markdown]
 # ### Add padding
@@ -260,50 +258,13 @@ padded_unseen_images = []
 unseen_filenames = []
 
 # %% [markdown]
-# ## Load model
-
-# %% [markdown]
-# ## Run model on unseen images (optional)
-
-# %%
-predictions = model.predict(filtered_images)
-
-# %%
-predictions.shape
-
-# %% [markdown]
-# ### Visual check
-
-# %%
-test_number = 20
-
-# %%
-img_size = 384
-image_test = np.load(sub_area_dir.joinpath(f"{filtered_filenames[test_number]}.npy"))
-image_test.shape
-
-# %%
-# BGR to RGB
-image_test = image_test[:, :, :3]
-image_test = image_test[:, :, ::-1]
-
-# %%
-plt.figure(figsize=(12, 8))
-plt.subplot(231)
-plt.title(filtered_filenames[test_number])
-plt.imshow(image_test)  # [:, :, :3])
-plt.subplot(232)
-plt.imshow(predictions[test_number])
-plt.show()
-
-# %% [markdown]
 # ## Convert to polygons
 
 # %%
 # get transformation matrix from original .tiff images
 transforms = extract_transform_from_directory(sub_area_dir)
 
-# %%
+# %% jupyter={"outputs_hidden": true}
 # create georeferenced footpritns
 num_classes = 3
 unique_classes = list(range(num_classes))
@@ -339,7 +300,7 @@ print("Number of buildings:", building_count)
 print("Number of tents:", tent_count)
 
 # %%
-filtered_gdf = all_polygons_gdf[all_polygons_gdf["index_num"] == 20]
+filtered_gdf = all_polygons_gdf[all_polygons_gdf["index_num"] == 0]
 
 # change crs into lat/long for plotting
 filtered_gdf = filtered_gdf.to_crs(epsg=4326)

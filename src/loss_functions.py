@@ -61,14 +61,17 @@ def focal_loss(y_test, y_pred, gamma=2.0, alpha=0.25):
     return K.mean(loss)
 
 
+def cross_entropy(y_true, y_pred):
+    epsilon = 1e-07  # Small constant to avoid division by zero
+    y_pred = tf.clip_by_value(
+        y_pred, epsilon, 1 - epsilon
+    )  # Clip values to avoid log(0)
+    loss = -tf.reduce_mean(y_true * tf.math.log(y_pred), axis=-1)
+    return loss
+
+
 def weighted_multi_class_loss(
-    y_test,
-    y_pred,
-    weights_distance,
-    weights_size,
-    weights_ce,
-    weights_dice,
-    weights_focal,
+    y_test, y_pred, class_weights, weights_ce=1.0, weights_dice=1.0, weights_focal=1.0
 ):
     """
     Calculate weighted multi-class loss.
@@ -79,8 +82,7 @@ def weighted_multi_class_loss(
     Args:
         y_test (tensor): Ground truth labels.
         y_pred (tensor): Predicted labels.
-        weights_distance (float): Weight for distance loss.
-        weights_size (float): Weight for size loss.
+        class_weights (list): Weights for each class.
         weights_ce (float): Weight for cross-entropy loss.
         weights_dice (float): Weight for dice loss.
         weights_focal (float): Weight for focal loss.
@@ -89,10 +91,10 @@ def weighted_multi_class_loss(
         tensor: Weighted multi-class loss.
 
     Example:
-        loss = weighted_multi_class_loss(y_true, y_pred, 1.0, 0.8, 1.0, 1.0, 1.0)
+        loss = weighted_multi_class_loss(y_true, y_pred, [0.7, 0.15, 0.15], 1.0, 1.0, 1.0)
     """
     # cross entropy loss
-    loss_ce = K.sparse_categorical_crossentropy(y_test, y_pred)
+    loss_ce = cross_entropy(y_test, y_pred)
 
     # dice loss
     loss_dice = dice_loss(y_test, y_pred)
@@ -100,12 +102,18 @@ def weighted_multi_class_loss(
     # focal loss
     loss_focal = focal_loss(y_test, y_pred)
 
-    # calculate pixel weights
-    weights = weights_distance * weights_size
+    # apply class weights to each loss
+    weighted_losses = (
+        [class_weights[i] * loss_ce for i in range(len(class_weights))]
+        + [class_weights[i] * loss_dice for i in range(len(class_weights))]
+        + [class_weights[i] * loss_focal for i in range(len(class_weights))]
+    )
 
-    # combine losses with weights
-    loss = weights * (
-        weights_ce * loss_ce + weights_dice * loss_dice + weights_focal * loss_focal
+    # combine weighted losses with respective weights
+    loss = (
+        weights_ce * weighted_losses[0]
+        + weights_dice * weighted_losses[1]
+        + weights_focal * weighted_losses[2]
     )
 
     return loss
@@ -143,39 +151,6 @@ def focal_tversky_loss(y_test, y_pred, alpha=0.7, beta=0.3, gamma=1.0, smooth=1e
     return loss
 
 
-def get_custom_loss(weights_distance, weights_size):
-    """
-
-    This function returns a lambda function that calculates a custom loss using
-    weighted multi-class loss function with provided weights.
-
-    Args:
-        weights_distance (float): Weight for distance loss.
-        weights_size (float): Weight for size loss.
-
-    Returns:
-        function: Lambda function for custom loss calculation.
-
-    Example:
-        custom_loss_func = get_custom_loss(0.8, 0.5)
-        loss = custom_loss_func(y_true, y_pred)
-    """
-    weights_ce = 1
-    weights_dice = (
-        1  # if accuracy low trying increasing to place more emphasis on Dice loss
-    )
-    weights_focal = 1  # helps deal with imbalanced data. Range from 0.5 to 5
-    return lambda y_test, y_pred: weighted_multi_class_loss(
-        y_test,
-        y_pred,
-        weights_distance,
-        weights_size,
-        weights_ce,
-        weights_dice,
-        weights_focal,
-    )
-
-
 def get_sm_loss(class_weights):
     return sm.losses.DiceLoss(class_weights) + sm.losses.CategoricalFocalLoss()
 
@@ -207,15 +182,12 @@ def tversky_loss(y_true, y_pred):
     return 1 - tversky_coef
 
 
-def get_loss_function(
-    loss_dropdown,
-    weights=None,
-    weights_distance=1,
-    weights_size=1,
-    weights_ce=0,
-    weights_dice=0.7,
-    weights_focal=0.3,
-):
+def get_combined_loss(y_true, y_pred):
+    loss = [focal_loss, dice_loss]
+    return loss
+
+
+def get_loss_function(loss_dropdown, class_weights=None):
     """
     Get the selected loss function.
 
@@ -240,13 +212,9 @@ def get_loss_function(
 
     elif loss_dropdown == "combined":
         loss = [focal_loss, dice_loss]
-        loss_weights = (weights_dice, weights_focal)
 
     elif loss_dropdown == "segmentation_models":
-        loss = get_sm_loss(weights)
-
-    elif loss_dropdown == "custom":
-        loss = get_custom_loss(weights_distance, weights_size)
+        loss = get_sm_loss(class_weights)
 
     elif loss_dropdown == "focal_tversky":
         loss = focal_tversky_loss
@@ -254,14 +222,4 @@ def get_loss_function(
     elif loss_dropdown == "tversky":
         loss = tversky_loss
 
-    elif loss_dropdown == "weighted_multi_class":
-        loss = weighted_multi_class_loss
-        loss_weights = (
-            weights_distance,
-            weights_size,
-            weights_ce,
-            weights_dice,
-            weights_focal,
-        )
-
-    return loss, loss_weights
+    return loss
