@@ -269,7 +269,18 @@ python src/upload_to_bucket.py models/ gs://somalia-census-support-wip/models
 
 ## Creating shelter footprints
 
-In the scenario where you want to use pre-trained models to create building footprints, only the `create_footprints.py` script is required to be run. Pre-trained models are available in the `somalia-census-support-wip` bucket, these should be downloaded locally to run the notebook (see `Moving data from local GCP storage` section above).
+In the scenario where you want to use pre-trained models to create building footprints, only the `create_footprints.py` script is required to be run. Pre-trained models are available in the `somalia-census-support-wip` bucket, these should be downloaded locally to run the notebook (see `Moving data from local GCP storage` section above). To run `create_footprints.py` `conditions.txt` for model runs and `camp_tiles` files also need to be downloaded. 
+
+To get `conditions.txt` run:
+```
+python src/download_from_bucket.py gs://somalia-census-support-wip/outputs/ data/outputs/
+```
+
+To get `camp_tiles` for Baidoa for example, run:
+```
+python src/download_from_bucket.py gs://somalia-census-support-ingress/baidoa/ camp_tiles/baidoa/
+```
+
 
 ## Things of note
 The [wiki page attached to this repo](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Somalia-UNFPA-Census-support) contains useful resources and other relevant notes.
