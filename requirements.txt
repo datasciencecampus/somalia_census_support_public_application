@@ -7,8 +7,8 @@ segmentation_models
 scikit-learn
 jupytext==1.14.5
 jupyter
-tensorflow
-keras
+tensorflow[and-cuda]
+keras==2.15.0
 Path
 datetime
 google.cloud
@@ -16,3 +16,5 @@ pytz
 pynvml
 numba
 opencv-python
+folium
+segmentation_models

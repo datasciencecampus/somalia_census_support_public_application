@@ -166,6 +166,29 @@ def rm_tree(pth):
         pth.rmdir()
 
 
+
+def delete_files_with_extensions(directory_path, extensions):
+    """
+    Delete files with specified extensions in a directory.
+
+    Parameters:
+        directory_path (str): The path to the directory containing the files.
+        extensions (list of str): List of file extensions to delete.
+
+    Returns:
+        None
+    """
+    # Create a Path object for the directory
+    directory = Path(directory_path)
+
+    # Iterate through all files in the directory
+    for file in directory.iterdir():
+        # Check if the file extension matches any of the specified extensions
+        if file.suffix in extensions:
+            # Delete the file
+            file.unlink()
+            print(f"File '{file.name}' deleted successfully.")
+
 def generate_tiles(image_path, tile_size=384, output_dir="tiles"):
 
     """

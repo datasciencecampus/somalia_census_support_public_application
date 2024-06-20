@@ -6,9 +6,9 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.5
+#       jupytext_version: 1.16.1
 #   kernelspec:
-#     display_name: venv-somalia-gcp
+#     display_name: venv-somalia-gcp (Local)
 #     language: python
 #     name: venv-somalia-gcp
 # ---
@@ -66,22 +66,22 @@ from pathlib import Path
 import datetime
 
 # %%
-
 import numpy as np
 import pandas as pd
+import ipywidgets as widgets
+from IPython.display import display
 import tensorflow as tf
 import pynvml
 from numba import cuda
 from keras.utils import to_categorical
-from sklearn.utils.class_weight import compute_class_weight
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import Sequence
 
 # %%
 from functions_library import get_folder_paths
 from multi_class_unet_model_build import jacard_coef, get_model
-from loss_functions import get_sm_loss, get_combined_loss, get_tversky_loss
-from weight_functions import calculate_distance_weights
+from loss_functions import get_loss_function
+from weight_functions import get_weights, calculate_weight_stats
 
 # %% [markdown]
 # #### GPU Availability check
@@ -156,8 +156,8 @@ else:
 # %%
 # for importing stacked arrays
 folder_dict = get_folder_paths()
-stacked_img = Path(folder_dict["stacked_img_dir"])
-stacked_mask = Path(folder_dict["stacked_mask_dir"])
+stacked_dir = Path(folder_dict["stacked_dir"])
+
 
 # set model and output directories
 models_dir = Path(folder_dict["models_dir"])
@@ -172,16 +172,16 @@ outputs_dir = Path(folder_dict["outputs_dir"])
 # %%
 ramp = False
 if ramp:
-    ramp_masks = np.load(stacked_mask / "ramp_bentiu_south_sudan_all_stacked_masks.npy")
+    ramp_masks = np.load(stacked_dir / "ramp_bentiu_south_sudan_all_stacked_masks.npy")
 else:
     ramp_masks = None
 
 # %%
-training_masks = np.load(stacked_mask / "training_data_all_stacked_masks.npy")
+training_masks = np.load(stacked_dir / "training_data_all_stacked_masks.npy")
 training_masks.shape
 
 # %%
-validation_masks = np.load(stacked_mask / "validation_data_all_stacked_masks.npy")
+validation_masks = np.load(stacked_dir / "validation_data_all_stacked_masks.npy")
 validation_masks.shape
 
 # %%
@@ -223,17 +223,17 @@ stacked_masks_cat.shape
 # %%
 if ramp:
     ramp_images = np.load(
-        stacked_img / "ramp_bentiu_south_sudan_all_stacked_images.npy"
+        stacked_dir / "ramp_bentiu_south_sudan_all_stacked_images.npy"
     )
 else:
     ramp_images = None
 
 # %%
-training_images = np.load(stacked_img / "training_data_all_stacked_images.npy")
+training_images = np.load(stacked_dir / "training_data_all_stacked_images.npy")
 training_images.shape
 
 # %%
-validation_images = np.load(stacked_img / "validation_data_all_stacked_images.npy")
+validation_images = np.load(stacked_dir / "validation_data_all_stacked_images.npy")
 validation_images.shape
 
 # %%
@@ -266,17 +266,17 @@ validation_images = []
 # %%
 if ramp:
     ramp_filenames = np.load(
-        stacked_img / "ramp_bentiu_south_sudan_all_stacked_filenames.npy"
+        stacked_dir / "ramp_bentiu_south_sudan_all_stacked_filenames.npy"
     )
 else:
     ramp_filenames = None
 
 # %%
-training_filenames = np.load(stacked_img / "training_data_all_stacked_filenames.npy")
+training_filenames = np.load(stacked_dir / "training_data_all_stacked_filenames.npy")
 
 # %%
 validation_filenames = np.load(
-    stacked_img / "validation_data_all_stacked_filenames.npy"
+    stacked_dir / "validation_data_all_stacked_filenames.npy"
 )
 
 # %%
@@ -296,11 +296,11 @@ stacked_filenames.shape
 # #### Borders
 
 # %%
-training_edges = np.load(stacked_mask / "training_data_all_stacked_edges.npy")
+training_edges = np.load(stacked_dir / "training_data_all_stacked_edges.npy")
 training_edges.shape
 
 # %%
-validation_edges = np.load(stacked_mask / "validation_data_all_stacked_edges.npy")
+validation_edges = np.load(stacked_dir / "validation_data_all_stacked_edges.npy")
 validation_edges.shape
 
 # %%
@@ -320,15 +320,6 @@ validation_edges = []
 # %% [markdown]
 # ## Training parameters <a name="trainingparameters"></a>
 
-# %%
-# X_train, X_test, y_train, y_test, filenames_train, filenames_test = train_test_split(
-#     stacked_images,
-#     stacked_masks_cat,
-#     stacked_filenames,
-#     test_size=0.20,
-#     random_state=42,
-# )
-
 # %% [markdown]
 # ### Adding edges as model in/outputs
 
@@ -347,26 +338,6 @@ X_train, X_test, y_train, y_test, filenames_train, filenames_test = train_test_s
 )
 
 # %% [markdown]
-# ## Weights <a name="weights"></a>
-
-# %%
-google_weights = calculate_distance_weights(stacked_masks_cat)
-print(google_weights)
-
-# %%
-frequency_weights = compute_class_weight(
-    "balanced",
-    classes=np.unique(stacked_masks),
-    y=np.ravel(stacked_masks, order="C"),
-)
-print(frequency_weights)
-
-# %%
-# weights = [0.2, 0.2, 0.2, 0.2, 0.2]
-# frequency_weights = np.array(weights, dtype=np.float64)
-# print(frequency_weights)
-
-# %% [markdown]
 # ## Model parameters <a name="modelparameters"></a>
 
 # %%
@@ -377,11 +348,6 @@ img_height, img_width, img_channels = (
     stacked_images.shape[3],
 )
 print(img_height, img_width, img_channels)
-
-# %%
-stacked_images = []
-stacked_masks_cat = []
-stacked_filenames = []
 
 # %%
 # defined under training parameters
@@ -406,38 +372,72 @@ batch_size = 50
 
 # %%
 callbacks = [
-    tf.keras.callbacks.EarlyStopping(patience=4, monitor="val_loss"),
+    tf.keras.callbacks.EarlyStopping(patience=10, monitor="val_loss"),
     tf.keras.callbacks.TensorBoard(log_dir="logs"),
 ]
+
+# %% [markdown]
+# ### Class weights <a name="weights"></a>
+
+# %%
+weight_options = ("frequency", "google", "size", "building")
+weight_dropdown = widgets.Dropdown(
+    options=weight_options, description="select weight function:"
+)
+display(weight_dropdown)
+
+# %%
+class_weights = get_weights(
+    weight_dropdown.value, stacked_masks, stacked_masks_cat, alpha=1.0, sigma=3, c=200
+)
+weight_stats = calculate_weight_stats(class_weights)
+print(class_weights)
+print(weight_stats)
 
 # %% [markdown]
 # ### Loss functions
 
 # %%
-# choose loss function
-loss_function = "combined"  # specify the loss function you want to use: "combined", "segmentation_models, focal_tversky"
-
-optimizer = "adam"  # specify the optimizer you want to use
-
-metrics = ["accuracy", jacard_coef]  # specific the metrics
+loss_options = (
+    "dice",
+    "focal",
+    "combined",
+    "segmentation_models",
+    "tversky",
+    "focal_tversky",
+)
+loss_dropdown = widgets.Dropdown(
+    options=loss_options, description="select loss function:"
+)
+display(loss_dropdown)
 
 # %%
-loss_weights = frequency_weights
+weights_ce = 1.0
+weights_dice = 1.0
+weights_focal = 1.0
 
-if loss_function == "segmentation_models":
-    loss = get_sm_loss(frequency_weights)
+# %%
+loss = get_loss_function(loss_dropdown.value, class_weights)
 
-elif loss_function == "combined":
-    loss = get_combined_loss()
-    loss_weights = google_weights
+# %%
+if loss_dropdown.value == "combined":
+    loss_weights = [weights_dice, weights_focal]
+elif loss_dropdown.value == "weighted_multi_class":
+    loss_weights = [weights_ce, weights_dice, weights_focal]
+else:
+    loss_weights = None
 
-elif loss_function == "focal_tversky":
-    loss = get_tversky_loss()
+# %% [markdown]
+# ### Model compile
 
 # %%
 model.compile(
-    optimizer=optimizer, loss=loss, loss_weights=loss_weights, metrics=metrics
+    optimizer="adam",
+    loss=loss,
+    loss_weights=loss_weights,
+    metrics=["accuracy", jacard_coef],
 )
+
 
 # %% [markdown]
 # ### Saving model parameters
@@ -450,17 +450,12 @@ current_datetime = datetime.datetime.now()
 formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H%M")
 
 # %%
-runid = f"qa_testing_{formatted_datetime}"
+runid = f"footprint_runs_{formatted_datetime}"
 runid
 
 # %%
-conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_array_num = {stacked_masks.shape[0]},\nloss_function = {loss_function},\nweight = {loss_weights}"
+conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_array_num = {stacked_masks.shape[0]},\nweights = {class_weights},\nloss_function = {loss},\nloss_weights = {loss_weights}, "
 print(conditions)
-
-# %%
-conditions_filename = outputs_dir / f"{runid}_conditions.txt"
-with open(conditions_filename, "w") as f:
-    f.write(conditions)
 
 
 # %% [markdown]
@@ -497,37 +492,26 @@ history1 = model.fit(
     epochs=num_epochs,
     validation_data=test_gen,
     shuffle=False,
-    # callbacks=callbacks,
+    callbacks=callbacks,
 )
-
-# %%
-# model.summary()
-
-# history1 = model.fit(
-#     X_train,
-#     y_train,
-#     batch_size=batch_size,
-#     verbose=1,
-#     epochs=num_epochs,
-#     validation_data=(X_test, y_test),
-#     shuffle=False,
-#     # callbacks=callbacks,
-# )
-
-# %%
-# optional
-# #%load_ext tensorboard
-# #%tensorboard --logdir logs/
 
 # %% [markdown]
 # ### Saving files
+
+# %% [markdown]
+# #### Saving conditions
+
+# %%
+conditions_filename = outputs_dir / f"{runid}_conditions.txt"
+with open(conditions_filename, "w") as f:
+    f.write(conditions)
 
 # %% [markdown]
 # #### Saving model
 
 # %%
 # saving model run conditions
-model_filename = f"{runid}.hdf5"
+model_filename = f"{runid}.h5"
 
 # save model output into models_dir
 model.save(models_dir.joinpath(model_filename))
@@ -558,7 +542,7 @@ with tf.device("/cpu:0"):
 X_test_filename = f"{runid}_xtest.npy"
 y_pred_filename = f"{runid}_ypred.npy"
 y_test_filename = f"{runid}_ytest.npy"
-filenames_test_filename = f"{runid}_filenamestest.npy"
+filenames_test_filename = f"{runid}_filenames.npy"
 
 
 np.save(outputs_dir.joinpath(X_test_filename), X_test)

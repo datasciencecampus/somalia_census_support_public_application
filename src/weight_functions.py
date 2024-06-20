@@ -4,6 +4,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter
 from scipy.ndimage import label
 from scipy.ndimage import distance_transform_edt
+from sklearn.utils.class_weight import compute_class_weight
 
 
 def calculate_distance_weights(stacked_masks, sigma=3, c=200):
@@ -163,3 +164,42 @@ def calculate_weight_stats(class_weights):
     weight_stats["ratios"] = weight_ratios
 
     return weight_stats
+
+
+def get_weights(
+    folder_dropdown, stacked_masks, stacked_masks_cat, alpha=1.0, sigma=3, c=200
+):
+    """
+    Calculate weights based on different criteria.
+
+    Parameters:
+    - folder_dropdown (str): Value selected from dropdown menu, determines the weighting method.
+    - stacked_masks (numpy.ndarray): Stacked masks for frequency or building-based weighting.
+    - stacked_masks_cat (numpy.ndarray, optional): Stacked categorical masks for Google or size-based weighting.
+    - alpha (float, optional): Alpha parameter for size-based weighting.
+    - sigma (float, optional): Sigma parameter for building-based weighting.
+    - c (float, optional): C parameter for building-based weighting.
+
+    Returns:
+    - weights (numpy.ndarray): Computed weights based on the selected method.
+    """
+    if folder_dropdown == "frequency":
+        weights = compute_class_weight(
+            "balanced",
+            classes=np.unique(stacked_masks),
+            y=np.ravel(stacked_masks, order="C"),
+        )
+    elif folder_dropdown == "google":
+        weights = calculate_distance_weights(stacked_masks_cat)
+    elif folder_dropdown == "size":
+        weights = calculate_size_weights(stacked_masks_cat, alpha=alpha)
+    elif folder_dropdown == "building":
+        weights = calculate_building_distance_weights(
+            stacked_masks, sigma=sigma, c=c, alpha=alpha
+        )
+    else:
+        raise ValueError(
+            "Invalid value for folder_dropdown. Choose from 'frequency', 'google', 'size', or 'building'."
+        )
+
+    return weights

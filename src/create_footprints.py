@@ -33,12 +33,12 @@
 
 # %%
 import numpy as np
-from keras.models import load_model
+
+import keras
 from pathlib import Path
 import pandas as pd
 import ipywidgets as widgets
 from IPython.display import display
-import matplotlib.pyplot as plt
 import rasterio as rio
 import folium
 import shutil
@@ -46,17 +46,73 @@ import shutil
 
 # %%
 from functions_library import get_folder_paths
-from loss_functions import get_combined_loss
+from loss_functions import get_loss_function
 from multi_class_unet_model_build import jacard_coef
-from image_processing_functions import process_image
 from data_augmentation_functions import stack_array
-from create_footprint_functions import process_tile, extract_transform_from_directory
+from create_footprint_functions import (
+    process_tile,
+    process_image_files,
+    check_shapes,
+    filter_empty_arrays,
+    extract_transform_from_directory,
+)
 
 # %%
 folder_dict = get_folder_paths()
 models_dir = Path(folder_dict["models_dir"])
+outputs_dir = Path(folder_dict["outputs_dir"])
+
 camp_tiles_dir = Path(folder_dict["camp_tiles_dir"])
 footprints_dir = Path(folder_dict["footprints_dir"])
+
+# %% [markdown]
+# ## Load model
+
+# %%
+n_classes = 3
+
+# %%
+runid = "footprint_runs_2024-05-15_0715"
+
+# %%
+# find what loss functions was used
+conditions_path = outputs_dir / f"{runid}_conditions.txt"
+with open(conditions_path, "r") as file:
+    text = file.read()
+print(text)
+
+# %%
+loss_options = (
+    "dice",
+    "focal",
+    "combined",
+    "segmentation_models",
+    "custom",
+    "tversky",
+    "focal_tversky",
+)
+loss_dropdown = widgets.Dropdown(
+    options=loss_options, description="select loss function:"
+)
+display(loss_dropdown)
+
+# %%
+loss = get_loss_function(loss_dropdown.value)
+
+
+# %%
+model_filename = f"{runid}.h5"
+model_phase = models_dir / model_filename
+
+# %%
+model = keras.models.load_model(
+    model_phase,
+    custom_objects={
+        "focal_loss": loss,
+        "dice_loss": loss,
+        "jacard_coef": jacard_coef,
+    },
+)
 
 # %% [markdown]
 # ## Select area folder
@@ -74,15 +130,46 @@ area_dir = camp_tiles_dir / area
 print(area_dir)
 
 # %% [markdown]
+# ### Move files into sub area directories
+
+# %%
+# list of img files
+img_files = list(area_dir.glob("*.tif"))
+
+# create folders based on second word & move files
+for file in img_files:
+    second_word = file.stem.split("_")[1]
+
+    destination_dir = area_dir / second_word
+    destination_dir.mkdir(parents=True, exist_ok=True)
+
+    shutil.move(str(file), str(destination_dir / file.name))
+
+# %% [markdown]
+# ## Select sub area folder
+
+# %%
+# get all sub directories within camp tiles folder
+sub_dir = [subdir.name for subdir in area_dir.iterdir() if subdir.is_dir()]
+
+sub_folder_dropdown = widgets.Dropdown(options=sub_dir, description="select folder:")
+display(sub_folder_dropdown)
+
+# %%
+sub_area = sub_folder_dropdown.value
+sub_area_dir = area_dir / sub_area
+print(sub_area_dir)
+
+# %% [markdown]
 # ### Move the polygon tiles into a separate folder
 #
 # > want to experiment with just using polygons not tiles hence keeping these for now
 
 # %%
-polygon_directory = area_dir / "polygon_tiles"
+polygon_directory = sub_area_dir / "polygon_tiles"
 polygon_directory.mkdir(exist_ok=True)
 
-for file in area_dir.glob("*.tif"):
+for file in sub_area_dir.glob("*.tif"):
     if "polygons" in file.stem:
         destination_path = polygon_directory / file.name
         shutil.move(file, destination_path)
@@ -92,7 +179,7 @@ for file in area_dir.glob("*.tif"):
 # ### Get image crs
 
 # %%
-tiff_files = list(area_dir.glob("*.tif"))
+tiff_files = list(sub_area_dir.glob("*.tif"))
 if not tiff_files:
     print("No GeoTIFF files found in the directory.")
     exit()
@@ -105,7 +192,7 @@ with rio.open(first_tiff_file) as src:
     # Get CRS
     crs = src.crs
 
-print(f"CRS for {area}:", crs)
+print(f"CRS for {sub_area}:", crs)
 
 # %% [markdown]
 # ## Process img files
@@ -114,33 +201,30 @@ print(f"CRS for {area}:", crs)
 
 # %%
 # list all .tif files in directoy
-img_files = list(area_dir.glob("*.tif"))
+img_files = list(sub_area_dir.glob("*.tif"))
 img_size = 384
 
 # %%
-error_files = []
+# create npy arrays & highlight any files with issues
+error_files = process_image_files(img_files, img_size, sub_area_dir)
 
-for img_file in img_files:
-    try:
-        process_image(img_file, img_size, area_dir)
-    except Exception as e:
-        print(f"Error processing file {img_file}: {e}")
-        error_files.append(img_file)
 
-print("Files with errors:", error_files)
-
+# %%
+# check all npy files have the same shape
+check_shapes(sub_area_dir)
 
 # %% [markdown]
 # ### Create stacked arrays and delete `.npy` files in directory
 
 # %%
-unseen_images, unseen_filenames = stack_array(area_dir, expanded_outputs=True)
+unseen_images, unseen_filenames = stack_array(sub_area_dir, expanded_outputs=True)
 print(unseen_images.shape)
 print(unseen_filenames.shape)
 
 # %%
-# for file in Path(area_dir).glob("*npy"):
-# file.unlink()
+# delete npy arrays now stacked
+for file in Path(area_dir).glob("*npy"):
+    file.unlink()
 
 # %% [markdown]
 # ### Add padding
@@ -156,24 +240,13 @@ padded_unseen_images = np.pad(
 )
 padded_unseen_images.shape
 
-
 # %% [markdown]
 # ### Check for any blank arrays
 
 # %%
-def is_array_empty(arr):
-    return np.all(arr == 0)
-
-
-empty_indices = [i for i, arr in enumerate(padded_unseen_images) if is_array_empty(arr)]
-
-unseen_filtered = np.delete(padded_unseen_images, empty_indices, axis=0)
-filenames_filtered = [
-    filename for i, filename in enumerate(unseen_filenames) if i not in empty_indices
-]
-
-print("Filtered stacked array shape:", unseen_filtered.shape)
-print("Number of filtered filenames:", len(filenames_filtered))
+filtered_images, filtered_filenames = filter_empty_arrays(
+    padded_unseen_images, unseen_filenames
+)
 
 
 # %% [markdown]
@@ -185,73 +258,18 @@ padded_unseen_images = []
 unseen_filenames = []
 
 # %% [markdown]
-# ## Load model
-
-# %%
-# check total loss has loaded successfully
-total_loss = get_combined_loss()
-
-# %%
-model_path = models_dir / "qa_testing_2024-03-27_0955.hdf5"
-
-model = load_model(
-    model_path,
-    custom_objects={
-        "dice_loss_plus_1focal_loss": total_loss,
-        "dice_loss_plus_focal_loss": total_loss,
-        "focal_loss": total_loss,
-        "dice_loss": total_loss,
-        "jacard_coef": jacard_coef,
-    },
-)
-
-# %% [markdown]
-# ## Run model on unseen images (optional)
-
-# %%
-predictions = model.predict(unseen_filtered)
-
-# %%
-predictions.shape
-
-# %% [markdown]
-# ### Visual check
-
-# %%
-test_number = 20
-
-# %%
-img_size = 384
-image_test = np.load(area_dir.joinpath(f"{filenames_filtered[test_number]}.npy"))
-image_test.shape
-
-# %%
-# BGR to RGB
-image_test = image_test[:, :, :3]
-image_test = image_test[:, :, ::-1]
-
-# %%
-plt.figure(figsize=(12, 8))
-plt.subplot(231)
-plt.title(filenames_filtered[test_number])
-plt.imshow(image_test)  # [:, :, :3])
-plt.subplot(232)
-plt.imshow(predictions[test_number])
-plt.show()
-
-# %% [markdown]
 # ## Convert to polygons
 
 # %%
 # get transformation matrix from original .tiff images
-transforms = extract_transform_from_directory(area_dir)
+transforms = extract_transform_from_directory(sub_area_dir)
 
 # %% jupyter={"outputs_hidden": true}
 # create georeferenced footpritns
 num_classes = 3
 unique_classes = list(range(num_classes))
 all_results = []
-for idx, (tile, filename) in enumerate(zip(unseen_filtered, filenames_filtered)):
+for idx, (tile, filename) in enumerate(zip(filtered_images, filtered_filenames)):
     result_gdf = process_tile(
         model, tile, unique_classes, filename, idx, transforms, crs
     )
@@ -265,7 +283,7 @@ all_polygons_gdf = pd.concat(all_results, ignore_index=True)
 # ### Save polygons for outputting
 
 # %%
-output_footprints = footprints_dir / f"{folder_dropdown.value}_footprints.geojson"
+output_footprints = footprints_dir / f"{sub_folder_dropdown.value}_footprints.geojson"
 all_polygons_gdf.to_file(output_footprints, driver="GeoJSON")
 
 # %%
@@ -282,7 +300,7 @@ print("Number of buildings:", building_count)
 print("Number of tents:", tent_count)
 
 # %%
-filtered_gdf = all_polygons_gdf[all_polygons_gdf["index_num"] == 20]
+filtered_gdf = all_polygons_gdf[all_polygons_gdf["index_num"] == 0]
 
 # change crs into lat/long for plotting
 filtered_gdf = filtered_gdf.to_crs(epsg=4326)

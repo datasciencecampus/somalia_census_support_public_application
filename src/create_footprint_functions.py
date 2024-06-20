@@ -6,6 +6,8 @@ from shapely.geometry import Polygon
 import geopandas as gpd
 import rasterio as rio
 
+from image_processing_functions import process_image
+
 
 def extract_transform_from_directory(directory):
     """
@@ -152,3 +154,92 @@ def process_tile(model, tile, unique_classes, filename, index_number, transforms
         return combined_gdf
     else:
         return None
+
+
+def process_image_files(img_files, img_size, sub_area_dir):
+    """
+    Process a list of image files, calling the process_image function on each one.
+
+    Args:
+        img_files (list): List of image file paths.
+        img_size (tuple): Tuple specifying the size of the images.
+        sub_area_dir (str): Directory path where the images are located.
+
+    Returns:
+        list: List of file paths that encountered errors during processing.
+    """
+    error_files = []
+    for img_file in img_files:
+        try:
+            process_image(img_file, img_size, sub_area_dir)
+        except Exception as e:
+            print(f"Error processing file {img_file}: {e}")
+            error_files.append(img_file)
+    print("Files with errors:", error_files)
+    return error_files
+
+
+def check_shapes(directory):
+    """
+    Check the shapes of npy files in a directory and print any inconsistencies.
+
+    Args:
+        directory (str): Path to the directory containing npy files.
+
+    Returns:
+        set: Set containing the shapes of npy files if they are all the same, None otherwise.
+    """
+    error_files = []
+    npy_files = Path(directory).glob("*.npy")
+    shapes = set()
+
+    for file in npy_files:
+        array = np.load(file)
+        if array.shape != (384, 384, 4):
+            print(f"File {file} has shape {array.shape}, expected (384, 384, 4)")
+            error_files.append(file)
+        else:
+            shapes.add(array.shape)
+
+    if len(shapes) == 1:
+        print("All npy files have the same shape:", shapes.pop())
+    else:
+        return None
+
+
+def is_array_empty(arr):
+    """
+    Check if a NumPy array is empty (all elements are zero).
+
+    Args:
+        arr (numpy.ndarray): Input array.
+
+    Returns:
+        bool: True if the array is empty, False otherwise.
+    """
+    return np.all(arr == 0)
+
+
+def filter_empty_arrays(padded_unseen_images, unseen_filenames):
+    """
+    Filter out empty arrays and corresponding filenames from the input arrays.
+
+    Args:
+        padded_unseen_images (numpy.ndarray): Array of images.
+        unseen_filenames (list): List of filenames corresponding to the images.
+
+    Returns:
+        tuple: A tuple containing the filtered images array and filtered filenames list.
+    """
+    empty_indices = [
+        i for i, arr in enumerate(padded_unseen_images) if is_array_empty(arr)
+    ]
+    unseen_filtered = np.delete(padded_unseen_images, empty_indices, axis=0)
+    filenames_filtered = [
+        filename
+        for i, filename in enumerate(unseen_filenames)
+        if i not in empty_indices
+    ]
+    print("Filtered stacked array shape:", unseen_filtered.shape)
+    print("Number of filtered filenames:", len(filenames_filtered))
+    return unseen_filtered, filenames_filtered
