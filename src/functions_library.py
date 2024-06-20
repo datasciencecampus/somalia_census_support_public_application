@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import List
 import yaml
 import numpy as np
+import rasterio as rio
+from rasterio.windows import Window
 
 # set data directory
 data_dir = Path.cwd().parent.joinpath("data")
@@ -164,6 +166,7 @@ def rm_tree(pth):
         pth.rmdir()
 
 
+
 def delete_files_with_extensions(directory_path, extensions):
     """
     Delete files with specified extensions in a directory.
@@ -185,3 +188,54 @@ def delete_files_with_extensions(directory_path, extensions):
             # Delete the file
             file.unlink()
             print(f"File '{file.name}' deleted successfully.")
+
+def generate_tiles(image_path, tile_size=384, output_dir="tiles"):
+
+    """
+    Creates multiple tiles of planet image and saves them in specified folder.
+
+    Parameters
+    ----------
+    image_path: Path
+        local data path for images
+
+    tile_size: Integer
+        specified tile size
+
+    output_dir: Path
+        path for outputs to be saved in
+
+    Returns
+    -------
+    Multiple tiles of planet
+    """
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    with rio.open(image_path) as src:
+        rows = src.height // tile_size
+        cols = src.width // tile_size
+
+        for row in range(rows):
+            for col in range(cols):
+                window = Window(col * tile_size, row * tile_size, tile_size, tile_size)
+                # Read the tile
+                tile = src.read(window=window)
+
+                if np.sum(tile) > 0:
+                    tile_meta = src.meta.copy()
+                    tile_meta.update(
+                        {
+                            "width": tile_size,
+                            "height": tile_size,
+                            "transform": rio.windows.transform(window, src.transform),
+                        }
+                    )
+
+                    tile_filename = (
+                        output_dir
+                        / f"{image_path.stem.replace('polygon', '')}_tile_{row}_{col}.tif"
+                    )
+                    with rio.open(tile_filename, "w", **tile_meta) as dst:
+                        dst.write(tile)
