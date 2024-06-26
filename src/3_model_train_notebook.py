@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.1
+#       jupytext_version: 1.16.2
 #   kernelspec:
 #     display_name: venv-somalia-gcp (Local)
 #     language: python
@@ -454,7 +454,7 @@ runid = f"footprint_runs_{formatted_datetime}"
 runid
 
 # %%
-conditions = f"epochs = {num_epochs}\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_array_num = {stacked_masks.shape[0]},\nweights = {class_weights},\nloss_function = {loss},\nloss_weights = {loss_weights}, "
+conditions = f"epochs = {num_epochs},\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_array_num = {stacked_masks.shape[0]},\nweights = {class_weights},\nloss_function = {loss},\nloss_weights = {loss_weights}, "
 print(conditions)
 
 
