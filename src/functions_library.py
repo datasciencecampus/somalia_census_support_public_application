@@ -221,7 +221,7 @@ def generate_tiles(image_path, tile_size=384, output_dir="tiles"):
             for col in range(cols):
                 window = Window(col * tile_size, row * tile_size, tile_size, tile_size)
                 # Read the tile
-                tile = src.read(window=window)
+                tile = src.read(window=window, boundless=True, fill_value=0)
 
                 if np.sum(tile) > 0:
                     tile_meta = src.meta.copy()
