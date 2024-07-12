@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.1
+#       jupytext_version: 1.16.2
 #   kernelspec:
 #     display_name: venv-somalia-gcp (Local)
 #     language: python
@@ -72,7 +72,7 @@ footprints_dir = Path(folder_dict["footprints_dir"])
 n_classes = 3
 
 # %%
-runid = "footprint_runs_2024-05-15_0715"
+runid = "footprint_runs_2024-06-06_1241"
 
 # %%
 # find what loss functions was used
@@ -264,7 +264,7 @@ unseen_filenames = []
 # get transformation matrix from original .tiff images
 transforms = extract_transform_from_directory(sub_area_dir)
 
-# %% jupyter={"outputs_hidden": true}
+# %%
 # create georeferenced footpritns
 num_classes = 3
 unique_classes = list(range(num_classes))
@@ -278,6 +278,23 @@ for idx, (tile, filename) in enumerate(zip(filtered_images, filtered_filenames))
 
 all_polygons_gdf = pd.concat(all_results, ignore_index=True)
 
+
+# %% [markdown]
+# ## Add polygon size column to geopandas dataframe
+
+# %%
+all_polygons_gdf["polygon_size"] = all_polygons_gdf["geometry"].area
+
+# %% [markdown]
+# ## Filter out polygon sizes below 1
+
+# %%
+all_polygons_gdf = all_polygons_gdf[all_polygons_gdf["polygon_size"] >= 1]
+
+# reset index
+all_polygons_gdf.reset_index(inplace=True, drop=True)
+
+all_polygons_gdf
 
 # %% [markdown]
 # ### Save polygons for outputting
