@@ -93,5 +93,5 @@ with rio.open(img_file) as src:
 # ### Create tiles
 
 # %%
-for tile_path in tile_dir.glob("*.tif"):
+for tile_path in tile_dir.glob("*_polygons_*.tif"):
     generate_tiles(tile_path, output_dir=tile_dir)
