@@ -127,7 +127,7 @@ folder_dropdown = widgets.Dropdown(options=sub_dir, description="select folder:"
 display(folder_dropdown)
 
 # %%
-area = folder_dropdown.value
+area = folder_dropdown.value + ("//tiles")
 area_dir = camp_tiles_dir / area
 print(area_dir)
 
