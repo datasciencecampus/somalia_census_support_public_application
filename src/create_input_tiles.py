@@ -17,8 +17,8 @@ from functions_library import generate_tiles
 data_dir = Path.cwd().parent.joinpath("data")
 
 # change variable for dir name as required
-baidoa_dir = data_dir.joinpath("Baidoa")
-tile_dir = baidoa_dir.joinpath("tiles")
+region_dir = data_dir.joinpath("Baidoa")
+tile_dir = region_dir.joinpath("tiles")
 
 
 # %% [markdown]
@@ -26,7 +26,7 @@ tile_dir = baidoa_dir.joinpath("tiles")
 
 # %%
 pattern = "*_camp_extents.geojson"
-matching_files = list(baidoa_dir.glob(pattern))
+matching_files = list(region_dir.glob(pattern))
 
 # %%
 folder_dropdown = widgets.Dropdown(options=matching_files, description="select folder:")
@@ -51,10 +51,10 @@ else:
 
 # %%
 # tif file
-img_file = baidoa_dir.joinpath(planet_file)
+img_file = region_dir.joinpath(planet_file)
 
 # geojson file
-polygon_file = baidoa_dir.joinpath(f"{folder_dropdown.value.stem}.geojson")
+polygon_file = region_dir.joinpath(f"{folder_dropdown.value.stem}.geojson")
 
 # %% [markdown]
 # ## Creating polygons & tiles for input
@@ -93,5 +93,5 @@ with rio.open(img_file) as src:
 # ### Create tiles
 
 # %%
-for tile_path in tile_dir.glob("*.tif"):
+for tile_path in tile_dir.glob("*_polygons_*.tif"):
     generate_tiles(tile_path, output_dir=tile_dir)

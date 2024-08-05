@@ -166,7 +166,6 @@ def rm_tree(pth):
         pth.rmdir()
 
 
-
 def delete_files_with_extensions(directory_path, extensions):
     """
     Delete files with specified extensions in a directory.
@@ -188,6 +187,7 @@ def delete_files_with_extensions(directory_path, extensions):
             # Delete the file
             file.unlink()
             print(f"File '{file.name}' deleted successfully.")
+
 
 def generate_tiles(image_path, tile_size=384, output_dir="tiles"):
 
@@ -214,14 +214,14 @@ def generate_tiles(image_path, tile_size=384, output_dir="tiles"):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     with rio.open(image_path) as src:
-        rows = src.height // tile_size
-        cols = src.width // tile_size
+        rows = -(src.height // -tile_size)  # ceiling division
+        cols = -(src.width // -tile_size)
 
         for row in range(rows):
             for col in range(cols):
                 window = Window(col * tile_size, row * tile_size, tile_size, tile_size)
                 # Read the tile
-                tile = src.read(window=window)
+                tile = src.read(window=window, boundless=True, fill_value=0)
 
                 if np.sum(tile) > 0:
                     tile_meta = src.meta.copy()

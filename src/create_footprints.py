@@ -55,6 +55,7 @@ from create_footprint_functions import (
     check_shapes,
     filter_empty_arrays,
     extract_transform_from_directory,
+    modify_transform,
 )
 
 # %%
@@ -65,16 +66,17 @@ outputs_dir = Path(folder_dict["outputs_dir"])
 camp_tiles_dir = Path(folder_dict["camp_tiles_dir"])
 footprints_dir = Path(folder_dict["footprints_dir"])
 
+# %%
+# Set model variables
+n_classes = 3
+runid = "footprint_runs_2024-06-06_1241"
+padding = 8
+
 # %% [markdown]
 # ## Load model
 
 # %%
-n_classes = 3
 
-# %%
-runid = "footprint_runs_2024-06-06_1241"
-
-# %%
 # find what loss functions was used
 conditions_path = outputs_dir / f"{runid}_conditions.txt"
 with open(conditions_path, "r") as file:
@@ -125,7 +127,7 @@ folder_dropdown = widgets.Dropdown(options=sub_dir, description="select folder:"
 display(folder_dropdown)
 
 # %%
-area = folder_dropdown.value
+area = folder_dropdown.value + ("//tiles")
 area_dir = camp_tiles_dir / area
 print(area_dir)
 
@@ -138,9 +140,10 @@ img_files = list(area_dir.glob("*.tif"))
 
 # create folders based on second word & move files
 for file in img_files:
-    second_word = file.stem.split("_")[1]
+    first_two_words = file.stem.split("_")[:2]
+    area_subdir = "_".join(first_two_words)
 
-    destination_dir = area_dir / second_word
+    destination_dir = area_dir / area_subdir
     destination_dir.mkdir(parents=True, exist_ok=True)
 
     shutil.move(str(file), str(destination_dir / file.name))
@@ -230,9 +233,6 @@ for file in Path(area_dir).glob("*npy"):
 # ### Add padding
 
 # %%
-padding = 8
-
-# %%
 padded_unseen_images = np.pad(
     unseen_images,
     ((0, 0), (padding, padding), (padding, padding), (0, 0)),
@@ -264,14 +264,18 @@ unseen_filenames = []
 # get transformation matrix from original .tiff images
 transforms = extract_transform_from_directory(sub_area_dir)
 
+# modaify transformation matrices to account for padding
+modified_transforms = dict(
+    (k, modify_transform(v, padding)) for k, v in transforms.items()
+)
+
 # %%
 # create georeferenced footpritns
-num_classes = 3
-unique_classes = list(range(num_classes))
+unique_classes = list(range(n_classes))
 all_results = []
 for idx, (tile, filename) in enumerate(zip(filtered_images, filtered_filenames)):
     result_gdf = process_tile(
-        model, tile, unique_classes, filename, idx, transforms, crs
+        model, tile, unique_classes, filename, idx, modified_transforms, crs
     )
     if result_gdf is not None:
         all_results.append(result_gdf)

@@ -17,5 +17,5 @@ json_dir: ../data/training/json_dir
 models_dir: ../models
 outputs_dir: ../data/outputs
 
-camp_tiles_dir: ../camp_tiles
+camp_tiles_dir: ../data
 footprints_dir: ../data/footprints
