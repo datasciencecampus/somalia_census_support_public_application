@@ -27,6 +27,21 @@ def extract_transform_from_directory(directory):
     return transform_dict
 
 
+def modify_transform(transform_matrix, padding):
+    """
+    Modify GeoTIFF transformation matrix origin to account for padding.
+
+    Parameters:
+    - transform_matrix (affine.Affine): GeoTIFF transform matrix in affine format.
+
+    Returns:
+    modified_trans: GeoTIFF transform matrix where origin has been corrected to
+        account for padding.
+    """
+    modified_trans = transform_matrix * rio.Affine.translation(-padding, -padding)
+    return modified_trans
+
+
 def create_mask_dict(predicted_img, unique_classes):
     """
     Create a dictionary of masks based on predicted image and unique classes.
