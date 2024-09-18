@@ -1,0 +1,557 @@
+# ---
+# jupyter:
+#   jupytext:
+#     formats: ipynb,py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.16.2
+#   kernelspec:
+#     display_name: venv-somalia-gcp (Local)
+#     language: python
+#     name: venv-somalia-gcp
+# ---
+
+# %% [markdown]
+# # Feasibility study - U-Net training model
+#
+# <div style="padding: 15px; border: 1px solid transparent; border-color: transparent; margin-bottom: 20px; border-radius: 4px; color: #31708f; background-color: #d9edf7; border-color: #bce8f1;">
+# Before running this project ensure that the correct kernel is selected (top right). The default project environment name is `venv-somalia-gcp`.
+# </div>
+#
+# This notebook assumes the `1_premodelling_notebook` has already been run and all the training data has been converted into `.npy` arrays. It augments the arrays to bulk out the training data for input into the model. Model parameters that can be adjusted have been laid out in individual cells for ease of optimisation. Finally, model outputs are displayed in a tensorboard and outputted as images below.
+#
+# #### Contents - to update
+#
+# 1. ##### [Set-up](#setup)
+# 1. ##### [Training parameters](#trainingparameters)
+# 1. ##### [Weights](#weights)
+# 1. ##### [Model parameters](#modelparameters)
+# 1. ##### [Model](#model)
+# 1. ##### [Outputs](#output)
+#
+
+# %% [markdown]
+# ### Checking memory usage
+
+# %%
+import os
+import psutil
+
+# Get the process ID (PID) of the current Jupyter notebook process
+current_pid = os.getpid()
+
+# Get the process memory usage
+process = psutil.Process(current_pid)
+memory_info = process.memory_info()
+
+# Convert memory usage to gigabytes
+memory_usage_gb = memory_info.rss / (1024 * 1024 * 1024)
+
+# Print the memory usage in gigabytes
+print("Memory usage (gb):", memory_usage_gb)
+
+# %% [markdown]
+# ## Set-up <a name="setup"></a>
+
+# %%
+# %env TF_GPU_ALLOCATOR=cuda_malloc_async
+
+# %% [markdown]
+# ### Import libraries & custom functions
+
+# %%
+from pathlib import Path
+import datetime
+
+# %%
+import numpy as np
+import pandas as pd
+import ipywidgets as widgets
+from IPython.display import display
+import tensorflow as tf
+import pynvml
+from numba import cuda
+from keras.utils import to_categorical
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.utils import Sequence
+
+# %%
+from functions_library import get_folder_paths
+from multi_class_unet_model_build import jacard_coef, get_model
+from loss_functions import get_loss_function
+from weight_functions import get_weights, calculate_weight_stats
+
+# %% [markdown]
+# #### GPU Availability check
+
+# %%
+gpus = tf.config.experimental.list_physical_devices("GPU")
+if gpus:
+    try:
+        # Currently, memory growth needs to be the same across GPUs
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)
+
+
+# %%
+physical_devices = tf.config.list_physical_devices("GPU")
+try:
+    # Disable first GPU
+    tf.config.set_visible_devices(physical_devices[0], "GPU")
+    logical_devices = tf.config.list_logical_devices("GPU")
+except OSError:
+    raise RuntimeError(
+        "Invalid device or cannot modify virtual devices once initialized."
+    )
+print("Num GPUs Available: ", len(tf.config.list_physical_devices("GPU")))
+
+
+# %% [markdown]
+# #### GPU memory usage
+
+# %%
+def bytes_to_gb(bytes_value):
+    return round(bytes_value / (1024**3), 2)
+
+
+pynvml.nvmlInit()
+handle = pynvml.nvmlDeviceGetHandleByIndex(
+    0
+)  # Assuming the GPU you are interested in is at index 0
+
+info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+total_gb = bytes_to_gb(info.total)
+free_gb = bytes_to_gb(info.free)
+used_gb = bytes_to_gb(info.used)
+
+print(f"Total GPU Memory: {total_gb} GB")
+print(f"Free GPU Memory: {free_gb} GB")
+print(f"Used GPU Memory: {used_gb} GB")
+
+pynvml.nvmlShutdown()
+
+# %% [markdown]
+# #### Freeing GPU memory
+
+# %%
+if free_gb < 10:
+    # reset tensorflow session
+    tf.keras.backend.clear_session()
+
+    # Using CUDA operations
+    cuda.select_device(0)
+    cuda.close()
+
+    print("TensorFlow session cleared and CUDA operations performed.")
+else:
+    print("No need to clear TensorFlow session or perform CUDA operations.")
+
+# %% [markdown]
+# ### Set-up filepaths
+
+# %%
+# for importing stacked arrays
+folder_dict = get_folder_paths()
+stacked_dir = Path(folder_dict["stacked_dir"])
+
+
+# set model and output directories
+models_dir = Path(folder_dict["models_dir"])
+outputs_dir = Path(folder_dict["outputs_dir"])
+
+# %% [markdown]
+# ### Import arrays
+
+# %% [markdown]
+# #### Masks
+
+# %%
+ramp = False
+if ramp:
+    ramp_masks = np.load(stacked_dir / "ramp_bentiu_south_sudan_all_stacked_masks.npy")
+else:
+    ramp_masks = None
+
+# %%
+training_masks = np.load(stacked_dir / "training_data_all_stacked_masks.npy")
+training_masks.shape
+
+# %%
+validation_masks = np.load(stacked_dir / "validation_data_all_stacked_masks.npy")
+validation_masks.shape
+
+# %%
+# joining masks together
+if ramp:
+    stacked_masks = np.concatenate(
+        [training_masks, validation_masks, ramp_masks], axis=0
+    )
+else:
+    stacked_masks = np.concatenate([training_masks, validation_masks], axis=0)
+
+stacked_masks.shape
+
+# %%
+# clearing out some memory
+ramp_masks = []
+training_masks = []
+validation_masks = []
+
+# %% [markdown]
+# #### Number of classes
+
+# %%
+# number of classes (i.e. building, tent, background)
+n_classes = len(np.unique(stacked_masks))
+n_classes
+
+# %% [markdown]
+# #### Encoding masks
+
+# %%
+# encode building classes into training mask arrays
+stacked_masks_cat = to_categorical(stacked_masks, num_classes=n_classes)
+stacked_masks_cat.shape
+
+# %% [markdown]
+# #### Images
+
+# %%
+if ramp:
+    ramp_images = np.load(
+        stacked_dir / "ramp_bentiu_south_sudan_all_stacked_images.npy"
+    )
+else:
+    ramp_images = None
+
+# %%
+training_images = np.load(stacked_dir / "training_data_all_stacked_images.npy")
+training_images.shape
+
+# %%
+validation_images = np.load(stacked_dir / "validation_data_all_stacked_images.npy")
+validation_images.shape
+
+# %%
+# dropping 4 th channel to join with ramp
+if ramp:
+    training_images = training_images[:, :, :, :3]
+    validation_images = validation_images[:, :, :, :3]
+
+
+# %%
+# joining images together
+if ramp:
+    stacked_images = np.concatenate(
+        [training_images, validation_images, ramp_images], axis=0
+    )
+else:
+    stacked_images = np.concatenate([training_images, validation_images], axis=0)
+
+stacked_images.shape
+
+# %%
+# clearing out some memory
+ramp_images = []
+training_images = []
+validation_images = []
+
+# %% [markdown]
+# #### Import filenames
+
+# %%
+if ramp:
+    ramp_filenames = np.load(
+        stacked_dir / "ramp_bentiu_south_sudan_all_stacked_filenames.npy"
+    )
+else:
+    ramp_filenames = None
+
+# %%
+training_filenames = np.load(stacked_dir / "training_data_all_stacked_filenames.npy")
+
+# %%
+validation_filenames = np.load(
+    stacked_dir / "validation_data_all_stacked_filenames.npy"
+)
+
+# %%
+# joining images together
+if ramp:
+    stacked_filenames = np.concatenate(
+        [training_filenames, validation_filenames, ramp_filenames], axis=0
+    )
+else:
+    stacked_filenames = np.concatenate(
+        [training_filenames, validation_filenames], axis=0
+    )
+
+stacked_filenames.shape
+
+# %% [markdown]
+# #### Borders
+
+# %%
+training_edges = np.load(stacked_dir / "training_data_all_stacked_edges.npy")
+training_edges.shape
+
+# %%
+validation_edges = np.load(stacked_dir / "validation_data_all_stacked_edges.npy")
+validation_edges.shape
+
+# %%
+stacked_edges = np.concatenate([training_edges, validation_edges], axis=0)
+
+# %%
+# encode building classes into training mask arrays
+stacked_edges_cat = to_categorical(stacked_edges, num_classes=n_classes)
+stacked_edges_cat.shape
+
+# %%
+# clearing out some memory
+ramp_edges = []
+training_edges = []
+validation_edges = []
+
+# %% [markdown]
+# ## Training parameters <a name="trainingparameters"></a>
+
+# %% [markdown]
+# ### Adding edges as model in/outputs
+
+# %%
+train_images = np.concatenate([stacked_images, stacked_images], axis=0)
+train_masks = np.concatenate([stacked_masks_cat, stacked_edges_cat], axis=0)
+train_filenames = np.concatenate([stacked_filenames, stacked_filenames], axis=0)
+
+# %%
+X_train, X_test, y_train, y_test, filenames_train, filenames_test = train_test_split(
+    train_images,
+    train_masks,
+    train_filenames,
+    test_size=0.20,
+    random_state=42,
+)
+
+# %% [markdown]
+# ## Model parameters <a name="modelparameters"></a>
+
+# %%
+# Extract img_height, img_width, and num_channels
+img_height, img_width, img_channels = (
+    stacked_images.shape[1],
+    stacked_images.shape[2],
+    stacked_images.shape[3],
+)
+print(img_height, img_width, img_channels)
+
+# %%
+# defined under training parameters
+model = get_model(n_classes, img_height, img_width, img_channels)
+
+# %% [markdown]
+# ### Epochs
+
+# %%
+# define number of epochs
+num_epochs = 250
+
+# %% [markdown]
+# ### Batch size
+
+# %%
+# define batch size
+batch_size = 50
+
+# %% [markdown]
+# ### Callbacks
+
+# %%
+callbacks = [
+    tf.keras.callbacks.EarlyStopping(patience=10, monitor="val_loss"),
+    tf.keras.callbacks.TensorBoard(log_dir="logs"),
+]
+
+# %% [markdown]
+# ### Class weights <a name="weights"></a>
+
+# %%
+weight_options = ("frequency", "google", "size", "building")
+weight_dropdown = widgets.Dropdown(
+    options=weight_options, description="select weight function:"
+)
+display(weight_dropdown)
+
+# %%
+class_weights = get_weights(
+    weight_dropdown.value, stacked_masks, stacked_masks_cat, alpha=1.0, sigma=3, c=200
+)
+weight_stats = calculate_weight_stats(class_weights)
+print(class_weights)
+print(weight_stats)
+
+# %% [markdown]
+# ### Loss functions
+
+# %%
+loss_options = (
+    "dice",
+    "focal",
+    "combined",
+    "segmentation_models",
+    "tversky",
+    "focal_tversky",
+)
+loss_dropdown = widgets.Dropdown(
+    options=loss_options, description="select loss function:"
+)
+display(loss_dropdown)
+
+# %%
+weights_ce = 1.0
+weights_dice = 1.0
+weights_focal = 1.0
+
+# %%
+loss = get_loss_function(loss_dropdown.value, class_weights)
+
+# %%
+if loss_dropdown.value == "combined":
+    loss_weights = [weights_dice, weights_focal]
+elif loss_dropdown.value == "weighted_multi_class":
+    loss_weights = [weights_ce, weights_dice, weights_focal]
+else:
+    loss_weights = None
+
+# %% [markdown]
+# ### Model compile
+
+# %%
+model.compile(
+    optimizer="adam",
+    loss=loss,
+    loss_weights=loss_weights,
+    metrics=["accuracy", jacard_coef],
+)
+
+
+# %% [markdown]
+# ### Saving model parameters
+#
+
+# %%
+# Get the current date and time
+current_datetime = datetime.datetime.now()
+# Format the date and time as a string
+formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H%M")
+
+# %%
+runid = f"footprint_runs_{formatted_datetime}"
+runid
+
+# %%
+conditions = f"epochs = {num_epochs},\nbatch_size = {batch_size},\nn_classes = {n_classes},\nstacked_array_num = {stacked_masks.shape[0]},\nweights = {class_weights},\nloss_function = {loss},\nloss_weights = {loss_weights}, "
+print(conditions)
+
+
+# %% [markdown]
+# ## Data Generators  <a name="datagenerator"></a>
+
+# %%
+class DataGenerator(Sequence):
+    def __init__(self, x_set, y_set, batch_size):
+        self.x, self.y = x_set, y_set
+        self.batch_size = batch_size
+
+    def __len__(self):
+        return int(np.ceil(len(self.x) / float(self.batch_size)))
+
+    def __getitem__(self, idx):
+        batch_x = self.x[idx * self.batch_size : (idx + 1) * self.batch_size]
+        batch_y = self.y[idx * self.batch_size : (idx + 1) * self.batch_size]
+        return batch_x, batch_y
+
+
+train_gen = DataGenerator(X_train, y_train, 32)
+test_gen = DataGenerator(X_test, y_test, 32)
+
+
+# %% [markdown]
+# ## Model <a name="model"></a>
+
+# %%
+model.summary()
+history1 = model.fit(
+    train_gen,
+    batch_size=batch_size,
+    verbose=1,
+    epochs=num_epochs,
+    validation_data=test_gen,
+    shuffle=False,
+    callbacks=callbacks,
+)
+
+# %% [markdown]
+# ### Saving files
+
+# %% [markdown]
+# #### Saving conditions
+
+# %%
+conditions_filename = outputs_dir / f"{runid}_conditions.txt"
+with open(conditions_filename, "w") as f:
+    f.write(conditions)
+
+# %% [markdown]
+# #### Saving model
+
+# %%
+# saving model run conditions
+model_filename = f"{runid}.h5"
+
+# save model output into models_dir
+model.save(models_dir.joinpath(model_filename))
+
+# %% [markdown]
+# #### Saving history
+
+# %%
+history = history1
+
+
+# %%
+# saving epochs
+history_filename = outputs_dir / f"{runid}.csv"
+
+history_df = pd.DataFrame(history.history)
+history_df.to_csv(history_filename, index=False)
+
+# %% [markdown]
+# #### Saving outputs
+
+# %%
+# defining y_pred first
+with tf.device("/cpu:0"):
+    y_pred = model.predict(X_test)
+
+# %%
+X_test_filename = f"{runid}_xtest.npy"
+y_pred_filename = f"{runid}_ypred.npy"
+y_test_filename = f"{runid}_ytest.npy"
+filenames_test_filename = f"{runid}_filenames.npy"
+
+
+np.save(outputs_dir.joinpath(X_test_filename), X_test)
+np.save(outputs_dir.joinpath(y_pred_filename), y_pred)
+np.save(outputs_dir.joinpath(y_test_filename), y_test)
+np.save(outputs_dir.joinpath(filenames_test_filename), filenames_test)
+
+# %% [markdown]
+# ## Clear outputs and remove variables<a name="clear"></a>
+
+# %%
+# #%reset -f
