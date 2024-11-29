@@ -66,7 +66,7 @@ read_files_in_folder(bucket_name, folder_name)
 
 # ### Import individual files <a name="importfiles"></a>
 
-run_id = "qa_testing_2024-01-30_1655"
+run_id = ""
 
 # #### For Outputs (6 files)
 

@@ -94,7 +94,7 @@ for file in outputs.iterdir():
 
 # #### Export model outputs to review bucket
 
-file_to_move = "training_data_baidoa_10_jo.geojson"
+file_to_move = ""
 
 file = footprints / file_to_move
 bucket_name = review_bucket
