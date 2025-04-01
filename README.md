@@ -4,19 +4,12 @@
 [![black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 [![status: experimental](https://github.com/GIScience/badges/raw/master/status/experimental.svg)](https://github.com/GIScience/badges#experimental)
 
-# Somalia UNFPA Census Support
+# Somalia UNFPA Census Support - Training Development Branch
 
-## Background
+## Disclaimer
 
-Planning for a census requires understanding where populations are distributed so that enumeration areas can be successfully designed.
+This branch has been uploaded to provide the training structure that we used to train our U-Net model for the public application. The ONS Data Science Campus place no guarantee on the efficacy of any other models trained using this method.
 
-The last census in Somalia was 50 years ago, before a Civil War and protracted conflict, meaning that this data is no longer relevant for designing enumeration areas.
-
-In addition, it's estimated nearly 3 million people have been internally displaced in Somalia, seeking refugee in over 2,700 camps. These informal camps are prone to rapid changes in their size and structure, making them an area where population estimates are difficult to obtain.
-
-The UKs Foreign, Commonwealth, and Development Office (FCDO) are working the Somali Government and the United Nations Population Fund (UNFPA) to lay the foundations for a census in Somalia. As part of this they wanted to know if novel data science techniques could be used to support census planning in a resource-efficient way.
-
-The Data Science Campus at the Office for National Statistics (ONS) worked to automate the detection of shelter footprints in Somali internally displaced people (IDP) camps. We used very high-resolution (VHR) Planet SkySat 0.5 m/px satellite imagery to train our model. The model is capable of detecting tents, informal, and formal buildings to a high degree of accuracy (>70 % percentage accuracy). The DSC work means IDP camp footprints can be created in minutes compared to months.
 
 ## How to use this repo
 
@@ -224,22 +217,17 @@ The below tree demonstrates where each file/folder needs to be for successful ex
 
 ### Training data
 
-Follow the [wiki guide](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Using-QGIS-to-create-Training-Data) to create training data. Image rasters should be exported as `.geoTIF` and accompanying polygons and as `.geoJSON` files.
-
-Use the project naming structure:
+The original project used the following naming structure for it's training data:
 
 `training_data_<area>_<unique int>_<your initials>`
 
 >For validation data replace `training` with `validation`.
 
+If you want to remove the check that verifys this pattern, disable `check_naming_convention_upheld` in the `preingress_notebook`.
 
 ### Uploading data to GCP
 
-All data should be run locally through the `pre-ingress notebook`, and any issues resolved, before uploading to the project's [GCP SharePoint folder](https://officenationalstatistics.sharepoint.com/sites/dscdsc/Pro/Forms/AllItems.aspx?newTargetListUrl=%2Fsites%2Fdscdsc%2FPro&viewpath=%2Fsites%2Fdscdsc%2FPro%2FForms%2FAllItems%2Easpx&id=%2Fsites%2Fdscdsc%2FPro%2F2%2E%20Squads%2FInternational%5FDevelopment%2FData%20Science%20Projects%2F2%2E%20Data%20Science%20Research%20Projects%2FSomalia%5FUNFPA%5Fcensus%5Fsupport%2FData%2FGCP%20ingress%20folder&viewid=0d0e2855%2Dec81%2D4dab%2D8eb3%2D8a0d07ae59fe).
-
-When data is ready to be ingested to GCP, the files can be drag and dropped into the [ingress bucket](https://console.cloud.google.com/storage/browser/somalia-census-support-ingress;tab=objects?forceOnBucketsSortingFiltering=true&project=somalia-census-support&prefix=&forceOnObjectsSortingFiltering=false):
-
-`somalia-census-support-ingress`
+We have included the code for uploading/downloading data from a GCP environment. These functions may vary if using AWS/Azure/another provider.
 
 Note the directory structure, which mirrors that of local GCP (shown above).
 
@@ -248,39 +236,35 @@ Note the directory structure, which mirrors that of local GCP (shown above).
 To download files from the ingress bucket into the local GCP environment run the `download_from_bucket.py` script with the below line:
 
 ```
-python src/download_from_bucket.py gs://somalia-census-support-ingress/training/ data/training/
+python src/download_from_bucket.py gs://<GCP-Instance>-ingress/training/ data/training/
 ```
 
 or moving model files from the `wip` bucket to local storage:
 ```
-python src/download_from_bucket.py gs://somalia-census-support-wip/models/ models/
+python src/download_from_bucket.py gs://<GCP-Instance-wip>/models/ models/
 ```
 
 ### Moving data from local GCP storage
 
 To upload files from local storage into the egress bucket run the `upload_to_bucket.py` script with the below line:
 ```
-python src/upload_to_bucket.py data/outputs/figures gs://somalia-census-support-egress/
+python src/upload_to_bucket.py data/outputs/figures gs://<GCP-Instance>-egress/
 ```
 or moving model files into the `wip` bucket, it's the same script but different bucket location:
 ```
-python src/upload_to_bucket.py models/ gs://somalia-census-support-wip/models
+python src/upload_to_bucket.py models/ gs://<GCP-Instance>-wip/models
 ```
 
 ## Creating shelter footprints
 
-In the scenario where you want to use pre-trained models to create building footprints, only the `create_footprints.py` script is required to be run. Pre-trained models are available in the `somalia-census-support-wip` bucket, these should be downloaded locally to run the notebook (see `Moving data from local GCP storage` section above). To run `create_footprints.py` `conditions.txt` for model runs and `camp_tiles` files also need to be downloaded. 
+In the scenario where you want to use pre-trained models to create building footprints, only the `create_footprints.py` script is required to be run. Pre-trained models are available in the `wip` bucket, these should be downloaded locally to run the notebook (see `Moving data from local GCP storage` section above). To run `create_footprints.py` `conditions.txt` for model runs and `camp_tiles` files also need to be downloaded. 
 
 To get `conditions.txt` run:
 ```
-python src/download_from_bucket.py gs://somalia-census-support-wip/outputs/ data/outputs/
+python src/download_from_bucket.py gs://<GCP-Instance>-wip/outputs/ data/outputs/
 ```
 
 To get `camp_tiles` for Baidoa for example, run:
 ```
-python src/download_from_bucket.py gs://somalia-census-support-ingress/baidoa/ camp_tiles/baidoa/
+python src/download_from_bucket.py gs://<GCP-Instance>-ingress/baidoa/ camp_tiles/baidoa/
 ```
-
-
-## Things of note
-The [wiki page attached to this repo](https://github.com/datasciencecampus/somalia_unfpa_census_support/wiki/Somalia-UNFPA-Census-support) contains useful resources and other relevant notes.
